@@ -1,0 +1,56 @@
+.redes {
+    height: 30dvh;
+    display: flex;
+    flex-direction: column;
+    /* Para que el h3 quede encima de la lista */
+    align-items: center;
+    justify-content: center;
+    gap: 2em;
+}
+
+.redes h3 {
+    margin: 0;
+    font-family: 'Akashi', sans-serif;
+    font-size: 2.5rem;
+    color: #ffffff;
+}
+
+.redes ul {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    gap: 3em;
+}
+
+.redes ul li {
+    font-size: 3em;
+    transition: transform 0.3s ease;
+}
+
+.redes ul li:hover {
+    transform: scale(1.5);
+}
+
+.redes ul li a {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .redes {
+        height: 20dvh;
+    }
+
+    .redes h3 {
+        font-size: 2em;
+    }
+
+    .redes ul {
+        gap: 1em;
+    }
+
+    .redes ul li {
+        font-size: 2em;
+    }
+}

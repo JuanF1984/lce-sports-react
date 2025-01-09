@@ -1,0 +1,82 @@
+.container-reloj {
+    font-family: 'Akashi', sans-serif;
+    text-align: center;
+    height: 75dvh;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.container-reloj h3 {
+    font-size: 2.5rem;
+    margin-bottom: 40px;
+    margin-left: 1em;
+    margin-right: 1em;
+    color: #DADADA;
+    text-shadow: 0 0 10px #312783, 0 0 20px #312783, 0 0 40px #312783;
+    padding: 0;
+}
+
+.container-reloj p {
+    font-family: 'Avenir', sans-serif;
+    font-size: 1.5em;
+    text-align: center;
+    padding-bottom: 2em;
+    color: #DADADA;
+}
+
+.clock {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.time {
+    color: #DADADA;
+    font-size: 4rem;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px #312783, 0 0 20px #312783, 0 0 40px #312783;
+    background-color: #111;
+    transition: 0.5s;
+}
+
+.label {
+    font-size: 1.5rem;
+    font-family: 'Avenir';
+    color: #DADADA;
+    /* text-shadow: 0 0 5px #00ffcc, 0 0 10px #00ffcc; */
+}
+
+.final-message {
+    font-family: 'Avenir', sans-serif;
+    font-size: 2em;
+    color: #DADADA;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .container-reloj {
+        height: 80dvh;
+    }
+
+    .clock {
+        gap: 10px;
+    }
+
+    .time {
+        font-size: 2em;
+    }
+
+    #minutes {
+        display: none;
+    }
+
+    #minutes~div {
+        display: none;
+    }
+
+
+}

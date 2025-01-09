@@ -1,0 +1,40 @@
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+body {
+   
+    background-color: #000000;
+}
+
+@font-face {
+    font-family: 'Akashi';
+    src: url('../fonts/akashi.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Encode-Sans';
+    src: url('../fonts/Encode-Sans-Condensed-Thin-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Avenir';
+    src: url('../fonts/Avenir-HeavyOblique.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+h2{
+    font-family: 'Avenir', sans-serif;
+    font-size: 1.7em;
+    color: #fff;
+}

@@ -1,0 +1,25 @@
+header {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(45deg, rgba(13, 13, 13, 0.9), rgba(255, 0, 255, 0.1));
+    padding: 0.5em;
+}
+
+
+
+.header-superior img {
+    height: 6em;
+    padding: 1em;
+}
+
+
+@media (width<=768px) {
+    header {
+        grid-template-columns: 1fr 1fr;
+        justify-content: space-evenly; 
+    }
+
+   
+}

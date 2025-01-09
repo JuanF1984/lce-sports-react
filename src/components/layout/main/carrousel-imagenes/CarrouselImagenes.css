@@ -1,0 +1,139 @@
+.carrousel h2 {
+    font-family: 'Akashi', sans-serif;
+    font-size: 2.5rem;
+    margin-left: 1em;
+    margin-right: 1em;
+    color: #DADADA;
+    padding: 0;
+}
+
+.carrousel {
+    height: 90dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+
+
+
+/* Estilos para cuando se maximiza la imagen */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+    max-height: 80vh;
+    object-fit: contain;
+}
+
+.close {
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.prev,
+.next {
+    cursor: pointer;
+    position: absolute;
+    top: 50%;
+    width: auto;
+    padding: 16px;
+    margin-top: -50px;
+    color: white;
+    font-weight: bold;
+    font-size: 24px;
+    border-radius: 0 3px 3px 0;
+    user-select: none;
+    background-color: rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s ease;
+}
+
+.next {
+    right: 10%;
+    border-radius: 3px 0 0 3px;
+}
+
+.prev {
+    left: 10%;
+    border-radius: 3px 0 0 3px;
+}
+
+.prev:hover,
+.next:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.modal img {
+    max-width: 90%;
+    max-height: 90vh;
+    margin: auto;
+    display: block;
+}
+
+.swiper {
+    width: 100%;
+    height: 50vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.swiper-slide {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.swiper-wrapper {
+    align-items: center;
+}
+
+.swiper-slide img {
+    outline: 2px solid black;
+    cursor: pointer;
+    object-fit: cover;
+    transition: transform 0.3s ease-in-out;
+}
+
+
+
+@media (max-width: 768px) {
+    .carrousel {
+        height: 70dvh;
+    }
+
+    .swiper {
+        height: 30vh;
+    }
+
+    .carrousel h2 {
+        font-size: 2em;
+    }
+}
