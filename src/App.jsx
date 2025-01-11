@@ -15,12 +15,6 @@ export const App = () => {
 
   // Agregamos logs para debug
   useEffect(() => {
-    console.log('Estado de carga:', {
-      headerLoaded,
-      mainLoaded,
-      isLoading
-    });
-
     if (headerLoaded && mainLoaded) {
       setIsLoading(false);
     }
@@ -28,12 +22,10 @@ export const App = () => {
 
   // Funciones de callback con logs
   const handleHeaderLoad = () => {
-    console.log('Header cargado');
     setHeaderLoaded(true);
   };
 
   const handleMainLoad = () => {
-    console.log('Main cargado');
     setMainLoaded(true);
   };
 

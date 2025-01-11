@@ -5,6 +5,7 @@ header {
     align-items: center;
     background: linear-gradient(45deg, rgba(13, 13, 13, 0.9), rgba(255, 0, 255, 0.1));
     padding: 0.5em;
+    height: auto;
 }
 
 
@@ -14,12 +15,83 @@ header {
     padding: 1em;
 }
 
+.auth-section {
+    font-family: 'Avenir', sans-serif;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    align-items: center;
+}
+
+.auth-section button {
+    font-family: 'Avenir', sans-serif;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5em;
+    cursor: pointer;
+}
+
+.auth-section button:hover {
+    transform: scale(1.3);
+    filter: drop-shadow(10px 10px 5px rgba(255, 255, 255, 0.5));
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 2em;
+}
+
+.auth-section span {
+    color: #fff;
+    position: absolute;
+    /* Posiciona el span por encima de los demás elementos */
+    top: -2em;
+    /* Lo coloca encima del header */
+    left: 50%;
+    /* Lo centra horizontalmente */
+    transform: translateX(-50%);
+    /* Ajusta para que esté perfectamente centrado */
+    font-size: 0.8em;
+    /* Ajusta el tamaño del texto si es necesario */
+    z-index: 10;
+    /* Asegura que esté por encima de los demás elementos */
+}
+
+@media (max-width: 960px) {
+    header {
+        font-size: 12px;
+    }
+
+    .auth-buttons {
+        flex-direction: column;
+        gap: 0.3em;
+    }
+
+    .auth-section span {
+        top: -1.3em;
+    }
+}
+
 
 @media (width<=768px) {
     header {
-        grid-template-columns: 1fr 1fr;
-        justify-content: space-evenly; 
+        grid-template-columns: 1fr  1fr;
+        justify-content: space-evenly;
     }
 
-   
+    .auth-section {
+        grid-column: 1/3;
+        height: 3.5em;
+    }
+
+    .auth-buttons {
+        flex-direction: row;
+        gap: 3em;
+        align-items: flex-start;
+    }
+
+    .auth-section span {
+        top: 2.5em;
+    }
 }
