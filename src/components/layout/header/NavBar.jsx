@@ -1,12 +1,19 @@
 import { useState } from "react"
 import '@styles/NavBar.css'
 
+import { useMediaQuery } from 'react-responsive';
+
+import { LogIn } from "./LogIn";
+
 export const NavBar = () => {
     const [isOpen, setIsOpen] = useState(false);
 
     const toggleMenu = () => {
         setIsOpen(!isOpen);
     };
+    
+    const isMobile = useMediaQuery({ maxWidth: 768 })
+
     return (
         <nav>
             <div className="menu-container">
@@ -23,6 +30,7 @@ export const NavBar = () => {
                     <li><a href="#agenda" onClick={() => setIsOpen(false)}>AGENDA</a></li>
                     <li><a href="#buscate" onClick={() => setIsOpen(false)}>GALERÍA</a></li>
                     <li><a href="#contacto" onClick={() => setIsOpen(false)}>CONTACTO</a></li>
+                    {isMobile && <LogIn />}
                 </ul>
             </div>
         </nav>

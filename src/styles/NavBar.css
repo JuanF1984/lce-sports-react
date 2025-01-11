@@ -57,7 +57,7 @@ nav ul li {
 }
 
 /* Menú en pantallas pequeñas */
-@media (width<= 768px) {
+@media (max-width: 768px) {
     .menu {
         display: none; /* Oculta el menú por defecto */
         flex-direction: column;

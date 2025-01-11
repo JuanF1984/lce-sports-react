@@ -5,7 +5,8 @@ import './styles/App.css'
 import { LineaNeon } from './components/common/LineaNeon.jsx'
 import { LogoNeon } from './components/common/LogoNeon.jsx'
 
-import { Header } from './components/layout/header/Header.jsx'
+// import { Header } from './components/layout/header/Header.jsx'
+import { Header} from './components/layout/header/HeaderCopy.jsx'
 import { Main } from './components/layout/main/Main.jsx'
 
 export const App = () => {

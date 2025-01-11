@@ -22,9 +22,9 @@ export const AuthModal = ({ onClose, onAuthSuccess }) => {
     };
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <button className="modal-close" onClick={onClose}>×</button>
+        <div className="modalAuth-overlay" onClick={onClose}>
+            <div className="modalAuth-content" onClick={e => e.stopPropagation()}>
+                <button className="modalAuth-close" onClick={onClose}>×</button>
                 <h2>Iniciar Sesión</h2>
 
                 {error && (
