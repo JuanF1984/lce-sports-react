@@ -6,13 +6,14 @@
     align-items: center;
     flex-direction: column;
     justify-content: center;
+    gap: 3em;
 }
 
 .container-reloj h3 {
     font-size: 2.5rem;
-    margin-bottom: 40px;
-    margin-left: 1em;
-    margin-right: 1em;
+    /* margin-bottom: 40px; */
+    /* margin-left: 1em; */
+    /* margin-right: 1em; */
     color: #DADADA;
     text-shadow: 0 0 10px #312783, 0 0 20px #312783, 0 0 40px #312783;
     padding: 0;
@@ -22,7 +23,7 @@
     font-family: 'Avenir', sans-serif;
     font-size: 1.5em;
     text-align: center;
-    padding-bottom: 2em;
+    /* padding-bottom: 2em; */
     color: #DADADA;
 }
 

@@ -53,7 +53,7 @@ export const Carrusel4 = ({ onLoadComplete }) => {
   };
 
   return (
-    <section className="carrousel" id="agenda">
+    <section className="carrousel" id="buscate">
       <h2>Buscate</h2>
 
       {images.length > 0 ? (

@@ -37,26 +37,6 @@
     text-align: center;
 }
 
-.hero-text button {
-    font-family: 'Avenir', sans-serif;
-    font-size: 1.5em;
-    margin: 0.5em;
-    padding: 0.5em 1em;
-    border: none;
-    background-color: #FFAA00;
-    color: #1D1D1B;
-    cursor: pointer;
-    border: none;
-    border-radius: 5px;
-}
-
-.hero-text button:hover {
-    background-color: #FFD700;
-    color: #1D1D1B;
-    transition: 0.5s;
-    transform: scale(1.2);
-}
-
 
 
 @media (width< 480px) {

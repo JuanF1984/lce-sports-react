@@ -27,9 +27,9 @@ export const NavBar = () => {
                     )}
                 </button>
                 <ul className={`menu ${isOpen ? 'active' : ''}`}>
-                    <li><a href="#agenda" onClick={() => setIsOpen(false)}>AGENDA</a></li>
+                    <li><a href="#reloj" onClick={() => setIsOpen(false)}>AGENDA</a></li>
                     <li><a href="#buscate" onClick={() => setIsOpen(false)}>GALERÍA</a></li>
-                    <li><a href="#contacto" onClick={() => setIsOpen(false)}>CONTACTO</a></li>
+                    <li><a href="#redes" onClick={() => setIsOpen(false)}>SUMATE</a></li>
                     {isMobile && <LogIn />}
                 </ul>
             </div>

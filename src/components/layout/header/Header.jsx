@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import supabase from "../../../utils/supabase";
 
+import { Link } from 'react-router-dom';
+
 import '@styles/Header.css';
 import logo from '@img/a.png';
 
@@ -66,7 +68,9 @@ export const Header = ({ onLoadComplete }) => {
     return (
         <header className="header">
             <div className="header-superior">
-                <img src={logo} alt="Logo de LC E-Sports" />
+                <Link to="/">
+                    <img src={logo} alt="Logo de LC E-Sports" />
+                </Link>
             </div>
             <NavBar />
             <div className="auth-section">

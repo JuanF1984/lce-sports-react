@@ -6,7 +6,7 @@ import './RedesSociales.css';
 
 export const RedesSociales = () => {
     return (
-        <div className="redes">
+        <div className="redes" id="redes">
             <h3>Sumate</h3>
             <ul>
                 <li>
