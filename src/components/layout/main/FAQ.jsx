@@ -5,8 +5,8 @@ export const FAQ = () => {
 // Lista de preguntas y respuestas
 const faqs = [
     { question: '¿Cómo puedo registrarme?', answer: 'Haz clic en "Registrarse" en la parte superior.' },
-    { question: '¿Olvidé mi contraseña, qué hago?', answer: 'Usa el enlace "Olvidé mi contraseña" en el inicio de sesión.' },
-    { question: '¿Cómo contacto soporte?', answer: 'Envía un correo a soporte@ejemplo.com.' },
+    { question: '¿Puedo participar si no tengo PC?', answer: 'Sí, las computadoras las llevamos nosotros' },
+    { question: '¿Cómo puedo contactarlos?', answer: 'Envía un correo a lcsports00@gmail.com.' },
 ];
 
 // Estado para controlar qué pregunta está abierta

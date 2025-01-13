@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import supabase from "../../../utils/supabase";
 
+import { useNavigate } from 'react-router-dom';
+
 
 import { AuthModal } from './AuthModal';
 
@@ -56,17 +58,34 @@ export const LogIn = () => {
         }
     };
 
+    const InscripcionButton = () => {
+        const navigate = useNavigate();
+
+        const handleClick = () => {
+            navigate("/inscriptions"); // Redirige a la página del formulario
+        };
+
+        return (
+                <button className='admin-button' onClick={handleClick}>
+                    Panel Admin
+                </button>
+        );
+    };
+
+
     return (
         <>
             <div className="auth-section">
                 {isAuthenticated ? (
                     <>
-                        <span className="user-email">{userEmail}</span>
+                        {/* por el momento no vemos el user-mail hasta que no trabajemos los estilos */}
+                        {/* <span className="user-email">{userEmail}</span> */}
                         <div className='auth-buttons'>
                             {isAdmin && (
-                                <button className="admin-button">
-                                    Panel Admin
-                                </button>
+                                // <button className="admin-button">
+                                //     Panel Admin
+                                // </button>
+                                <InscripcionButton />
                             )}
                             <button
                                 className="logout-button"

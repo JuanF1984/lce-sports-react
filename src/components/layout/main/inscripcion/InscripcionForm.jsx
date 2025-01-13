@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import supabase from "../../../../utils/supabase";
 import { AuthModal } from "../../header/AuthModalP";
-import "./InscripcionForm.css";
 
 const TournamentRegistration = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);

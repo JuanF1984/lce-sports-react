@@ -126,7 +126,7 @@
 
 @media (max-width: 768px) {
     .carrousel {
-        height: 70dvh;
+        height: 40dvh;
     }
 
     .swiper {

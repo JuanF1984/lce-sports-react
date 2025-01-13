@@ -8,7 +8,7 @@ main {
     margin: 0;
 }
 
-button {
+.main-button {
     font-family: 'Avenir', sans-serif;
     font-size: 1.5em;
     margin: 0.5em;
@@ -21,7 +21,7 @@ button {
     border-radius: 5px;
 }
 
-button:hover {
+.main-button:hover {
     background-color: #FFD700;
     color: #1D1D1B;
     transition: 0.5s;

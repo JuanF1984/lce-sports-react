@@ -15,6 +15,10 @@ import { FAQ } from './FAQ'
 
 import TournamentRegistration from './inscripcion/InscripcionForm'
 
+import { BotonFormulario } from './BotonFormulario'
+
+
+
 // Importación de estilos
 import '@styles/Main.css'
 
@@ -37,9 +41,16 @@ export const Main = ({ onLoadComplete }) => {
     }
   }, [heroLoaded, carouselLoaded, onLoadComplete])
 
+  const handleScroll = () => {
+    const searchElement = document.getElementById('buscate');
+    if (searchElement) {
+      searchElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <main>
-      <Hero onLoadComplete={handleHeroLoad} />
+      <Hero onLoadComplete={handleHeroLoad} onNavigateToBuscate={handleScroll}/>
       <Carrusel4 onLoadComplete={handleCarouselLoad} />
       <RedesSociales />
       <RelojRegresivo />

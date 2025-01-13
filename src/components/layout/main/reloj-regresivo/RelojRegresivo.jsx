@@ -51,9 +51,9 @@ export const RelojRegresivo = () => {
         };
 
         return (
-            <div>
-                <button onClick={handleClick}>Inscribirse en el torneo</button>
-            </div>
+                <button className='main-button' onClick={handleClick}>
+                    Inscribirse en el torneo
+                </button>
         );
     };
 

@@ -2,9 +2,11 @@ import { useEffect } from 'react';
 
 import img1 from '@img/hero/hero_img1.jpg'
 
+import { useNavigate } from 'react-router-dom'
+
 import '@styles/Hero.css'
 
-export const Hero = ({ onLoadComplete }) => {
+export const Hero = ({ onLoadComplete, onNavigateToBuscate }) => {
   useEffect(() => {
     const img = new Image();
     img.src = img1;
@@ -21,7 +23,7 @@ export const Hero = ({ onLoadComplete }) => {
         <p>
           Una nueva manera de disfrutar ser Gamer. Conocenos
         </p>
-        <button>Let's Go</button>
+        <button className='main-button'onClick={onNavigateToBuscate}>Let's Go</button>
       </div>
 
     </section>
