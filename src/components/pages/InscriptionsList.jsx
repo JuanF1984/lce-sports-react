@@ -12,7 +12,7 @@ const InscriptionsList = () => {
       try {
         const { data, error } = await supabase
           .from('inscriptions')
-          .select('nombre, apellido, celular, juegos, localidad');
+          .select('nombre, apellido, edad, celular, juegos, localidad');
         
         if (error) {
           console.error('Error fetching inscriptions:', error);
@@ -45,6 +45,7 @@ const InscriptionsList = () => {
           <tr>
             <th>Nombre</th>
             <th>Apellido</th>
+            <th>Edad</th>
             <th>Celular</th>
             <th>Juegos</th>
             <th>Localidad</th>
@@ -55,6 +56,7 @@ const InscriptionsList = () => {
             <tr key={index}>
               <td>{inscription.nombre}</td>
               <td>{inscription.apellido}</td>
+              <td>{inscription.edad}</td>
               <td>{inscription.celular}</td>
               <td>{inscription.juegos}</td>
               <td>{inscription.localidad}</td>

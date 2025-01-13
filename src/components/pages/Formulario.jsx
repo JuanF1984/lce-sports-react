@@ -18,6 +18,7 @@ export const Formulario = () => {
     const [formValues, setFormValues] = useState({
         nombre: "",
         apellido: "",
+        edad: "",
         email: "",
         celular: "",
         juegos: [],
@@ -94,6 +95,7 @@ export const Formulario = () => {
             setFormValues({
                 nombre: "",
                 apellido: "",
+                edad: "",
                 email: "",
                 celular: "",
                 juegos: [],
@@ -139,6 +141,17 @@ export const Formulario = () => {
                                         type="text"
                                         name="apellido"
                                         value={formValues.apellido}
+                                        onChange={handleInputChange}
+                                    />
+                                </label>
+                            </div>
+                            <div className="form-group">
+                                <label>
+                                    Edad:
+                                    <input
+                                        type="text"
+                                        name="edad"
+                                        value={formValues.edad}
                                         onChange={handleInputChange}
                                     />
                                 </label>
