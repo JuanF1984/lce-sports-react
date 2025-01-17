@@ -65,3 +65,10 @@
         box-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #fff;
     }
 }
+
+@media (max-width: 768px){
+    .logo-container {
+        width: 18em;
+        height: 18em;
+    }
+}
