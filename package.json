@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://JuanF1984.github.io/lce-sports-react",
+  
   "scripts": {
     "dev": "vite",
     "build": "vite build",
