@@ -60,7 +60,7 @@ const App = () => {
 export const AppWrapper = () => {
   return (
     <AuthProvider>
-      <Router basename='/lce-sports-react'>
+      <Router>
         <ScrollToTop />
         <App />
       </Router>
