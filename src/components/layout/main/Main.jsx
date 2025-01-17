@@ -15,6 +15,7 @@ import { FAQ } from './FAQ'
 
 
 
+
 import { InscriptionButton } from '../../common/InscriptionButton'
 
 // Importación de estilos

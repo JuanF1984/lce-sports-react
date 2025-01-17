@@ -9,9 +9,16 @@ import { LogoNeon } from './components/common/LogoNeon.jsx'
 // import { Header } from './components/layout/header/Header.jsx'
 import { Header } from './components/layout/header/HeaderCopy.jsx'
 import { Main } from './components/layout/main/Main.jsx'
+import { Footer } from './components/layout/footer/Footer.jsx'
+
 
 import { Formulario } from './components/pages/Formulario.jsx'
+
+// Importación del botón de WhatssApp
+import WhatsAppButton from './components/common/WhatsAppButton.jsx'
+
 import InscriptionsList from './components/pages/InscriptionsList.jsx'
+
 import ScrollToTop from './components/common/ScrollToTop.jsx'
 
 import { AuthProvider } from './context/AuthProvider.jsx'
@@ -55,6 +62,8 @@ const App = () => {
         {/* Redirige cualquier otra URL a la raíz */}
         <Route path="*" element={<Main />} />
       </Routes>
+      <WhatsAppButton />
+      <Footer />
     </>
   );
 };
