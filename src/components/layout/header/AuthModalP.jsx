@@ -28,7 +28,7 @@ export const AuthModal = ({ onClose, onAuthSuccess }) => {
         };
     }, [onAuthSuccess, onClose]);
 
-    const redirectUrl = window.location.origin + "/lce-sports-react"+location.pathname;
+    const redirectUrl = window.location.origin + location.pathname;
     
     const handleOAuthLogin = async (provider) => {
         try {
