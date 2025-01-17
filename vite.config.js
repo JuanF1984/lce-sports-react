@@ -12,7 +12,7 @@ export default defineConfig({
       '@img': path.resolve(__dirname, 'src/assets/img'),
     },
   },
-  base: '/lce-sports-react/',
+  base: './',
   build: {
     outDir: 'build', 
   },
