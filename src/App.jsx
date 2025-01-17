@@ -16,20 +16,23 @@ import ScrollToTop from './components/common/ScrollToTop.jsx'
 
 import { AuthProvider } from './context/AuthProvider.jsx'
 
+import { useAuth } from './context/UseAuth.jsx'
+
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [headerLoaded, setHeaderLoaded] = useState(false);
   const [mainLoaded, setMainLoaded] = useState(false);
+  const { user, isLoading: authLoading } = useAuth();
   const localation = useLocation();
 
 
 
   // Agregamos logs para debug
   useEffect(() => {
-    if (headerLoaded && (mainLoaded || localation.pathname === "/formulario")) {
+    if (!authLoading && headerLoaded && (mainLoaded || localation.pathname === "/formulario")) {
       setIsLoading(false);
     }
-  }, [headerLoaded, mainLoaded, localation.pathname]);
+  }, [authLoading, headerLoaded, mainLoaded, localation.pathname]);
 
   // Funciones de callback con logs
   const handleHeaderLoad = () => {

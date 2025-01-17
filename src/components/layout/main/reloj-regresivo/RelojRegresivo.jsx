@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
 
-import { useNavigate } from 'react-router-dom'
-
 import './RelojRegresivo.css'
 
 export const RelojRegresivo = () => {
@@ -42,21 +40,6 @@ export const RelojRegresivo = () => {
         return () => clearInterval(timer); // Limpieza del intervalo
     }, [endDate]);
 
-    // Componente Boton para abrir el formulario de inscripción
-    const InscripcionButton = () => {
-        const navigate = useNavigate();
-
-        const handleClick = () => {
-            navigate("/formulario"); // Redirige a la página del formulario
-        };
-
-        return (
-                <button className='main-button' onClick={handleClick}>
-                    Inscribirse en el torneo
-                </button>
-        );
-    };
-
     return (
         <section className="reloj" id='reloj'>
             <div className="container-reloj">
@@ -78,7 +61,6 @@ export const RelojRegresivo = () => {
                         <div className="final-message">¡Evento Finalizado!</div>
                     )}
                 </div>
-                <InscripcionButton />
             </div>
         </section>
     )

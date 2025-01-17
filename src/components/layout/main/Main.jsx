@@ -13,11 +13,9 @@ import { RelojRegresivo } from './reloj-regresivo/RelojRegresivo'
 // Importación de FAQ
 import { FAQ } from './FAQ'
 
-import TournamentRegistration from './inscripcion/InscripcionForm'
-
-import { BotonFormulario } from './BotonFormulario'
 
 
+import { InscriptionButton } from '../../common/InscriptionButton'
 
 // Importación de estilos
 import '@styles/Main.css'
@@ -26,6 +24,7 @@ import '@styles/Main.css'
 export const Main = ({ onLoadComplete }) => {
   const [heroLoaded, setHeroLoaded] = useState(false)
   const [carouselLoaded, setCarouselLoaded] = useState(false);
+  const [inscriptionButtonLoaded, setInscriptionsButtonLoaded]=useState(false);
 
   const handleHeroLoad = useCallback(() => {
     setHeroLoaded(true);
@@ -35,8 +34,12 @@ export const Main = ({ onLoadComplete }) => {
     setCarouselLoaded(true);
   }, []);
 
+  const handleInscriptionButtonLoaded = useCallback (() =>{
+    setInscriptionsButtonLoaded (true);
+  }, []);
+
   useEffect(() => {
-    if (heroLoaded && carouselLoaded) {
+    if (heroLoaded && carouselLoaded && inscriptionButtonLoaded) {
       onLoadComplete?.(); // Notifica al padre cuando ambos han cargado
     }
   }, [heroLoaded, carouselLoaded, onLoadComplete])
@@ -54,7 +57,7 @@ export const Main = ({ onLoadComplete }) => {
       <Carrusel4 onLoadComplete={handleCarouselLoad} />
       <RedesSociales />
       <RelojRegresivo />
-      {/* <TournamentRegistration /> */}
+      <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded}/>
       <FAQ />
     </main>
   )

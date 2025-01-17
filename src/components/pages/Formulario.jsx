@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import supabase from "../../utils/supabase";
-import { AuthModal } from "../layout/header/AuthModalP";
+
+import { LogoNeon } from '../common/LogoNeon';
 
 import { useAuth } from "../../context/UseAuth";
 
@@ -11,8 +12,6 @@ import { localidadesBuenosAires } from "../../data/localidades";
 import '../../styles/Formulario.css';
 
 export const Formulario = () => {
-    const [userId, setUserId] = useState(null);
-    const [showAuthModal, setShowAuthModal] = useState(false);
     const navigate = useNavigate();
     const { user, isLoading } = useAuth();
     const [formValues, setFormValues] = useState({
@@ -26,6 +25,7 @@ export const Formulario = () => {
     });
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+    const [showLoading, setShowLoading] = useState(false);
 
     const staticData = {
         fecha: "2025-01-15 al 2025-01-16",
@@ -46,20 +46,17 @@ export const Formulario = () => {
     }));
 
     useEffect(() => {
-        // Limpia el fragmento de la URL (todo lo que está después de '#')
-        if (window.location.hash) {
-            window.history.replaceState(null, '', window.location.pathname);
+        if (isLoading) {
+            setShowLoading(true);
+        } else {
+            if (!user) {
+                navigate("/"); // Si no hay usuario, redirigir.
+            } else {
+                setShowLoading(false); // Si hay usuario, ocultar el loading.
+            }
         }
-    }, []); // Este efecto se ejecuta solo una vez, cuando el componente se monta
+    }, [isLoading, user, navigate]);
 
-    useEffect(() => {
-        if (!isLoading && !user) {
-            setShowAuthModal(true);
-        }
-    }, [isLoading, user]);
-    if (isLoading) {
-        return <p>Cargando...</p>; // Opcional: spinner o placeholder
-    }
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -114,145 +111,132 @@ export const Formulario = () => {
         }
     };
 
-    const handleModalAccept = () => {
-        setSuccessMessage(false);
-        navigate('/')
-    };
-
     return (
         <>
-            {user ? (
-                <main>
-                    <div className="form-container">
-                        <h3>Formulario Inscripción al Torneo</h3>
-                        <div className="info-text">
-                            <p>Fecha del torneo: {staticData.fecha}</p>
-                            <p>Lugar: {staticData.lugar}</p>
-                        </div>
-                        <form onSubmit={handleSubmit} className="inscription-form">
-                            <div className="form-group">
-                                <label>
-                                    Nombre:*
-                                    <input
-                                        type="text"
-                                        name="nombre"
-                                        value={formValues.nombre}
-                                        onChange={handleInputChange}
-                                    />
-                                </label>
+            {showLoading ?
+                (<LogoNeon onClose={()=>setShowLoading(false)}/>
+                ) : (
+                    <main>
+                        <div className="form-container">
+                            <h3>Formulario Inscripción al Torneo</h3>
+                            <div className="info-text">
+                                <p>Fecha del torneo: {staticData.fecha}</p>
+                                <p>Lugar: {staticData.lugar}</p>
                             </div>
-                            <div className="form-group">
-                                <label>
-                                    Apellido:*
-                                    <input
-                                        type="text"
-                                        name="apellido"
-                                        value={formValues.apellido}
-                                        onChange={handleInputChange}
-                                    />
-                                </label>
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Edad:
-                                    <input
-                                        type="text"
-                                        name="edad"
-                                        value={formValues.edad}
-                                        onChange={handleInputChange}
-                                    />
-                                </label>
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Email:
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formValues.email}
-                                        onChange={handleInputChange}
-                                    />
-                                </label>
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Celular:*
-                                    <input
-                                        type="tel"
-                                        name="celular"
-                                        value={formValues.celular}
-                                        onChange={handleInputChange}
-                                    />
-                                </label>
-                            </div>
-                            <div className="form-group">
-                                <label>Juegos:*</label>
-                                <div className="checkbox-grid">
-                                    {juegos.map((juego) => (
-                                        <label key={juego.id} className="checkbox-label">
-                                            <input
-                                                type="checkbox"
-                                                value={juego.value}
-                                                checked={formValues.juegos.includes(juego.value)}
-                                                onChange={handleCheckboxChange}
-                                            />
-                                            {juego.label}
-                                        </label>
-                                    ))}
+                            <form onSubmit={handleSubmit} className="inscription-form">
+                                <div className="form-group">
+                                    <label>
+                                        Nombre:*
+                                        <input
+                                            type="text"
+                                            name="nombre"
+                                            value={formValues.nombre}
+                                            onChange={handleInputChange}
+                                        />
+                                    </label>
                                 </div>
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Localidad:*
-                                    <select
-                                        name="localidad"
-                                        value={formValues.localidad}
-                                        onChange={handleInputChange}
-                                    >
-                                        <option value="">Selecciona una localidad</option>
-                                        {localidadesOptions.map((localidad, index) => (
-                                            <option key={index} value={localidad.value}>
-                                                {localidad.label}
-                                            </option>
+                                <div className="form-group">
+                                    <label>
+                                        Apellido:*
+                                        <input
+                                            type="text"
+                                            name="apellido"
+                                            value={formValues.apellido}
+                                            onChange={handleInputChange}
+                                        />
+                                    </label>
+                                </div>
+                                <div className="form-group">
+                                    <label>
+                                        Edad:
+                                        <input
+                                            type="text"
+                                            name="edad"
+                                            value={formValues.edad}
+                                            onChange={handleInputChange}
+                                        />
+                                    </label>
+                                </div>
+                                <div className="form-group">
+                                    <label>
+                                        Email:
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={formValues.email}
+                                            onChange={handleInputChange}
+                                        />
+                                    </label>
+                                </div>
+                                <div className="form-group">
+                                    <label>
+                                        Celular:*
+                                        <input
+                                            type="tel"
+                                            name="celular"
+                                            value={formValues.celular}
+                                            onChange={handleInputChange}
+                                        />
+                                    </label>
+                                </div>
+                                <div className="form-group">
+                                    <label>Juegos:*</label>
+                                    <div className="checkbox-grid">
+                                        {juegos.map((juego) => (
+                                            <label key={juego.id} className="checkbox-label">
+                                                <input
+                                                    type="checkbox"
+                                                    value={juego.value}
+                                                    checked={formValues.juegos.includes(juego.value)}
+                                                    onChange={handleCheckboxChange}
+                                                />
+                                                {juego.label}
+                                            </label>
                                         ))}
-                                    </select>
-                                </label>
-                            </div>
-                            {errorMessage && (
-                                <p className="error-message">{errorMessage}</p>
-                            )}
-                            {successMessage && (
-                                // <p className="success-message">{successMessage}</p>
-                                <div className="modal-insc-overlay">
-                                    <div className="modal-insc-content">
-                                        <h3>¡Registro exitoso!</h3>
-                                        <p>
-                                            Se registró correctamente al torneo. Ante cualquier duda, comuníquese al
-                                            celular (011) 1234-5678.
-                                        </p>
-                                        <button onClick={handleModalAccept}>Aceptar</button>
                                     </div>
                                 </div>
-                            )}
+                                <div className="form-group">
+                                    <label>
+                                        Localidad:*
+                                        <select
+                                            name="localidad"
+                                            value={formValues.localidad}
+                                            onChange={handleInputChange}
+                                        >
+                                            <option value="">Selecciona una localidad</option>
+                                            {localidadesOptions.map((localidad, index) => (
+                                                <option key={index} value={localidad.value}>
+                                                    {localidad.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+                                {errorMessage && (
+                                    <p className="error-message">{errorMessage}</p>
+                                )}
+                                {successMessage && (
+                                    // <p className="success-message">{successMessage}</p>
+                                    <div className="modal-insc-overlay">
+                                        <div className="modal-insc-content">
+                                            <h3>¡Registro exitoso!</h3>
+                                            <p>
+                                                Se registró correctamente al torneo. Ante cualquier duda, comuníquese al
+                                                celular (011) 1234-5678.
+                                            </p>
+                                            <button onClick={handleModalAccept}>Aceptar</button>
+                                        </div>
+                                    </div>
+                                )}
 
-                            <button type="submit" className="main-button">
-                                Enviar inscripción
-                            </button>
-                        </form>
+                                <button type="submit" className="main-button">
+                                    Enviar inscripción
+                                </button>
+                            </form>
 
-                    </div>
-                </main>
-            ) : (
-                <AuthModal
-                    isOpen={showAuthModal}
-                    onClose={() => {
-                        setShowAuthModal(false); // Cierra el modal
-                        if (!user) {
-                            navigate('/'); // Redirige a la página principal si no está autenticado
-                        }
-                    }}
-                />
-            )}
+                        </div>
+                    </main>
+                )}
         </>
     )
 }

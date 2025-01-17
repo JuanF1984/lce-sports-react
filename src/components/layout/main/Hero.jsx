@@ -18,7 +18,7 @@ export const Hero = ({ onLoadComplete, onNavigateToBuscate }) => {
   return (
     <section className="hero">
       <img src={img1} title="Imagen de MegaEvento Gamer" alt="Imagen de un evento Gamer organizado por LC E-Sport" />
-      <div className="hero-text">
+      <div className="container">
         <h1>LC E-Sports</h1>
         <p>
           Una nueva manera de disfrutar ser Gamer. Conocenos

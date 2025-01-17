@@ -15,7 +15,7 @@
 
 
 
-.hero-text {
+.container {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -26,12 +26,12 @@
 }
 
 
-.hero-text h1 {
+.container h1 {
     font-family: 'Akashi', sans-serif;
     font-size: 3.5em;
 }
 
-.hero-text p {
+.container p {
     font-family: 'Avenir', sans-serif;
     font-size: 2em;
     text-align: center;
