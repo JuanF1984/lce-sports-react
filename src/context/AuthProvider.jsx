@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
                 
             } catch (err) {
                 console.error("Error checking auth status:", err.message);
+                setIsLoading(false);
             }
         };
 
