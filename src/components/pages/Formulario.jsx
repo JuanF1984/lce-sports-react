@@ -46,6 +46,13 @@ export const Formulario = () => {
     }));
 
     useEffect(() => {
+        // Limpia el fragmento de la URL (todo lo que está después de '#')
+        if (window.location.hash) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, []); // Este efecto se ejecuta solo una vez, cuando el componente se monta
+
+    useEffect(() => {
         if (!isLoading && !user) {
             setShowAuthModal(true);
         }
