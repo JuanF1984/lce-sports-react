@@ -42,8 +42,6 @@ const App = () => {
 
   return (
     <>
-      {/* <Router basename="/lce-sports-react"> */}
-      {/* <ScrollToTop /> */}
       {isLoading && <LogoNeon />}
       <Header onLoadComplete={handleHeaderLoad} />
       <LineaNeon />
@@ -51,8 +49,9 @@ const App = () => {
         <Route path="/" element={<Main onLoadComplete={handleMainLoad} />} />
         <Route path="/formulario" element={<Formulario />} />
         <Route path="/inscriptions" element={<InscriptionsList />} />
+        {/* Redirige cualquier otra URL a la raíz */}
+        <Route path="*" element={<Main />} />
       </Routes>
-      {/* </Router> */}
     </>
   );
 };
@@ -60,7 +59,7 @@ const App = () => {
 export const AppWrapper = () => {
   return (
     <AuthProvider>
-      <Router basename="/lce-sports-react">
+      <Router>
         <ScrollToTop />
         <App />
       </Router>
