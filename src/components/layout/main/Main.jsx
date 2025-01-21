@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 // Importación del componente Hero
 import { Hero } from './Hero'
 // Importación de CarrouselImagenes
-import { Carrusel4 } from './carrousel-imagenes/CarrouselImagenes'
+import { Carrusel } from './carrousel-imagenes/CarrouselImagenes'
 // Importación de Redes Sociales
 import { RedesSociales } from './redes-sociales/RedesSociales'
 // Importación de Reloj
@@ -55,7 +55,7 @@ export const Main = ({ onLoadComplete }) => {
   return (
     <main>
       <Hero onLoadComplete={handleHeroLoad} onNavigateToBuscate={handleScroll}/>
-      <Carrusel4 onLoadComplete={handleCarouselLoad} />
+      <Carrusel onLoadComplete={handleCarouselLoad} />
       <RedesSociales />
       <RelojRegresivo />
       <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded}/>

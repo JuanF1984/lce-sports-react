@@ -11,7 +11,7 @@ import 'swiper/css/navigation';
 // Import required modules
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
 
-export const Carrusel4 = ({ onLoadComplete }) => {
+export const Carrusel = ({ onLoadComplete }) => {
   const [images, setImages] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
