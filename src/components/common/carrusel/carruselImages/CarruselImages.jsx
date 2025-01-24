@@ -15,6 +15,6 @@ export const CarruselImages = ({ images, title, onImageLoad }) => {
         />
     ));
 
-    return <CarruselCommon items={imageItems} title={title} />;
+    return <CarruselCommon items={imageItems} title={title} id="buscate"/>;
 };
 

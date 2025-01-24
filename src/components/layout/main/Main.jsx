@@ -14,12 +14,21 @@ import { FAQ } from './FAQ'
 import { useImageLoading } from '../../../hooks/useImageLoading'
 // Importación para carrusel de imagenes
 import { CarruselImages } from '../../common/carrusel/carruselImages/carruselImages'
+// Importación para carrusel de imagenes y texto
+import { CarruselTextAndImage } from '../../common/carrusel/carruselTextAndImages/CarruselTextAndImage'
 
 // Imortación de botón para inscribirse
 import { InscriptionButton } from '../../common/InscriptionButton'
 
 // Importación de estilos
 import '@styles/Main.css'
+
+// Importación de imagenes de los torneos
+import brandsenImg from '@img/torneos/brandsen.jpg';
+import colonImg from '@img/torneos/colon.jpg';
+import hurlinghamImg from '@img/torneos/hurlingham.jpg';
+import laPlataImg from '@img/torneos/laPlata.jpg';
+import sanAndresDeGilesImg from '@img/torneos/sanAndresDeGiles.jpg';
 
 // Componente Main
 export const Main = ({ onLoadComplete }) => {
@@ -39,6 +48,34 @@ export const Main = ({ onLoadComplete }) => {
 
     loadImages();
   }, []);
+
+  const textImageItems = [
+    {
+      title: 'Brandsen',
+      description: 'Fecha del torneo: 12 de octubre de 2024',
+      image: brandsenImg,
+    },
+    {
+      title: 'Colón',
+      description: 'Fecha del torneo: 28 de septiembre de 2024',
+      image: colonImg,
+    },
+    {
+      title: 'Hurlingham',
+      description: 'Fecha del torneo: 4 de mayo de 2024',
+      image: hurlinghamImg,
+    },
+    {
+      title: 'La Plata',
+      description: 'Fecha del torneo: 21 de septiembre de 2024',
+      image: laPlataImg,
+    },
+    {
+      title: 'San Andrés de Giles',
+      description: 'Fecha del torneo: 27 de julio de 2024',
+      image: sanAndresDeGilesImg,
+    },
+  ];
 
   const handleHeroLoad = useCallback(() => {
     setHeroLoaded(true);
@@ -69,6 +106,12 @@ export const Main = ({ onLoadComplete }) => {
       <CarruselImages
         images={images}
         title="Buscate"
+        onImageLoad={handleImageLoad}
+      />
+
+      <CarruselTextAndImage
+        imagesAndText = {textImageItems}
+        title = "Torneos"
         onImageLoad={handleImageLoad}
       />
       <RelojRegresivo />

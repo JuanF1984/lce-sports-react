@@ -14,13 +14,29 @@
     justify-content: center;
 }
 
-.carrusel-image {
+/* .carrusel-image {
     width: '100%';
     height: '100%';
     object-fit: 'cover';
+} */
+
+.imgTxtContainer h4{
+    font-family: 'Avenir', sans-serif;
+    font-size: 1.2em;
 }
 
+.imgTxtContainer{
+    font-size: 1em;
+}
 
+.imgTxtContainer{
+    display: flex;
+    flex-direction: column;
+    align-items: last baseline;
+    justify-content: baseline;
+    gap: 12px;
+    padding: 0.5em;
+}
 
 /* Estilos para cuando se maximiza la imagen */
 .modal {

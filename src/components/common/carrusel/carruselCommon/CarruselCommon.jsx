@@ -10,7 +10,8 @@ import './CarruselStyle.css';
 
 export const CarruselCommon = ({
   items,
-  title
+  title,
+  id,
 }) => {
   const carouselItems = items.length < 8 ? [...items, ...items, ...items, ...items] : items
   const [modalOpen, setModalOpen] = useState(false);
@@ -37,7 +38,7 @@ export const CarruselCommon = ({
   };
 
   return (
-    <section className="carrousel" id="buscate">
+    <section className="carrousel" {...(id ? { id } : {})}>
       {title && <h2>{title}</h2>}
 
       <Swiper
