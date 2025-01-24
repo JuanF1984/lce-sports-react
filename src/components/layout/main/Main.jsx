@@ -13,9 +13,9 @@ import { FAQ } from './FAQ'
 // Importación de hook para controlar carga de imagenes
 import { useImageLoading } from '../../../hooks/useImageLoading'
 // Importación para carrusel de imagenes
-import { CarruselImages } from '../../common/carrusel/carruselImages/CarruselImages.jsx'
+import { CarruselImages } from '../../common/carrusel/carruselImages/CarruselImages'
 // Importación para carrusel de imagenes y texto
-import { CarruselTextAndImage } from '../../common/carrusel/carruselTextAndImages'
+import { CarruselTextAndImage } from '../../common/carrusel/carruselTextAndImages/CarruselTextAndImage'
 
 // Imortación de botón para inscribirse
 import { InscriptionButton } from '../../common/InscriptionButton'
