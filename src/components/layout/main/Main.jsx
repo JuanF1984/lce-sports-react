@@ -109,14 +109,14 @@ export const Main = ({ onLoadComplete }) => {
         onImageLoad={handleImageLoad}
       />
 
+      <RelojRegresivo />
+      <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded} />
+      <FAQ />
       <CarruselTextAndImage
         imagesAndText = {textImageItems}
         title = "Torneos"
         onImageLoad={handleImageLoad}
       />
-      <RelojRegresivo />
-      <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded} />
-      <FAQ />
       <RedesSociales />
     </main>
   )

@@ -10,8 +10,8 @@ export const CarruselTextAndImage = ({ imagesAndText, title, onImageLoad }) => {
                 alt={item.title}
                 onLoad={onImageLoad}
                 style={{
-                    width: '80%',
-                    height: '80%',
+                    width: '100%',
+                    height: '100%',
                     objectFit: 'cover',
                 }}
             />
