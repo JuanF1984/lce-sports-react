@@ -13,7 +13,7 @@ import { FAQ } from './FAQ'
 // Importación de hook para controlar carga de imagenes
 import { useImageLoading } from '../../../hooks/useImageLoading'
 // Importación para carrusel de imagenes
-import { CarruselImages } from '../../common/carrusel/carruselImages/carruselImages'
+import { CarruselImages } from '../../common/carrusel/carruselImages/CarruselImages.jsx'
 // Importación para carrusel de imagenes y texto
 import { CarruselTextAndImage } from '../../common/carrusel/carruselTextAndImages'
 
