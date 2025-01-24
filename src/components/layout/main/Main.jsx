@@ -10,13 +10,12 @@ import { RedesSociales } from './redes-sociales/RedesSociales'
 import { RelojRegresivo } from './reloj-regresivo/RelojRegresivo'
 // Importación de FAQ
 import { FAQ } from './FAQ'
-
-import { CarruselCommon } from '../../common/carrusel/CarruselCommon'
+// Importación de hook para controlar carga de imagenes
 import { useImageLoading } from '../../../hooks/useImageLoading'
+// Importación para carrusel de imagenes
+import { CarruselImages } from '../../common/carrusel/carruselImages/carruselImages'
 
-
-
-
+// Imortación de botón para inscribirse
 import { InscriptionButton } from '../../common/InscriptionButton'
 
 // Importación de estilos
@@ -45,12 +44,12 @@ export const Main = ({ onLoadComplete }) => {
     setHeroLoaded(true);
   }, []);
 
-    const handleInscriptionButtonLoaded = useCallback(() => {
+  const handleInscriptionButtonLoaded = useCallback(() => {
     setInscriptionsButtonLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (heroLoaded  && inscriptionButtonLoaded && !carouselLoading) {
+    if (heroLoaded && inscriptionButtonLoaded && !carouselLoading) {
       onLoadComplete?.(); // Notifica al padre cuando se han cargado los componentes
     }
   }, [heroLoaded, carouselLoading, onLoadComplete])
@@ -62,31 +61,20 @@ export const Main = ({ onLoadComplete }) => {
     }
   };
 
-  const carouselItems = images.map((src, index) => (
-    <img
-      key={index}
-      src={src}
-      alt={`Imagen ${index + 1}`}
-      onLoad={handleImageLoad}
-      style={{
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
-      }}
-    />
-  ));
-
+ 
   return (
     <main>
       <Hero onLoadComplete={handleHeroLoad} onNavigateToBuscate={handleScroll} />
-      <CarruselCommon
-        items={carouselItems}
+     
+      <CarruselImages
+        images={images}
         title="Buscate"
+        onImageLoad={handleImageLoad}
       />
-      <RedesSociales />
       <RelojRegresivo />
       <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded} />
       <FAQ />
+      <RedesSociales />
     </main>
   )
 }

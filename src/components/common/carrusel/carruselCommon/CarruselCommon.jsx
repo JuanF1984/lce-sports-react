@@ -10,19 +10,15 @@ import './CarruselStyle.css';
 
 export const CarruselCommon = ({
   items,
-  title,
-  slidesPerView = 2,
-  breakpoints = {
-    1024: { slidesPerView: 4 },
-    768: { slidesPerView: 3 }
-  }
+  title
 }) => {
+  const carouselItems = items.length < 8 ? [...items, ...items, ...items, ...items] : items
   const [modalOpen, setModalOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const swiperRef = useRef(null);
 
   const handleItemClick = (index) => {
-    setCurrentIndex(index);
+    setCurrentIndex(index % items.length);
     setModalOpen(true);
     swiperRef.current?.autoplay.stop();
   };
@@ -46,8 +42,21 @@ export const CarruselCommon = ({
 
       <Swiper
         spaceBetween={0}
-        slidesPerView={slidesPerView}
-        breakpoints={breakpoints}
+        slidesPerView={1}
+        breakpoints={{
+          // Cuando el ancho de pantalla sea >= 640px
+          640: {
+            slidesPerView: 2,
+          },
+          // Cuando el ancho de pantalla sea >= 768px
+          768: {
+            slidesPerView: 3,
+          },
+          // Cuando el ancho de pantalla sea >= 1024px
+          1024: {
+            slidesPerView: 4,
+          }
+        }}
         centeredSlides={true}
         autoplay={{
           delay: 1500,
@@ -55,12 +64,12 @@ export const CarruselCommon = ({
         }}
         pagination={{ clickable: true }}
         navigation={true}
-        loop={true}
+        loop={items.length >= 4}
         modules={[Autoplay, Pagination, Navigation]}
         className="mySwiper"
         onSwiper={(swiper) => (swiperRef.current = swiper)}
       >
-        {items.map((item, index) => (
+        {carouselItems.map((item, index) => (
           <SwiperSlide
             key={index}
             className="cursor-pointer"
