@@ -15,7 +15,7 @@ import { useImageLoading } from '../../../hooks/useImageLoading'
 // Importación para carrusel de imagenes
 import { CarruselImages } from '../../common/carrusel/carruselImages/carruselImages'
 // Importación para carrusel de imagenes y texto
-import { CarruselTextAndImage } from '../../common/carrusel/carruselTextAndImages/CarruselTextAndImage'
+import { CarruselTextAndImage } from '../../common/carrusel/carruselTextAndImages'
 
 // Imortación de botón para inscribirse
 import { InscriptionButton } from '../../common/InscriptionButton'
