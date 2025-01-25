@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useProximoEvento } from '../../../../hooks/useProximoEvento';
 
 import './RelojRegresivo.css'
 
@@ -10,10 +11,18 @@ export const RelojRegresivo = () => {
         seconds: '00',
     });
 
-    const endDate = new Date('February 04, 2025 15:00:00').getTime();
+    const { fecha_fin, localidad, loading } = useProximoEvento();
 
+    // const endDate = new Date('February 04, 2025 15:00:00').getTime();
+
+    
     useEffect(() => {
+        if (loading || !fecha_fin) return;
+        
+        const endDate = new Date(`${fecha_fin} 23:59:59`).getTime();
+                
         const updateClock = () => {
+            console.log(fecha_fin)
             const now = new Date().getTime();
             const timeDiff = endDate - now;
 
@@ -38,29 +47,34 @@ export const RelojRegresivo = () => {
         const timer = setInterval(updateClock, 1000);
         updateClock(); // Llamada inicial
         return () => clearInterval(timer); // Limpieza del intervalo
-    }, [endDate]);
+    }, [loading, fecha_fin]);
 
     return (
         <section className="reloj" id='reloj'>
             <div className="container-reloj">
                 <h3>Próximo Evento</h3>
-                <p>Lugar del Evento</p>
-                <div className="clock" id="clock">
-                    {timeRemaining ? (
-                        <>
-                            <div className="time" id="days">{timeRemaining.days}</div>
-                            <div className="label">Días</div>
-                            <div className="time" id="hours">{timeRemaining.hours}</div>
-                            <div className="label">Horas</div>
-                            <div className="time" id="minutes">{timeRemaining.minutes}</div>
-                            <div className="label">Minutos</div>
-                            <div className="time" id="seconds">{timeRemaining.seconds}</div>
-                            <div className="label">Segundos</div>
-                        </>
-                    ) : (
-                        <div className="final-message">¡Evento Finalizado!</div>
+                {loading ?
+                    (<p>Cargando...</p>) :
+                    (<>
+                        <p>{localidad}</p>
+                        <div className="clock" id="clock">
+                            {timeRemaining ? (
+                                <>
+                                    <div className="time" id="days">{timeRemaining.days}</div>
+                                    <div className="label">Días</div>
+                                    <div className="time" id="hours">{timeRemaining.hours}</div>
+                                    <div className="label">Horas</div>
+                                    <div className="time" id="minutes">{timeRemaining.minutes}</div>
+                                    <div className="label">Minutos</div>
+                                    <div className="time" id="seconds">{timeRemaining.seconds}</div>
+                                    <div className="label">Segundos</div>
+                                </>
+                            ) : (
+                                <div className="final-message">¡Evento Finalizado!</div>
+                            )}
+                        </div>
+                    </>
                     )}
-                </div>
             </div>
         </section>
     )

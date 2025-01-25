@@ -7,6 +7,8 @@ import { LogoNeon } from '../common/LogoNeon';
 
 import { useAuth } from "../../context/UseAuth";
 
+import { useProximoEvento } from "../../hooks/useProximoEvento";
+
 import { localidadesBuenosAires } from "../../data/localidades";
 
 import '../../styles/Formulario.css';
@@ -26,11 +28,7 @@ export const Formulario = () => {
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [showLoading, setShowLoading] = useState(false);
-
-    const staticData = {
-        fecha: "2025-01-15 al 2025-01-16",
-        lugar: "Gaming Center, Buenos Aires",
-    };
+    const { proximoEvento, fecha_inicio, fecha_fin, localidad, loading } = useProximoEvento();
 
     const juegos = [
         { id: "cs", label: "Counter Strike", value: "Counter Strike" },
@@ -57,7 +55,6 @@ export const Formulario = () => {
         }
     }, [isLoading, user, navigate]);
 
-
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormValues((prev) => ({ ...prev, [name]: value }));
@@ -72,6 +69,10 @@ export const Formulario = () => {
             return { ...prev, juegos };
         });
     };
+
+    const handleModalAccept = () => {
+        setSuccessMessage("");
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -89,8 +90,7 @@ export const Formulario = () => {
             const { error } = await supabase.from("inscriptions").insert({
                 user_id: user.id,
                 ...formValues,
-                fecha: staticData.fecha,
-                lugar: staticData.lugar,
+                id_evento: proximoEvento.id,
             });
 
             if (error) throw error;
@@ -106,7 +106,6 @@ export const Formulario = () => {
                 localidad: "",
             });
         } catch (err) {
-            console.error("Error al guardar en la base de datos:", err.message);
             setErrorMessage("Hubo un error al procesar tu solicitud. Intenta nuevamente.");
         }
     };
@@ -114,14 +113,23 @@ export const Formulario = () => {
     return (
         <>
             {showLoading ?
-                (<LogoNeon onClose={()=>setShowLoading(false)}/>
+                (<LogoNeon onClose={() => setShowLoading(false)} />
                 ) : (
                     <main>
                         <div className="form-container">
                             <h3>Formulario Inscripción al Torneo</h3>
                             <div className="info-text">
-                                <p>Fecha del torneo: {staticData.fecha}</p>
-                                <p>Lugar: {staticData.lugar}</p>
+                                {loading ? (
+                                    <p>Cargando...</p>
+                                ) : (
+                                    <>
+                                        <p>Fecha del torneo: {fecha_inicio}</p>
+                                        {fecha_inicio !== fecha_fin && (
+                                            <p> al {fecha_fin}</p>
+                                        )}
+                                        <p>Lugar: {localidad}</p>
+                                    </>
+                                )}
                             </div>
                             <form onSubmit={handleSubmit} className="inscription-form">
                                 <div className="form-group">
@@ -216,7 +224,7 @@ export const Formulario = () => {
                                     <p className="error-message">{errorMessage}</p>
                                 )}
                                 {successMessage && (
-                                    // <p className="success-message">{successMessage}</p>
+
                                     <div className="modal-insc-overlay">
                                         <div className="modal-insc-content">
                                             <h3>¡Registro exitoso!</h3>
