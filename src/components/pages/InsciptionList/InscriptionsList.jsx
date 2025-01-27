@@ -7,20 +7,26 @@ import '../../../styles/InscriptionsList.css';
 
 const InscriptionsList = () => {
   const [inscriptions, setInscriptions] = useState([]);
+  const [events, setEvents] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchInscriptions = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
+        const { data: inscriptionsData, error: inscriptionsError } = await supabase
           .from('inscriptions')
           .select('nombre, apellido, edad, celular, juegos, localidad, id_evento');
 
-        if (error) {
-          console.error('Error fetching inscriptions:', error);
+        const { data: eventsData, error: eventsError } = await supabase
+          .from('events')
+          .select('id, fecha_inicio, localidad');
+
+        if (inscriptionsError || eventsError) {
+          console.error('Error fetching data:', inscriptionsError || eventsError);
         } else {
-          setInscriptions(data);
+          setInscriptions(inscriptionsData);
+          setEvents(eventsData);
           setFilteredData(data);
           setLoading(false);
         }
@@ -31,7 +37,7 @@ const InscriptionsList = () => {
       }
     };
 
-    fetchInscriptions();
+    fetchData();
   }, []);
 
   const handleFilter = (eventId) => {
@@ -40,6 +46,11 @@ const InscriptionsList = () => {
     } else {
       setFilteredData(inscriptions);
     }
+  };
+
+  const getEventDetails = (eventId) => {
+    const event = events.find((e) => e.id === eventId);
+    return event ? `${event.fecha_inicio} - ${event.localidad}` : 'Evento no encontrado';
   };
 
   if (loading) {
@@ -64,6 +75,7 @@ const InscriptionsList = () => {
               <th>Celular</th>
               <th>Juegos</th>
               <th>Localidad</th>
+              <th>Evento</th>
             </tr>
           </thead>
           <tbody>
@@ -75,6 +87,7 @@ const InscriptionsList = () => {
                 <td>{inscription.celular}</td>
                 <td>{inscription.juegos}</td>
                 <td>{inscription.localidad}</td>
+                <td>{getEventDetails(inscription.id_evento)}</td>
               </tr>
             ))}
           </tbody>
