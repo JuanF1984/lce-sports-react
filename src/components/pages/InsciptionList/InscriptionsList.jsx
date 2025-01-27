@@ -3,6 +3,8 @@ import supabase from '../../../utils/supabase';
 
 import { FilterableList } from './FilterableList';
 
+import { ExportToExcelButton } from './ExportToExcelButton ';
+
 import '../../../styles/InscriptionsList.css';
 
 const InscriptionsList = () => {
@@ -10,6 +12,16 @@ const InscriptionsList = () => {
   const [events, setEvents] = useState([]);
   const [filteredInscriptions, setFilteredInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const headerTable = [
+    'Nombre',
+    'Apellido',
+    'Edad',
+    'Celular',
+    'Juegos',
+    'Localidad',
+    'Evento'
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,17 +72,18 @@ const InscriptionsList = () => {
     <main>
       <div className="inscriptions-container">
         <FilterableList inscriptions={inscriptions} events={events} onFilter={handleFilterUpdate} />
+        <ExportToExcelButton
+          data={filteredInscriptions}
+          getEventDetails={getEventDetails}
+          headerTable={headerTable}
+        />
         <h2>Lista de Inscripciones</h2>
         <table className="inscriptions-table">
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              <th>Edad</th>
-              <th>Celular</th>
-              <th>Juegos</th>
-              <th>Localidad</th>
-              <th>Evento</th>
+              {headerTable.map((header, index) => (
+                <th key={index}>{header}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
