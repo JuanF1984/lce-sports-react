@@ -22,7 +22,6 @@ export const RelojRegresivo = () => {
         const endDate = new Date(`${fecha_fin} 23:59:59`).getTime();
                 
         const updateClock = () => {
-            console.log(fecha_fin)
             const now = new Date().getTime();
             const timeDiff = endDate - now;
 

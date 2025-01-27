@@ -32,7 +32,7 @@ export const useProximoEvento = () => {
         };
 
         fetchEvents();
-    }, [proximoEvento]);
+    }, []);
 
     const fecha_inicio = proximoEvento?.fecha_inicio || '';
     const fecha_fin = proximoEvento?.fecha_fin || '';

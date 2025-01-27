@@ -17,7 +17,7 @@ import { Formulario } from './components/pages/Formulario.jsx'
 // Importación del botón de WhatssApp
 import WhatsAppButton from './components/common/WhatsAppButton.jsx'
 
-import InscriptionsList from './components/pages/InscriptionsList.jsx'
+import InscriptionsList from './components/pages/InsciptionList/InscriptionsList.jsx'
 
 import ScrollToTop from './components/common/ScrollToTop.jsx'
 
