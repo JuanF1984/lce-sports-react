@@ -8,30 +8,29 @@ import '../../../styles/InscriptionsList.css';
 const InscriptionsList = () => {
   const [inscriptions, setInscriptions] = useState([]);
   const [events, setEvents] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
+  const [filteredInscriptions, setFilteredInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const { data: inscriptionsData, error: inscriptionsError } = await supabase
-          .from('inscriptions')
-          .select('nombre, apellido, edad, celular, juegos, localidad, id_evento');
+          .from("inscriptions")
+          .select("nombre, apellido, edad, celular, juegos, localidad, id_evento, created_at");
 
         const { data: eventsData, error: eventsError } = await supabase
-          .from('events')
-          .select('id, fecha_inicio, localidad');
+          .from("events")
+          .select("id, fecha_inicio, localidad");
 
         if (inscriptionsError || eventsError) {
-          console.error('Error fetching data:', inscriptionsError || eventsError);
+          console.error("Error fetching data:", inscriptionsError || eventsError);
         } else {
           setInscriptions(inscriptionsData);
           setEvents(eventsData);
-          setFilteredData(data);
-          setLoading(false);
+          setFilteredInscriptions(inscriptionsData); // Mostrar todas las inscripciones inicialmente
         }
       } catch (err) {
-        console.error('Unexpected error:', err);
+        console.error("Unexpected error:", err);
       } finally {
         setLoading(false);
       }
@@ -40,17 +39,13 @@ const InscriptionsList = () => {
     fetchData();
   }, []);
 
-  const handleFilter = (eventId) => {
-    if (eventId) {
-      setFilteredData(inscriptions.filter((insc) => insc.id_evento === eventId));
-    } else {
-      setFilteredData(inscriptions);
-    }
+  const handleFilterUpdate = (data) => {
+    setFilteredInscriptions(data);
   };
 
   const getEventDetails = (eventId) => {
     const event = events.find((e) => e.id === eventId);
-    return event ? `${event.fecha_inicio} - ${event.localidad}` : 'Evento no encontrado';
+    return event ? `${event.fecha_inicio} - ${event.localidad}` : "Evento no encontrado";
   };
 
   if (loading) {
@@ -64,7 +59,7 @@ const InscriptionsList = () => {
   return (
     <main>
       <div className="inscriptions-container">
-        <FilterableList onFilterChange={handleFilter} />
+        <FilterableList inscriptions={inscriptions} events={events} onFilter={handleFilterUpdate} />
         <h2>Lista de Inscripciones</h2>
         <table className="inscriptions-table">
           <thead>
@@ -79,7 +74,7 @@ const InscriptionsList = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredData.map((inscription, index) => (
+            {filteredInscriptions.map((inscription, index) => (
               <tr key={index}>
                 <td>{inscription.nombre}</td>
                 <td>{inscription.apellido}</td>
