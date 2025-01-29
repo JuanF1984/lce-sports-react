@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import supabase from '../../../utils/supabase';
 
-import { FilterableList } from './FilterableList';
+import { FilterSystem } from './FilterSystem';
 
 import { ExportToExcelButton } from './ExportToExcelButton ';
 
@@ -12,34 +12,68 @@ const InscriptionsList = () => {
   const [events, setEvents] = useState([]);
   const [filteredInscriptions, setFilteredInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [games, setGames] = useState([]);
 
   const headerTable = [
     'Nombre',
     'Apellido',
     'Edad',
     'Celular',
-    'Juegos',
     'Localidad',
+    'Juegos',
     'Evento'
   ];
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data: inscriptionsData, error: inscriptionsError } = await supabase
+        const { data: inscriptionsWithGames, error: inscriptionsError } = await supabase
           .from("inscriptions")
-          .select("nombre, apellido, edad, celular, juegos, localidad, id_evento, created_at");
+          .select(`
+            nombre,
+            apellido,
+            edad,
+            celular,
+            localidad,
+            id_evento,
+            created_at,
+            games_inscriptions (
+              game:games (
+                id,
+                game_name
+              )
+            )
+          `);
 
         const { data: eventsData, error: eventsError } = await supabase
           .from("events")
           .select("id, fecha_inicio, localidad");
 
-        if (inscriptionsError || eventsError) {
-          console.error("Error fetching data:", inscriptionsError || eventsError);
+        const { data: gamesData, error: gamesError } = await supabase
+          .from("games")
+          .select("id, game_name");
+
+        if (inscriptionsError || eventsError || gamesError) {
+          console.error("Error fetching data:", inscriptionsError || eventsError || gamesError);
         } else {
-          setInscriptions(inscriptionsData);
+
+          const formattedInscriptions = inscriptionsWithGames.map(inscription => {
+            const gamesArray = inscription.games_inscriptions || [];
+            const games = gamesArray
+              .map(gi => gi.game?.game_name)
+              .filter(Boolean)
+              .join(', ');
+
+            return {
+              ...inscription,
+              juegos: games || 'Sin juegos registrados'
+            };
+          });
+
+          setInscriptions(formattedInscriptions);
           setEvents(eventsData);
-          setFilteredInscriptions(inscriptionsData); // Mostrar todas las inscripciones inicialmente
+          setGames(gamesData);
+          setFilteredInscriptions(formattedInscriptions); // Mostrar todas las inscripciones inicialmente
         }
       } catch (err) {
         console.error("Unexpected error:", err);
@@ -51,9 +85,10 @@ const InscriptionsList = () => {
     fetchData();
   }, []);
 
-  const handleFilterUpdate = (data) => {
-    setFilteredInscriptions(data);
-  };
+
+  // const handleFilterUpdate = (data) => {
+  //   setFilteredInscriptions(data);
+  // };
 
   const getEventDetails = (eventId) => {
     const event = events.find((e) => e.id === eventId);
@@ -71,7 +106,13 @@ const InscriptionsList = () => {
   return (
     <main>
       <div className="inscriptions-container">
-        <FilterableList inscriptions={inscriptions} events={events} onFilter={handleFilterUpdate} />
+        {/* <FilterableList inscriptions={inscriptions} events={events} games={games} onFilter={handleFilterUpdate} /> */}
+        <FilterSystem
+          inscriptions={inscriptions}
+          events={events}
+          games={games}
+          onFilter={setFilteredInscriptions}
+        />
         <ExportToExcelButton
           data={filteredInscriptions}
           getEventDetails={getEventDetails}
@@ -87,17 +128,25 @@ const InscriptionsList = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredInscriptions.map((inscription, index) => (
-              <tr key={index}>
-                <td>{inscription.nombre}</td>
-                <td>{inscription.apellido}</td>
-                <td>{inscription.edad}</td>
-                <td>{inscription.celular}</td>
-                <td>{inscription.juegos}</td>
-                <td>{inscription.localidad}</td>
-                <td>{getEventDetails(inscription.id_evento)}</td>
+            {filteredInscriptions.length > 0 ? (
+              filteredInscriptions.map((inscription, index) => (
+                <tr key={index}>
+                  <td>{inscription.nombre}</td>
+                  <td>{inscription.apellido}</td>
+                  <td>{inscription.edad}</td>
+                  <td>{inscription.celular}</td>
+                  <td>{inscription.localidad}</td>
+                  <td>{inscription.juegos}</td>
+                  <td>{getEventDetails(inscription.id_evento)}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={headerTable.length} style={{ textAlign: "center", padding: "10px" }}>
+                  ⚠️ No hay inscripciones disponibles.
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

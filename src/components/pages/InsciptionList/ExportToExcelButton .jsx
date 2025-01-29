@@ -44,6 +44,6 @@ export const ExportToExcelButton = ({ data, getEventDetails, headerTable }) => {
     };
 
     return (
-        <button onClick={exportToExcel}>Exportar a Excel</button>
+        <button onClick={exportToExcel} className="export-button">Exportar a Excel</button>
     );
 }
