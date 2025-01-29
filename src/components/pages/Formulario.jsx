@@ -9,7 +9,10 @@ import { useAuth } from "../../context/UseAuth";
 
 import { useProximoEvento } from "../../hooks/useProximoEvento";
 
+import { useGames } from "../../hooks/useGames";
+
 import { localidadesBuenosAires } from "../../data/localidades";
+
 
 import '../../styles/Formulario.css';
 
@@ -22,26 +25,20 @@ export const Formulario = () => {
         edad: "",
         email: "",
         celular: "",
-        juegos: [],
         localidad: "",
     });
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [showLoading, setShowLoading] = useState(false);
     const { proximoEvento, fecha_inicio, fecha_fin, localidad, loading } = useProximoEvento();
-
-    const juegos = [
-        { id: "cs", label: "Counter Strike", value: "Counter Strike" },
-        { id: "valorant", label: "Valorant", value: "Valorant" },
-        { id: "fifa", label: "FIFA", value: "FIFA" },
-        { id: "f1", label: "F1", value: "F1" },
-        { id: "lol", label: "League of Legends", value: "League of Legends" },
-    ];
+    const { games, loading: loadingGames, error: errorGames } = useGames();
+    const [selectedGames, setSelectedGames] = useState([]);
 
     const localidadesOptions = localidadesBuenosAires.map((localidad) => ({
         value: localidad,
         label: localidad,
     }));
+
 
     useEffect(() => {
         if (isLoading) {
@@ -60,14 +57,11 @@ export const Formulario = () => {
         setFormValues((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleCheckboxChange = (e) => {
-        const { value, checked } = e.target;
-        setFormValues((prev) => {
-            const juegos = checked
-                ? [...prev.juegos, value]
-                : prev.juegos.filter((juego) => juego !== value);
-            return { ...prev, juegos };
-        });
+    const handleCheckboxChange = (gameId) => {
+        setSelectedGames((prev) =>
+            prev.includes(gameId) ? prev.filter((id) => id !== gameId) : [...prev, gameId]
+
+        );
     };
 
     const handleModalAccept = () => {
@@ -79,22 +73,58 @@ export const Formulario = () => {
         setErrorMessage("");
         setSuccessMessage("");
 
-        const { nombre, apellido, celular, juegos, localidad } = formValues;
+        const { nombre, apellido, celular, localidad } = formValues;
 
-        if (!nombre || !apellido || !celular || !juegos.length || !localidad) {
+        // Validaciones
+        if (!nombre || !apellido || !celular || !localidad) {
             setErrorMessage("Por favor, completa todos los campos obligatorios.");
             return;
         }
 
+        if (selectedGames.length === 0) {
+            setErrorMessage("Por favor, selecciona al menos un juego.");
+            return;
+        }
+
         try {
-            const { error } = await supabase.from("inscriptions").insert({
-                user_id: user.id,
-                ...formValues,
-                id_evento: proximoEvento.id,
-            });
+            // Insertar en la tabla inscriptions y obtener los datos insertados
+            const { data: inscriptionData, error: insertError } = await supabase
+                .from("inscriptions")
+                .insert({
+                    user_id: user.id,
+                    ...formValues,
+                    id_evento: proximoEvento.id,
+                })
+                .select() // Agregamos .select() para obtener los datos insertados
+                .single();
 
-            if (error) throw error;
+            if (insertError) {
+                throw insertError;
+            }
 
+            if (!inscriptionData) {
+                throw new Error("No se recibieron datos de la inscripción.");
+            }
+
+
+            // Crear las inscripciones de juegos usando el ID obtenido
+            if (selectedGames.length > 0) {
+                const gameInscriptions = selectedGames.map(gameId => ({
+                    id_inscription: inscriptionData.id, // Usar directamente inscriptionData.id
+                    id_game: gameId,
+                }));
+
+                const { error: gameInsertError } = await supabase
+                    .from("games_inscriptions")
+                    .insert(gameInscriptions);
+
+                if (gameInsertError) {
+                    console.error(gameInsertError)
+                    throw gameInsertError;
+                }
+            }
+
+            // Limpiar el formulario y mostrar mensaje de éxito
             setSuccessMessage("Inscripción realizada con éxito.");
             setFormValues({
                 nombre: "",
@@ -102,11 +132,13 @@ export const Formulario = () => {
                 edad: "",
                 email: "",
                 celular: "",
-                juegos: [],
                 localidad: "",
             });
+            setSelectedGames([]);
+
         } catch (err) {
             setErrorMessage("Hubo un error al procesar tu solicitud. Intenta nuevamente.");
+            console.error("Error:", err);
         }
     };
 
@@ -189,18 +221,27 @@ export const Formulario = () => {
                                 </div>
                                 <div className="form-group">
                                     <label>Juegos:*</label>
+
+                                    {loadingGames && <p>Cargando juegos...</p>}
+                                    {errorGames && <p>Error al cargar juegos: {errorGames}</p>}
+
                                     <div className="checkbox-grid">
-                                        {juegos.map((juego) => (
-                                            <label key={juego.id} className="checkbox-label">
-                                                <input
-                                                    type="checkbox"
-                                                    value={juego.value}
-                                                    checked={formValues.juegos.includes(juego.value)}
-                                                    onChange={handleCheckboxChange}
-                                                />
-                                                {juego.label}
-                                            </label>
-                                        ))}
+                                        {!loadingGames && !errorGames && games.length > 0 ? (
+
+                                            games.map((game) => (
+                                                <label key={game.id}>
+                                                    <input
+                                                        type="checkbox"
+                                                        value={game.id}
+                                                        checked={selectedGames.includes(game.id)}
+                                                        onChange={() => handleCheckboxChange(game.id)}
+                                                    />
+                                                    {game.game_name}
+                                                </label>
+                                            ))
+                                        ) : (
+                                            !loadingGames && !errorGames && <p>No hay juegos disponibles.</p>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="form-group">
