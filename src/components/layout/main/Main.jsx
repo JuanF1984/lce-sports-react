@@ -24,11 +24,11 @@ import { InscriptionButton } from '../../common/InscriptionButton'
 import '@styles/Main.css'
 
 // Importación de imagenes de los torneos
-import brandsenImg from '@img/torneos/brandsen.jpg';
-import colonImg from '@img/torneos/colon.jpg';
-import hurlinghamImg from '@img/torneos/hurlingham.jpg';
-import laPlataImg from '@img/torneos/laPlata.jpg';
-import sanAndresDeGilesImg from '@img/torneos/sanAndresDeGiles.jpg';
+import brandsenImg from '@img/torneos/brandsen.webp';
+import colonImg from '@img/torneos/colon.webp';
+import hurlinghamImg from '@img/torneos/hurlingham.webp';
+import laPlataImg from '@img/torneos/laPlata.webp';
+import sanAndresDeGilesImg from '@img/torneos/sanAndresDeGiles.webp';
 
 // Componente Main
 export const Main = ({ onLoadComplete }) => {
@@ -41,7 +41,7 @@ export const Main = ({ onLoadComplete }) => {
 
   useEffect(() => {
     const loadImages = async () => {
-      const imagesContext = import.meta.glob('../../../assets/img/carrousel-buscate/*.{png,jpg,jpeg,svg}', { eager: true });
+      const imagesContext = import.meta.glob('../../../assets/img/carrousel-buscate/*.{png,jpg,jpeg,svg,webp}', { eager: true });
       const loadedImages = Object.values(imagesContext).map((img) => img.default || img);
       setImages(loadedImages);
     };
