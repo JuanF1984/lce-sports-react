@@ -11,6 +11,8 @@ import { useProximoEvento } from "../../hooks/useProximoEvento";
 
 import { useGames } from "../../hooks/useGames";
 
+import { useEventGames } from "../../hooks/useEventGames";
+
 import { localidadesBuenosAires } from "../../data/localidades";
 
 
@@ -31,7 +33,9 @@ export const Formulario = () => {
     const [successMessage, setSuccessMessage] = useState("");
     const [showLoading, setShowLoading] = useState(false);
     const { proximoEvento, fecha_inicio, fecha_fin, localidad, loading } = useProximoEvento();
-    const { games, loading: loadingGames, error: errorGames } = useGames();
+    // const { games, loading: loadingGames, error: errorGames } = useEventGames(!loading ? proximoEvento.id : null);
+    const { eventGames: games, loading: loadingGames, error: errorGames } = useEventGames(!loading ? proximoEvento.id : null);
+
     const [selectedGames, setSelectedGames] = useState([]);
 
     const localidadesOptions = localidadesBuenosAires.map((localidad) => ({
@@ -95,7 +99,7 @@ export const Formulario = () => {
                     ...formValues,
                     id_evento: proximoEvento.id,
                 })
-                .select() // Agregamos .select() para obtener los datos insertados
+                .select() //  .select() para obtener los datos insertados
                 .single();
 
             if (insertError) {
@@ -226,8 +230,7 @@ export const Formulario = () => {
                                     {errorGames && <p>Error al cargar juegos: {errorGames}</p>}
 
                                     <div className="checkbox-grid">
-                                        {!loadingGames && !errorGames && games.length > 0 ? (
-
+                                        {!loadingGames && !errorGames && games?.length > 0 ? (
                                             games.map((game) => (
                                                 <label key={game.id}>
                                                     <input
@@ -236,11 +239,11 @@ export const Formulario = () => {
                                                         checked={selectedGames.includes(game.id)}
                                                         onChange={() => handleCheckboxChange(game.id)}
                                                     />
-                                                    {game.game_name}
+                                                    {game.name}
                                                 </label>
                                             ))
                                         ) : (
-                                            !loadingGames && !errorGames && <p>No hay juegos disponibles.</p>
+                                            !loadingGames && <p>No hay juegos disponibles.</p>
                                         )}
                                     </div>
                                 </div>
