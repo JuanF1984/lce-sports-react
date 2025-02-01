@@ -1,13 +1,20 @@
+aside{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1.5em;
+}
+
 .inscriptions-container {
     padding: 20px;
     font-family: 'Avenir', sans-serif;
     color: white;
 }
 
-.inscriptions-container h2 {
+.titulos-admin {
     text-align: center;
     font-size: 2rem;
-    margin-bottom: 20px;
+    padding: 15px;
 }
 
 .inscriptions-table {
@@ -133,8 +140,7 @@
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.3s ease;
-    margin: 0 auto 20px auto;
-    /* Centrado y con espacio inferior */
+    margin: 15px auto;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
 }
 
@@ -158,6 +164,7 @@
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+    z-index: 1000000; 
 }
 
 .success-message-admin{

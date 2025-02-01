@@ -17,7 +17,9 @@ import { Formulario } from './components/pages/Formulario.jsx'
 // Importación del botón de WhatssApp
 import WhatsAppButton from './components/common/WhatsAppButton.jsx'
 
-import InscriptionsList from './components/pages/InsciptionList/InscriptionsList.jsx'
+import InscriptionsList from './components/pages/dashboardAdmin/InsciptionList/InscriptionsList.jsx'
+
+import { DashboardAdmin } from './components/pages/dashboardAdmin/DashboardAdmin.jsx'
 
 import ScrollToTop from './components/common/ScrollToTop.jsx'
 
@@ -58,7 +60,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Main onLoadComplete={handleMainLoad} />} />
         <Route path="/formulario" element={<Formulario />} />
-        <Route path="/inscriptions" element={<InscriptionsList />} />
+        <Route path="/inscriptions" element={<DashboardAdmin />} />
         {/* Redirige cualquier otra URL a la raíz */}
         <Route path="*" element={<Main />} />
       </Routes>

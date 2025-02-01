@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import supabase from '../../../utils/supabase';
+import supabase from '../../../../utils/supabase';
 
 import { FilterSystem } from './FilterSystem';
 
@@ -7,7 +7,7 @@ import { ExportToExcelButton } from './ExportToExcelButton ';
 
 import { AddTournamentForm } from './AddTournamentForm';
 
-import '../../../styles/InscriptionsList.css';
+import '../../../../styles/InscriptionsList.css';
 
 const InscriptionsList = () => {
   const [inscriptions, setInscriptions] = useState([]);
@@ -15,7 +15,6 @@ const InscriptionsList = () => {
   const [filteredInscriptions, setFilteredInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [games, setGames] = useState([]);
-  const [showModal, setShowModal] = useState(false);
 
   const headerTable = [
     'Nombre',
@@ -116,9 +115,8 @@ const InscriptionsList = () => {
           getEventDetails={getEventDetails}
           headerTable={headerTable}
         />
-        <button className="export-button" onClick={() => setShowModal(true)}>Cargar Evento</button>
-        {showModal && <Modal closeModal={() => setShowModal(false)} />}
-        <h2>Lista de Inscripciones</h2>
+        
+        <h2 className='titulos-admin'>Lista de Inscripciones</h2>
         <table className="inscriptions-table">
           <thead>
             <tr>
@@ -154,13 +152,6 @@ const InscriptionsList = () => {
   );
 };
 
-const Modal = ({ closeModal }) => (
-  <div className="modal-torneo">
-    <div className="modal-content">
-      <button onClick={closeModal}>Cerrar</button>
-      <AddTournamentForm />
-    </div>
-  </div>
-);
+
 
 export default InscriptionsList;

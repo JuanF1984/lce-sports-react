@@ -1,13 +1,13 @@
 import { useState } from 'react'
 
 // Importación de Supabase
-import supabase from '../../../utils/supabase'
+import supabase from '../../../../utils/supabase'
 
 // Importación del nombre de las localidades de la Provincia de Buenos Aires
-import { localidadesBuenosAires } from '../../../data/localidades'
+import { localidadesBuenosAires } from '../../../../data/localidades'
 
 // Importación del hook useGames para ver los juegos que están cargados en la base de datos
-import { useGames } from '../../../hooks/useGames'
+import { useGames } from '../../../../hooks/useGames'
 
 export const AddTournamentForm = () => {
     // Valores del formulario
