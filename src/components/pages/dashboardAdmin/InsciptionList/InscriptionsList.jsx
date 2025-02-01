@@ -5,16 +5,20 @@ import { FilterSystem } from './FilterSystem';
 
 import { ExportToExcelButton } from './ExportToExcelButton ';
 
-import { AddTournamentForm } from './AddTournamentForm';
+import { useEvents } from '../../../../hooks/useEvents';
 
 import '../../../../styles/InscriptionsList.css';
 
 const InscriptionsList = () => {
   const [inscriptions, setInscriptions] = useState([]);
-  const [events, setEvents] = useState([]);
+  // const [events, setEvents] = useState([]);
   const [filteredInscriptions, setFilteredInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [games, setGames] = useState([]);
+
+  const { eventsData, eventsError, loadingError } = useEvents();
+
+
 
   const headerTable = [
     'Nombre',
@@ -47,10 +51,7 @@ const InscriptionsList = () => {
             )
           `);
 
-        const { data: eventsData, error: eventsError } = await supabase
-          .from("events")
-          .select("id, fecha_inicio, localidad");
-
+       
         const { data: gamesData, error: gamesError } = await supabase
           .from("games")
           .select("id, game_name");
@@ -73,7 +74,7 @@ const InscriptionsList = () => {
           });
 
           setInscriptions(formattedInscriptions);
-          setEvents(eventsData);
+          // setEvents(eventsData);
           setGames(gamesData);
           setFilteredInscriptions(formattedInscriptions); // Mostrar todas las inscripciones inicialmente
         }
@@ -89,9 +90,20 @@ const InscriptionsList = () => {
 
 
   const getEventDetails = (eventId) => {
-    const event = events.find((e) => e.id === eventId);
-    return event ? `${event.fecha_inicio} - ${event.localidad}` : "Evento no encontrado";
+    if (eventsError || loadingError) {
+      return "Error al cargar los eventos";
+    }
+
+    if (!eventsData || !Array.isArray(eventsData)) {
+      return "Cargando eventos...";
+    }
+
+    const event = eventsData.find((e) => e.id === eventId);
+    return event
+      ? `${event.fecha_inicio} - ${event.localidad}`
+      : "Evento no encontrado";
   };
+
 
   if (loading) {
     return <p>Loading...</p>;
@@ -102,53 +114,55 @@ const InscriptionsList = () => {
   }
 
   return (
-    <main>
-      <div className="inscriptions-container">
+    <div className="inscriptions-container">
+      {eventsData ? (
         <FilterSystem
           inscriptions={inscriptions}
-          events={events}
+          events={eventsData}
           games={games}
           onFilter={setFilteredInscriptions}
         />
-        <ExportToExcelButton
-          data={filteredInscriptions}
-          getEventDetails={getEventDetails}
-          headerTable={headerTable}
-        />
-        
-        <h2 className='titulos-admin'>Lista de Inscripciones</h2>
-        <table className="inscriptions-table">
-          <thead>
-            <tr>
-              {headerTable.map((header, index) => (
-                <th key={index}>{header}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredInscriptions.length > 0 ? (
-              filteredInscriptions.map((inscription, index) => (
-                <tr key={index}>
-                  <td>{inscription.nombre}</td>
-                  <td>{inscription.apellido}</td>
-                  <td>{inscription.edad}</td>
-                  <td>{inscription.celular}</td>
-                  <td>{inscription.localidad}</td>
-                  <td>{inscription.juegos}</td>
-                  <td>{getEventDetails(inscription.id_evento)}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={headerTable.length} style={{ textAlign: "center", padding: "10px" }}>
-                  ⚠️ No hay inscripciones disponibles.
-                </td>
+      ) : (
+        <div>Cargando eventos...</div>
+      )}
+      <ExportToExcelButton
+        data={filteredInscriptions}
+        getEventDetails={getEventDetails}
+        headerTable={headerTable}
+      />
+
+      <h2 className='titulos-admin'>Lista de Inscripciones</h2>
+      <table className="inscriptions-table">
+        <thead>
+          <tr>
+            {headerTable.map((header, index) => (
+              <th key={index}>{header}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {filteredInscriptions.length > 0 ? (
+            filteredInscriptions.map((inscription, index) => (
+              <tr key={index}>
+                <td>{inscription.nombre}</td>
+                <td>{inscription.apellido}</td>
+                <td>{inscription.edad}</td>
+                <td>{inscription.celular}</td>
+                <td>{inscription.localidad}</td>
+                <td>{inscription.juegos}</td>
+                <td>{getEventDetails(inscription.id_evento)}</td>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </main>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={headerTable.length} style={{ textAlign: "center", padding: "10px" }}>
+                ⚠️ No hay inscripciones disponibles.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 };
 

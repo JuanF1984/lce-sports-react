@@ -9,8 +9,6 @@ import { useAuth } from "../../context/UseAuth";
 
 import { useProximoEvento } from "../../hooks/useProximoEvento";
 
-import { useGames } from "../../hooks/useGames";
-
 import { useEventGames } from "../../hooks/useEventGames";
 
 import { localidadesBuenosAires } from "../../data/localidades";
@@ -33,7 +31,6 @@ export const Formulario = () => {
     const [successMessage, setSuccessMessage] = useState("");
     const [showLoading, setShowLoading] = useState(false);
     const { proximoEvento, fecha_inicio, fecha_fin, localidad, loading } = useProximoEvento();
-    // const { games, loading: loadingGames, error: errorGames } = useEventGames(!loading ? proximoEvento.id : null);
     const { eventGames: games, loading: loadingGames, error: errorGames } = useEventGames(!loading ? proximoEvento.id : null);
 
     const [selectedGames, setSelectedGames] = useState([]);

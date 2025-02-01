@@ -157,4 +157,8 @@
     .carrousel h2 {
         font-size: 2em;
     }
+
+    .modal img {
+        max-height: 50dvh;
+    }
 }

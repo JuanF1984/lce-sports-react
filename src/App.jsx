@@ -38,7 +38,7 @@ const App = () => {
 
   // Agregamos logs para debug
   useEffect(() => {
-    if (!authLoading && headerLoaded && (mainLoaded || localation.pathname === "/formulario")) {
+    if (!authLoading && headerLoaded && (mainLoaded || localation.pathname === "/formulario" || localation.pathname ==="/inscriptions")) {
       setIsLoading(false);
     }
   }, [authLoading, headerLoaded, mainLoaded, localation.pathname]);
