@@ -31,7 +31,9 @@ export const Formulario = () => {
     const [successMessage, setSuccessMessage] = useState("");
     const [showLoading, setShowLoading] = useState(false);
     const { proximoEvento, fecha_inicio, fecha_fin, localidad, loading } = useProximoEvento();
-    const { eventGames: games, loading: loadingGames, error: errorGames } = useEventGames(!loading ? proximoEvento.id : null);
+    const { eventGames, loading: loadingGames, error: errorGames } = useEventGames(proximoEvento ? [proximoEvento.id] : []);
+
+    const games = proximoEvento?.id ? eventGames[proximoEvento.id] || [] : [];
 
     const [selectedGames, setSelectedGames] = useState([]);
 
@@ -236,7 +238,7 @@ export const Formulario = () => {
                                                         checked={selectedGames.includes(game.id)}
                                                         onChange={() => handleCheckboxChange(game.id)}
                                                     />
-                                                    {game.name}
+                                                    {game.game_name}
                                                 </label>
                                             ))
                                         ) : (
