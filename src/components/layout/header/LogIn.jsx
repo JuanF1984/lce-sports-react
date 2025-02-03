@@ -13,15 +13,16 @@ export const LogIn = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userEmail, setUserEmail] = useState('');
     const [isAdmin, setIsAdmin] = useState(false);
-    const [userId, setUserId] = useState ('')
+    const [userId, setUserId] = useState('')
+    const [isOpen, setIsOpen] = useState(false);
 
-    const { data, loading, error } = useUserInscriptions(userId?userId:'')
+    const { data, loading, error } = useUserInscriptions(userId ? userId : '')
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
                 setIsAuthenticated(true);
-                setUserEmail(session.user.email);           
+                setUserEmail(session.user.email);
                 setUserId(session.user.id)
                 const fetchRole = async () => {
                     const { data: profile, error } = await supabase
@@ -77,8 +78,7 @@ export const LogIn = () => {
 
     const VerInscripcion = () => {
         const handleClick = () => {
-            console.log('Usuario: ', userId)
-            console.log(data)
+            setIsOpen(true)
         }
 
         return (
@@ -124,6 +124,49 @@ export const LogIn = () => {
                     onClose={() => setIsModalOpen(false)}
                     onAuthSuccess={() => { }}
                 />
+            )}
+
+            {isOpen && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <button onClick={() => setIsOpen(false)}>Cerrar</button>
+                        <h2>Inscripciones del Usuario</h2>
+                        <table className='table-inscriptions'>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Evento</th>
+                                    <th>Juegos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.inscriptions.length > 0 ? (
+                                    data.inscriptions.map((insc) => {
+                                        const event = data.events.find((e) => e.id === insc.id_evento);
+                                        const games = data.games
+                                            .filter((g) =>
+                                                data.inscriptions.some((i) => i.id === insc.id && data.games.some((game) => game.id === g.id))
+                                            )
+                                            .map((g) => g.name)
+                                            .join(", ");
+
+                                        return (
+                                            <tr key={insc.id}>
+                                                <td>{insc.nombreCompleto}</td>
+                                                <td>{event ? event.name : "Sin evento"}</td>
+                                                <td>{games || "Sin juegos"}</td>
+                                            </tr>
+                                        );
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan="3">No hay inscripciones registradas.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             )}
         </>
     );

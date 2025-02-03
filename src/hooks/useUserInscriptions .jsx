@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import supabase from '../utils/supabase'
 
 export const useUserInscriptions = (userId) => {
-    const [data, setData] = useState({ events: [], games: [] });
+    const [data, setData] = useState({ inscriptions: [], events: [], games: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -16,13 +16,13 @@ export const useUserInscriptions = (userId) => {
                 // 1️⃣ Obtener inscripciones del usuario
                 const { data: inscriptions, error: errorInscriptions } = await supabase
                     .from("inscriptions")
-                    .select("id, id_evento")
+                    .select("id, id_evento, nombre, apellido")
                     .eq("user_id", userId);
 
                 if (errorInscriptions) throw errorInscriptions;
 
                 if (inscriptions.length === 0) {
-                    setData({ events: [], games: [] });
+                    setData({ inscriptions: [], events: [], games: [] });
                     setLoading(false);
                     return;
                 }
@@ -47,7 +47,7 @@ export const useUserInscriptions = (userId) => {
                 const { data: gameInscriptions, error: errorGameIns } = await supabase
                     .from("games_inscriptions")
                     .select("id_game")
-                    .in("id_inscriptions", inscriptionIds);
+                    .in("id_inscription", inscriptionIds);
 
                 if (errorGameIns) throw errorGameIns;
 
@@ -61,7 +61,14 @@ export const useUserInscriptions = (userId) => {
 
                 if (errorGames) throw errorGames;
 
+                const formattedInscriptions = inscriptions.map((insc) => ({
+                    id: insc.id,
+                    nombreCompleto: `${insc.nombre} ${insc.apellido}`,
+                    id_evento: insc.id_evento,
+                }));
+
                 setData({
+                    inscriptions: formattedInscriptions,
                     events: formattedEvents,
                     games: games.map((game) => ({ id: game.id, name: game.game_name })),
                 });
