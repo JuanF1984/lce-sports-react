@@ -3,6 +3,8 @@ import supabase from "../../../utils/supabase";
 
 import { useNavigate } from 'react-router-dom';
 
+import { useUserInscriptions } from '../../../hooks/useUserInscriptions ';
+
 
 import { AuthModal } from './AuthModal';
 
@@ -11,15 +13,16 @@ export const LogIn = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userEmail, setUserEmail] = useState('');
     const [isAdmin, setIsAdmin] = useState(false);
+    const [userId, setUserId] = useState ('')
 
-
+    const { data, loading, error } = useUserInscriptions(userId?userId:'')
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
                 setIsAuthenticated(true);
-                setUserEmail(session.user.email);
-
+                setUserEmail(session.user.email);           
+                setUserId(session.user.id)
                 const fetchRole = async () => {
                     const { data: profile, error } = await supabase
                         .from('profiles')
@@ -58,7 +61,7 @@ export const LogIn = () => {
         }
     };
 
-    const InscripcionButton = () => {
+    const PanelAdmin = () => {
         const navigate = useNavigate();
 
         const handleClick = () => {
@@ -66,11 +69,24 @@ export const LogIn = () => {
         };
 
         return (
-                <button className='admin-button' onClick={handleClick}>
-                    Panel Admin
-                </button>
+            <button className='admin-button' onClick={handleClick}>
+                Panel Admin
+            </button>
         );
     };
+
+    const VerInscripcion = () => {
+        const handleClick = () => {
+            console.log('Usuario: ', userId)
+            console.log(data)
+        }
+
+        return (
+            <button className='admin-button' onClick={handleClick}>
+                Ver inscripciones
+            </button>
+        )
+    }
 
 
     return (
@@ -81,11 +97,10 @@ export const LogIn = () => {
                         {/* por el momento no vemos el user-mail hasta que no trabajemos los estilos */}
                         {/* <span className="user-email">{userEmail}</span> */}
                         <div className='auth-buttons'>
-                            {isAdmin && (
-                                // <button className="admin-button">
-                                //     Panel Admin
-                                // </button>
-                                <InscripcionButton />
+                            {isAdmin ? (
+                                <PanelAdmin />
+                            ) : (
+                                <VerInscripcion />
                             )}
                             <button
                                 className="logout-button"

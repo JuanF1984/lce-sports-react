@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AuthModal } from '../layout/header/AuthModalP';
+import { AuthModal } from '../layout/header/AuthModal';
 import { useAuth } from '../../context/UseAuth';
 import { useNavigate } from 'react-router-dom';
 

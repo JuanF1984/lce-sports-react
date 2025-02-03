@@ -7,7 +7,7 @@ import { LineaNeon } from './components/common/LineaNeon.jsx'
 import { LogoNeon } from './components/common/LogoNeon.jsx'
 
 // import { Header } from './components/layout/header/Header.jsx'
-import { Header } from './components/layout/header/HeaderCopy.jsx'
+import { Header } from './components/layout/header/Header.jsx'
 import { Main } from './components/layout/main/Main.jsx'
 import { Footer } from './components/layout/footer/Footer.jsx'
 
@@ -16,8 +16,6 @@ import { Formulario } from './components/pages/Formulario.jsx'
 
 // Importación del botón de WhatssApp
 import WhatsAppButton from './components/common/WhatsAppButton.jsx'
-
-import InscriptionsList from './components/pages/dashboardAdmin/InsciptionList/InscriptionsList.jsx'
 
 import { DashboardAdmin } from './components/pages/dashboardAdmin/DashboardAdmin.jsx'
 
