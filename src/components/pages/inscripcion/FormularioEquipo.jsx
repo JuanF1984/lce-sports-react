@@ -225,7 +225,7 @@ export const FormularioEquipo = ({ onBack }) => {
                         {onBack && (
                             <button 
                                 onClick={onBack}
-                                className="back-button"
+                                className="export-button"
                             >
                                 ← Volver
                             </button>

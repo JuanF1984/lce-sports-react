@@ -37,7 +37,7 @@ export const SeleccionInscripcion = () => {
                 </div>
                 <div className="opciones-inscripcion">
                     <button
-                        className='export-button'
+                        className='main-button'
                         onClick={() => setTipoInscripcion("individual")}
                     >
                         Inscripción Individual
@@ -45,7 +45,7 @@ export const SeleccionInscripcion = () => {
 
                     {hayJuegosEquipo && (
                         <button
-                            className='export-button'
+                            className='main-button'
                             onClick={() => setTipoInscripcion("equipo")}
                         >
                             Inscripción en Equipo

@@ -156,7 +156,7 @@ export const Formulario = ({ onBack }) => {
                             {onBack && (
                                 <button
                                     onClick={onBack}
-                                    className="back-button"
+                                    className="export-button"
                                 >
                                     ← Volver
                                 </button>
