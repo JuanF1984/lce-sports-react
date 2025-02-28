@@ -16,7 +16,7 @@ import { localidadesBuenosAires } from "../../../data/localidades";
 
 import '../../../styles/Formulario.css';
 
-export const Formulario = () => {
+export const Formulario = ({ onBack }) => {
     const navigate = useNavigate();
     const { user, isLoading } = useAuth();
     const [formValues, setFormValues] = useState({
@@ -153,6 +153,14 @@ export const Formulario = () => {
                     <main>
                         <div className="form-container">
                             <h3>Formulario Inscripción al Torneo</h3>
+                            {onBack && (
+                                <button
+                                    onClick={onBack}
+                                    className="back-button"
+                                >
+                                    ← Volver
+                                </button>
+                            )}
                             <div className="info-text">
                                 {loading ? (
                                     <p>Cargando...</p>
