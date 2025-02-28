@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-import supabase from "../../utils/supabase";
+import supabase from "../../../utils/supabase";
 
-import { LogoNeon } from '../common/LogoNeon';
+import { LogoNeon } from '../../common/LogoNeon';
 
-import { useAuth } from "../../context/UseAuth";
+import { useAuth } from "../../../context/UseAuth";
 
-import { useProximoEvento } from "../../hooks/useProximoEvento";
+import { useProximoEvento } from "../../../hooks/useProximoEvento";
 
-import { useEventGames } from "../../hooks/useEventGames";
+import { useEventGames } from "../../../hooks/useEventGames";
 
-import { localidadesBuenosAires } from "../../data/localidades";
+import { localidadesBuenosAires } from "../../../data/localidades";
 
 
-import '../../styles/Formulario.css';
+import '../../../styles/Formulario.css';
 
 export const Formulario = () => {
     const navigate = useNavigate();

@@ -12,7 +12,9 @@ import { Main } from './components/layout/main/Main.jsx'
 import { Footer } from './components/layout/footer/Footer.jsx'
 
 
-import { Formulario } from './components/pages/Formulario.jsx'
+import { Formulario } from './components/pages/inscripcion/Formulario.jsx'
+
+import { SeleccionInscripcion } from './components/pages/inscripcion/SeleccionInscripcion.jsx'
 
 // Importación del botón de WhatssApp
 import WhatsAppButton from './components/common/WhatsAppButton.jsx'
@@ -57,7 +59,7 @@ const App = () => {
       <LineaNeon />
       <Routes>
         <Route path="/" element={<Main onLoadComplete={handleMainLoad} />} />
-        <Route path="/formulario" element={<Formulario />} />
+        <Route path="/formulario" element={<SeleccionInscripcion />} />
         <Route path="/inscriptions" element={<DashboardAdmin />} />
         {/* Redirige cualquier otra URL a la raíz */}
         <Route path="*" element={<Main />} />
