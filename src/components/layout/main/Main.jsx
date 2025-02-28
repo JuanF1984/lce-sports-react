@@ -20,6 +20,8 @@ import { CarruselTextAndImage } from '../../common/carrusel/carruselTextAndImage
 // Imortación de botón para inscribirse
 import { InscriptionButton } from '../../common/InscriptionButton'
 
+import BuenosAiresMap from './BuenosAiresMap'
+
 // Importación de estilos
 import '@styles/Main.css'
 
@@ -111,6 +113,7 @@ export const Main = ({ onLoadComplete }) => {
 
       <RelojRegresivo />
       <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded} />
+      <BuenosAiresMap />
       <FAQ />
       <CarruselTextAndImage
         imagesAndText = {textImageItems}
