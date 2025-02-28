@@ -21,7 +21,8 @@ export const useEventGames = (eventIds) => {
                         game_id,
                         games (
                             id,
-                            game_name
+                            game_name,
+                            team_option
                         )
                     `)
                     .in("event_id", eventIds);
@@ -41,6 +42,7 @@ export const useEventGames = (eventIds) => {
                         acc[item.event_id].push({
                             id: item.game_id,
                             game_name: item.games.game_name,
+                            team_option: item.games.team_option,
                         });
                     }
                     return acc;

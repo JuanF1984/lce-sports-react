@@ -13,7 +13,7 @@ export const useGames = () => {
 
         const {data, error} = await supabase
             .from ("games")
-            .select ("id, game_name")
+            .select ("id, game_name, team_option")
             .eq("active", true)
         
         if (error){

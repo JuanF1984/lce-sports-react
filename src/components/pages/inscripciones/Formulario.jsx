@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-import supabase from "../../utils/supabase";
+import supabase from "../../../utils/supabase";
 
-import { LogoNeon } from '../common/LogoNeon';
+import { LogoNeon } from '../../common/LogoNeon';
 
-import { useAuth } from "../../context/UseAuth";
+import { useAuth } from "../../../context/UseAuth";
 
-import { useProximoEvento } from "../../hooks/useProximoEvento";
+import { useProximoEvento } from "../../../hooks/useProximoEvento";
 
-import { useEventGames } from "../../hooks/useEventGames";
+import { useEventGames } from "../../../hooks/useEventGames";
 
-import { localidadesBuenosAires } from "../../data/localidades";
+import { localidadesBuenosAires } from "../../../data/localidades";
 
 
-import '../../styles/Formulario.css';
+import '../../../styles/Formulario.css';
 
-export const Formulario = () => {
+export const Formulario = ({ onBack }) => {
     const navigate = useNavigate();
     const { user, isLoading } = useAuth();
     const [formValues, setFormValues] = useState({
@@ -153,6 +153,14 @@ export const Formulario = () => {
                     <main>
                         <div className="form-container">
                             <h3>Formulario Inscripción al Torneo</h3>
+                            {onBack && (
+                                <button
+                                    onClick={onBack}
+                                    className="export-button"
+                                >
+                                    ← Volver
+                                </button>
+                            )}
                             <div className="info-text">
                                 {loading ? (
                                     <p>Cargando...</p>
