@@ -13,6 +13,8 @@ import { useEventGames } from "../../../hooks/useEventGames";
 
 import { localidadesBuenosAires } from "../../../data/localidades";
 
+import { enviarConfirmacionIndividual } from "../../../utils/emailService";
+
 
 import '../../../styles/Formulario.css';
 
@@ -27,9 +29,21 @@ export const Formulario = ({ onBack }) => {
         celular: "",
         localidad: "",
     });
+
+    // Estado para controlar campos con error
+    const [fieldErrors, setFieldErrors] = useState({
+        nombre: false,
+        apellido: false,
+        email: false,
+        celular: false,
+        localidad: false,
+        selectedGames: false
+    });
+
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [showLoading, setShowLoading] = useState(false);
+    const [formSubmitted, setFormSubmitted] = useState(false);
     const { proximoEvento, fecha_inicio, fecha_fin, localidad, loading } = useProximoEvento();
     const { eventGames, loading: loadingGames, error: errorGames } = useEventGames(proximoEvento ? [proximoEvento.id] : []);
 
@@ -42,6 +56,7 @@ export const Formulario = ({ onBack }) => {
         label: localidad,
     }));
 
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (isLoading) {
@@ -55,16 +70,55 @@ export const Formulario = ({ onBack }) => {
         }
     }, [isLoading, user, navigate]);
 
+    // Función para validar el formulario
+    const validateForm = () => {
+        const { nombre, apellido, celular, localidad, email } = formValues;
+
+        // Reiniciar errores
+        const newFieldErrors = {
+            nombre: !nombre,
+            apellido: !apellido,
+            celular: !celular,
+            localidad: !localidad,
+            email: !email,
+            selectedGames: selectedGames.length === 0
+        };
+
+        setFieldErrors(newFieldErrors);
+
+        // Verificar si hay algún error en el formulario
+        const hasErrors = Object.values(newFieldErrors).some(error => error);
+
+        return !hasErrors;
+    };
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormValues((prev) => ({ ...prev, [name]: value }));
+
+        // Si el formulario ha sido enviado, validar el campo en tiempo real
+        if (formSubmitted) {
+            setFieldErrors(prev => ({
+                ...prev,
+                [name]: value.trim() === ""
+            }));
+        }
     };
 
     const handleCheckboxChange = (gameId) => {
-        setSelectedGames((prev) =>
-            prev.includes(gameId) ? prev.filter((id) => id !== gameId) : [...prev, gameId]
+        const newSelectedGames = selectedGames.includes(gameId)
+            ? selectedGames.filter((id) => id !== gameId)
+            : [...selectedGames, gameId];
 
-        );
+        setSelectedGames(newSelectedGames);
+
+        // Si el formulario ha sido enviado, validar los juegos seleccionados en tiempo real
+        if (formSubmitted) {
+            setFieldErrors(prev => ({
+                ...prev,
+                selectedGames: newSelectedGames.length === 0
+            }));
+        }
     };
 
     const handleModalAccept = () => {
@@ -73,19 +127,20 @@ export const Formulario = ({ onBack }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSaving(true);
+        setFormSubmitted(true);
         setErrorMessage("");
-        setSuccessMessage("");
 
-        const { nombre, apellido, celular, localidad } = formValues;
+        // Validar el formulario
+        const isValid = validateForm();
 
-        // Validaciones
-        if (!nombre || !apellido || !celular || !localidad) {
+        if (!isValid) {
             setErrorMessage("Por favor, completa todos los campos obligatorios.");
-            return;
-        }
-
-        if (selectedGames.length === 0) {
-            setErrorMessage("Por favor, selecciona al menos un juego.");
+            // Hacer scroll al primer error
+            const firstErrorElement = document.querySelector('.error-field');
+            if (firstErrorElement) {
+                firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             return;
         }
 
@@ -127,6 +182,29 @@ export const Formulario = ({ onBack }) => {
                 }
             }
 
+            if (formValues.email) {
+                try {
+                    // Obtener nombres de los juegos seleccionados
+                    const juegosSeleccionados = selectedGames.map(gameId => {
+                        const juego = games.find(g => g.id === gameId);
+                        return juego ? juego.game_name : 'Juego no especificado';
+                    });
+
+                    await enviarConfirmacionIndividual(
+                        formValues, // datos de la inscripción
+                        {
+                            nombre: proximoEvento.nombre,
+                            fecha_inicio: fecha_inicio,
+                            localidad: localidad
+                        },
+                        juegosSeleccionados
+                    );
+                } catch (emailError) {
+                    console.error("Error al enviar confirmación por email:", emailError);
+                    // No interrumpimos el flujo si el email falla
+                }
+            }
+
             // Limpiar el formulario y mostrar mensaje de éxito
             setSuccessMessage("Inscripción realizada con éxito.");
             setFormValues({
@@ -138,12 +216,32 @@ export const Formulario = ({ onBack }) => {
                 localidad: "",
             });
             setSelectedGames([]);
+            setFormSubmitted(false);
+            setFieldErrors({
+                nombre: false,
+                apellido: false,
+                email: false,
+                celular: false,
+                localidad: false,
+                selectedGames: false
+            });
 
         } catch (err) {
             setErrorMessage("Hubo un error al procesar tu solicitud. Intenta nuevamente.");
             console.error("Error:", err);
         }
+        setIsSaving(false)
     };
+
+    // Estilos CSS adicionales para los campos con error
+    const errorStyle = {
+        border: '1px solid red',
+    };
+
+    // Contenido para indicar que el campo es requerido
+    const requiredFieldIndicator = (isError) => (
+        <span className={`required-field ${isError ? 'error-text' : ''}`}>*</span>
+    );
 
     return (
         <>
@@ -177,25 +275,35 @@ export const Formulario = ({ onBack }) => {
                             <form onSubmit={handleSubmit} className="inscription-form">
                                 <div className="form-group">
                                     <label>
-                                        Nombre:*
+                                        Nombre:{requiredFieldIndicator(fieldErrors.nombre)}
                                         <input
                                             type="text"
                                             name="nombre"
                                             value={formValues.nombre}
                                             onChange={handleInputChange}
+                                            className={fieldErrors.nombre ? 'error-field' : ''}
+                                            style={fieldErrors.nombre ? errorStyle : {}}
                                         />
                                     </label>
+                                    {fieldErrors.nombre && (
+                                        <p className="error-text">Nombre es requerido</p>
+                                    )}
                                 </div>
                                 <div className="form-group">
                                     <label>
-                                        Apellido:*
+                                        Apellido:{requiredFieldIndicator(fieldErrors.apellido)}
                                         <input
                                             type="text"
                                             name="apellido"
                                             value={formValues.apellido}
                                             onChange={handleInputChange}
+                                            className={fieldErrors.apellido ? 'error-field' : ''}
+                                            style={fieldErrors.apellido ? errorStyle : {}}
                                         />
                                     </label>
+                                    {fieldErrors.apellido && (
+                                        <p className="error-text">Apellido es requerido</p>
+                                    )}
                                 </div>
                                 <div className="form-group">
                                     <label>
@@ -210,33 +318,44 @@ export const Formulario = ({ onBack }) => {
                                 </div>
                                 <div className="form-group">
                                     <label>
-                                        Email:
+                                        Email:{requiredFieldIndicator(fieldErrors.email)}
                                         <input
                                             type="email"
                                             name="email"
                                             value={formValues.email}
                                             onChange={handleInputChange}
+                                            className={fieldErrors.email ? 'error-field' : ''}
+                                            style={fieldErrors.email ? errorStyle : {}}
                                         />
                                     </label>
+                                    {fieldErrors.email && (
+                                        <p className="error-text">Email es requerido</p>
+                                    )}
                                 </div>
                                 <div className="form-group">
                                     <label>
-                                        Celular:*
+                                        Celular:{requiredFieldIndicator(fieldErrors.celular)}
                                         <input
                                             type="tel"
                                             name="celular"
                                             value={formValues.celular}
                                             onChange={handleInputChange}
+                                            className={fieldErrors.celular ? 'error-field' : ''}
+                                            style={fieldErrors.celular ? errorStyle : {}}
                                         />
                                     </label>
+                                    {fieldErrors.celular && (
+                                        <p className="error-text">Celular es requerido</p>
+                                    )}
                                 </div>
                                 <div className="form-group">
-                                    <label>Juegos:*</label>
+                                    <label>Juegos:{requiredFieldIndicator(fieldErrors.selectedGames)}</label>
 
                                     {loadingGames && <p>Cargando juegos...</p>}
                                     {errorGames && <p>Error al cargar juegos: {errorGames}</p>}
 
-                                    <div className="checkbox-grid">
+                                    <div className={`checkbox-grid ${fieldErrors.selectedGames ? 'error-field' : ''}`}
+                                        style={fieldErrors.selectedGames ? { ...errorStyle, padding: '10px' } : {}}>
                                         {!loadingGames && !errorGames && games?.length > 0 ? (
                                             games.map((game) => (
                                                 <label key={game.id}>
@@ -253,14 +372,19 @@ export const Formulario = ({ onBack }) => {
                                             !loadingGames && <p>No hay juegos disponibles.</p>
                                         )}
                                     </div>
+                                    {fieldErrors.selectedGames && (
+                                        <p className="error-text">Debes seleccionar al menos un juego</p>
+                                    )}
                                 </div>
                                 <div className="form-group">
                                     <label>
-                                        Localidad:*
+                                        Localidad:{requiredFieldIndicator(fieldErrors.localidad)}
                                         <select
                                             name="localidad"
                                             value={formValues.localidad}
                                             onChange={handleInputChange}
+                                            className={fieldErrors.localidad ? 'error-field' : ''}
+                                            style={fieldErrors.localidad ? errorStyle : {}}
                                         >
                                             <option value="">Selecciona una localidad</option>
                                             {localidadesOptions.map((localidad, index) => (
@@ -270,6 +394,9 @@ export const Formulario = ({ onBack }) => {
                                             ))}
                                         </select>
                                     </label>
+                                    {fieldErrors.localidad && (
+                                        <p className="error-text">Localidad es requerida</p>
+                                    )}
                                 </div>
                                 {errorMessage && (
                                     <p className="error-message">{errorMessage}</p>
@@ -281,19 +408,43 @@ export const Formulario = ({ onBack }) => {
                                             <h3>¡Registro exitoso!</h3>
                                             <p>
                                                 Se registró correctamente al torneo. Ante cualquier duda, comuníquese al
-                                                celular (011) 1234-5678.
+                                                celular (011) 5095-6508.
                                             </p>
                                             <button onClick={handleModalAccept}>Aceptar</button>
                                         </div>
                                     </div>
                                 )}
 
-                                <button type="submit" className="main-button">
-                                    Enviar inscripción
+                                <button
+                                    type="submit"
+                                    className="main-button"
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? 'Guardando...' : 'Inscribir Equipo'}
                                 </button>
                             </form>
 
                         </div>
+                        <style jsx>{`
+                            .error-field {
+                                border: 1px solid red !important;
+                            }
+                            
+                            .error-text {
+                                color: red;
+                                font-size: 0.8rem;
+                                margin-top: 2px;
+                                margin-bottom: 5px;
+                            }
+                            
+                            .required-field {
+                                margin-left: 3px;
+                            }
+                            
+                            .required-field.error-text {
+                                font-weight: bold;
+                            }
+                        `}</style>
                     </main>
                 )}
         </>

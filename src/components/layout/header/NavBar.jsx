@@ -65,7 +65,7 @@ export const NavBar = () => {
                     </li>
                     <li>
                         <a href="#redes" onClick={(e) => handleNavClick(e, 'redes')}>
-                            SUMATE
+                            CONTACTO
                         </a>
                     </li>
                     {isMobile && <LogIn />}
