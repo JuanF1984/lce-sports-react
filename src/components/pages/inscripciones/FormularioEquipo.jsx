@@ -619,7 +619,7 @@ export const FormularioEquipo = ({ onBack }) => {
                                         <h3>¡Registro exitoso!</h3>
                                         <p>
                                             Se registró correctamente el equipo al torneo. Ante cualquier duda, comuníquese al
-                                            celular (011) 1234-5678.
+                                            celular (011) 5095-6508.
                                         </p>
                                         <button onClick={handleModalAccept}>Aceptar</button>
                                     </div>

@@ -103,14 +103,15 @@ export const Main = ({ onLoadComplete }) => {
     <main>
       <Hero onLoadComplete={handleHeroLoad} onNavigateToBuscate={handleScroll} />
      
+      <RelojRegresivo />
+      <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded} />
+      
       <CarruselImages
         images={images}
         title="Buscate"
         onImageLoad={handleImageLoad}
       />
 
-      <RelojRegresivo />
-      <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded} />
       <FAQ />
       <CarruselTextAndImage
         imagesAndText = {textImageItems}

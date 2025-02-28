@@ -420,7 +420,7 @@ export const Formulario = ({ onBack }) => {
                                     className="main-button"
                                     disabled={isSaving}
                                 >
-                                    {isSaving ? 'Guardando...' : 'Inscribir Equipo'}
+                                    {isSaving ? 'Guardando...' : 'Enviar inscripción'}
                                 </button>
                             </form>
 
