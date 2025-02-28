@@ -27,7 +27,8 @@ const InscriptionsList = () => {
     'Celular',
     'Localidad',
     'Juegos',
-    'Evento'
+    'Evento',
+    'Equipo'
   ];
 
   useEffect(() => {
@@ -42,6 +43,7 @@ const InscriptionsList = () => {
             celular,
             localidad,
             id_evento,
+            team_name,
             created_at,
             games_inscriptions (
               game:games (
@@ -49,7 +51,8 @@ const InscriptionsList = () => {
                 game_name
               )
             )
-          `);
+          `)
+          .order('team_name', { ascending: false });
 
        
         const { data: gamesData, error: gamesError } = await supabase
@@ -151,6 +154,7 @@ const InscriptionsList = () => {
                 <td>{inscription.localidad}</td>
                 <td>{inscription.juegos}</td>
                 <td>{getEventDetails(inscription.id_evento)}</td>
+                <td>{inscription.team_name}</td>
               </tr>
             ))
           ) : (
