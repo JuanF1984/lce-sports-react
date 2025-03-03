@@ -8,7 +8,7 @@ import { faEnvelope } from '@fortawesome/free-regular-svg-icons';
 export const RedesSociales = () => {
     return (
         <div className="redes" id="redes">
-            <h3>Sumate</h3>
+            <h3>Contacto</h3>
             <ul>
                 <li>
                     <a href="https://www.instagram.com/lcesports/" target="_blank" rel="noopener noreferrer">
