@@ -2,8 +2,6 @@ import { useEffect } from 'react';
 
 import img1 from '@img/hero/hero_img1.jpg'
 
-import { useNavigate } from 'react-router-dom'
-
 import '@styles/Hero.css'
 
 export const Hero = ({ onLoadComplete, onNavigateToBuscate }) => {

@@ -12,7 +12,7 @@ import { Main } from './components/layout/main/Main.jsx'
 import { Footer } from './components/layout/footer/Footer.jsx'
 
 
-import {SeleccionInscripcion} from './components/pages/inscripciones/SeleccionInscripcion.jsx'
+import { SeleccionInscripcion } from './components/pages/inscripciones/SeleccionInscripcion.jsx'
 
 // Importación del botón de WhatssApp
 import WhatsAppButton from './components/common/WhatsAppButton.jsx'
@@ -25,6 +25,8 @@ import { AuthProvider } from './context/AuthProvider.jsx'
 
 import { useAuth } from './context/UseAuth.jsx'
 
+import { Helmet } from 'react-helmet'
+
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [headerLoaded, setHeaderLoaded] = useState(false);
@@ -36,7 +38,7 @@ const App = () => {
 
   // Agregamos logs para debug
   useEffect(() => {
-    if (!authLoading && headerLoaded && (mainLoaded || localation.pathname === "/formulario" || localation.pathname ==="/inscriptions")) {
+    if (!authLoading && headerLoaded && (mainLoaded || localation.pathname === "/formulario" || localation.pathname === "/inscriptions")) {
       setIsLoading(false);
     }
   }, [authLoading, headerLoaded, mainLoaded, localation.pathname]);
