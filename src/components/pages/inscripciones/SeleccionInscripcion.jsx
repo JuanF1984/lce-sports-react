@@ -48,7 +48,7 @@ export const SeleccionInscripcion = () => {
                             className='main-button'
                             onClick={() => setTipoInscripcion("equipo")}
                         >
-                            Inscripción en Equipo
+                            Inscripción por Equipo
                         </button>
                     )}
                 </div>

@@ -5,7 +5,7 @@ import { useMediaQuery } from 'react-responsive';
 import { Link } from 'react-router-dom';
 
 import '@styles/Header.css';
-import logo from '@img/a.png';
+import logo from '@img/logo.webp';
 
 import { NavBar } from './NavBar';
 import { LogIn } from './LogIn';

@@ -1,4 +1,4 @@
-import logo from '@img/a.png' 
+import logo from '@img/logo.webp' 
 import '@styles/LogoNeon.css'
 
 export const LogoNeon = () => {

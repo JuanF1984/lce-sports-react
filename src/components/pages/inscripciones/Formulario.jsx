@@ -425,26 +425,7 @@ export const Formulario = ({ onBack }) => {
                             </form>
 
                         </div>
-                        <style jsx>{`
-                            .error-field {
-                                border: 1px solid red !important;
-                            }
-                            
-                            .error-text {
-                                color: red;
-                                font-size: 0.8rem;
-                                margin-top: 2px;
-                                margin-bottom: 5px;
-                            }
-                            
-                            .required-field {
-                                margin-left: 3px;
-                            }
-                            
-                            .required-field.error-text {
-                                font-weight: bold;
-                            }
-                        `}</style>
+                       
                     </main>
                 )}
         </>

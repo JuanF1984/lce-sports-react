@@ -16,8 +16,6 @@ import { localidadesBuenosAires } from "../../../data/localidades";
 import { enviarConfirmacionEquipo } from "../../../utils/emailService";
 
 
-import '../../../styles/Formulario.css';
-
 export const FormularioEquipo = ({ onBack }) => {
     const navigate = useNavigate();
     const { user, isLoading } = useAuth();
@@ -637,26 +635,7 @@ export const FormularioEquipo = ({ onBack }) => {
                     </div>
                 </main>
             )}
-            <style jsx>{`
-                .error-field {
-                    border: 1px solid red;
-                }
-                
-                .error-text {
-                    color: red;
-                    font-size: 0.8rem;
-                    margin-top: 2px;
-                    margin-bottom: 5px;
-                }
-                
-                .required-field {
-                    margin-left: 3px;
-                }
-                
-                .required-field.error-text {
-                    font-weight: bold;
-                }
-            `}</style>
+            
         </>
     );
 };

@@ -92,7 +92,7 @@ export const Main = ({ onLoadComplete }) => {
   }, [heroLoaded, carouselLoading, onLoadComplete])
 
   const handleScroll = () => {
-    const searchElement = document.getElementById('buscate');
+    const searchElement = document.getElementById('reloj');
     if (searchElement) {
       searchElement.scrollIntoView({ behavior: 'smooth' });
     }

@@ -9,7 +9,7 @@
 
 }
 
-.form-container h3{
+.form-container h3 {
     font-family: 'Akashi', sans-serif;
     font-size: 2.5rem;
     color: #DADADA;
@@ -17,7 +17,7 @@
     padding: 0;
 }
 
-.info-text{
+.info-text {
     font-family: 'Avenir', sans-serif;
     font-size: 1.5em;
     text-align: center;
@@ -30,7 +30,8 @@
     flex-direction: column;
     gap: 1em;
     width: 100%;
-    max-width: 1200px;  /* Aumentar el ancho máximo */
+    max-width: 1200px;
+    /* Aumentar el ancho máximo */
 
 }
 
@@ -98,7 +99,7 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
-.modal-insc-content p{
+.modal-insc-content p {
     font-family: 'Avenir', sans-serif;
     font-size: 1.5em;
 }
@@ -115,15 +116,42 @@
     border-radius: 5px;
 }
 
+.opciones-inscripcion {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    width: 100%;
+    max-width: 1200px;
+}
+
+.error-field {
+    border: 1px solid red;
+}
+
+.error-text {
+    color: red;
+    font-size: 0.8rem;
+    margin-top: 2px;
+    margin-bottom: 5px;
+}
+
+.required-field {
+    margin-left: 3px;
+}
+
+.required-field.error-text {
+    font-weight: bold;
+}
+
 @media (max-width: 768px) {
-   .form-container{
-    font-size: 13px;
-   }
-    .form-container h3{
+    .form-container {
+        font-size: 13px;
+    }
+
+    .form-container h3 {
         font-size: 2.5em;
         text-align: center;
     }
 
-    
-}
 
+}
