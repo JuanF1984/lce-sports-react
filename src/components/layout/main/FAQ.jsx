@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import '@styles/FAQ.css';
+import { faqData } from '../../../utils/faqData';
 
 export const FAQ = () => {
-    // Lista de preguntas y respuestas
-    const faqs = [
-        { question: '¿Cómo puedo registrarme?', answer: 'Haz clic en "Registrarse" en la parte superior.' },
-        { question: '¿Puedo participar si no tengo PC?', answer: 'Sí, las computadoras las llevamos nosotros' },
-        { question: '¿Puedo participar sin equipo?', answer: 'Sí, en inscripciones tenes la opción de participación individual o por equipo' },
-        { question: '¿Cómo puedo contactarlos?', answer: 'Envía un correo a lcsports00@gmail.com.' },
-    ];
+    // Estado para controlar qué categoría está seleccionada
+    const [activeCategory, setActiveCategory] = useState('general');
 
     // Estado para controlar qué pregunta está abierta
     const [openIndex, setOpenIndex] = useState(null);
@@ -18,21 +14,51 @@ export const FAQ = () => {
         setOpenIndex(openIndex === index ? null : index);
     };
 
+    // Obtener todas las categorías
+    const categories = Object.keys(faqData);
+
     return (
         <section className='faq'>
             <h2>Preguntas Frecuentes</h2>
+
+            {/* Navegación de categorías */}
+            <div className="faq-categories">
+                {categories.map(categoryKey => (
+                    <button
+                        key={categoryKey}
+                        className={`category-button ${activeCategory === categoryKey ? 'active' : ''}`}
+                        onClick={() => {
+                            setActiveCategory(categoryKey);
+                            setOpenIndex(null); // Cerrar preguntas abiertas al cambiar de categoría
+                        }}
+                    >
+                        {faqData[categoryKey].title}
+                    </button>
+                ))}
+            </div>
+
+            {/* Título de la categoría activa */}
+            <h3 className="category-title">{faqData[activeCategory].title}</h3>
+
+            {/* Lista de preguntas de la categoría seleccionada */}
             <ul className="faq-list">
-                {faqs.map((faq, index) => (
+                {faqData[activeCategory].faqs.map((faq, index) => (
                     <li key={index} className="faq-item">
-                        <button className="faq-question" onClick={() => toggleFAQ(index)}>
+                        <button
+                            className={`faq-question ${openIndex === index ? 'active' : ''}`}
+                            onClick={() => toggleFAQ(index)}
+                        >
                             {faq.question}
+                            <span className="faq-icon">{openIndex === index ? '−' : '+'}</span>
                         </button>
                         {openIndex === index && (
-                            <p className="faq-answer">{faq.answer}</p>
+                            <div className="faq-answer">
+                                <p>{faq.answer}</p>
+                            </div>
                         )}
                     </li>
                 ))}
             </ul>
         </section>
-    )
-}
+    );
+};

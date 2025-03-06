@@ -55,7 +55,7 @@ export const NavBar = () => {
                 <ul className={`menu ${isOpen ? 'active' : ''}`}>
                     <li>
                         <a href="#reloj" onClick={(e) => handleNavClick(e, 'reloj')}>
-                            AGENDA
+                            INSCRIBITE
                         </a>
                     </li>
                     <li>

@@ -41,7 +41,7 @@ export const BotonFormulario = () => {
 
     return (
         <>
-            <button onClick={handleButtonClick}>Ir al Formulario</button>
+            <button onClick={handleButtonClick}>¡Inscribite!</button>
 
             {/* Mostrar modal solo si el usuario no está autenticado */}
             {showAuthModal && (

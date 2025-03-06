@@ -45,7 +45,7 @@ export const InscriptionButton = ({ onLoadComplete}) => {
         <>
             <div className="container">
                 <button className="main-button" onClick={handleTournamentClick}>
-                    Inscribirse en Torneo
+                    ¡Inscribite!
                 </button>
             </div>
             {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
