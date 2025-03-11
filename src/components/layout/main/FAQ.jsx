@@ -53,7 +53,7 @@ export const FAQ = () => {
                         </button>
                         {openIndex === index && (
                             <div className="faq-answer">
-                                <p>{faq.answer}</p>
+                                <p dangerouslySetInnerHTML={{ __html: faq.answer }}></p>
                             </div>
                         )}
                     </li>

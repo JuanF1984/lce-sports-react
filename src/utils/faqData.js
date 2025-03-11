@@ -6,7 +6,7 @@ export const faqData = {
     faqs: [
       {
         question: "¿Cómo puedo registrarme?",
-        answer: "Haz clic en \"Registrarse\" en la parte superior."
+        answer: "Haz clic en \"Inscribite\" en la parte superior. Si estas desde el celular, hacé clic en el menú ☰ y luego en \"Inscribite\"."
       },
       {
         question: "¿Puedo participar si no tengo PC?",
@@ -18,7 +18,7 @@ export const faqData = {
       },
       {
         question: "¿Cómo puedo contactarlos?",
-        answer: "Envía un correo a lcsports00@gmail.com."
+        answer: "Contactanos vía <a href='https://www.instagram.com/lcesports/' target='_blank' rel='noopener noreferrer'>Instagram</a> ."
       }
     ]
   },
