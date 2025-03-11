@@ -35,7 +35,6 @@ export const SeleccionInscripcion = () => {
                 <div className="info-text">
                     <p>Selecciona el tipo de inscripción que deseas realizar:</p>
                 </div>
-                <div className="opciones-inscripcion">
                     <button
                         className='main-button'
                         onClick={() => setTipoInscripcion("individual")}
@@ -52,7 +51,6 @@ export const SeleccionInscripcion = () => {
                         </button>
                     )}
                 </div>
-            </div>
         </main>
     );
 };

@@ -19,7 +19,7 @@ export const Hero = ({ onLoadComplete, onNavigateToBuscate }) => {
       <div className="container">
         <h1>LC E-Sports</h1>
         <p>
-          Una nueva manera de disfrutar ser Gamer. Conocenos
+          Una nueva manera de disfrutar ser Gamer
         </p>
         <button className='main-button'onClick={onNavigateToBuscate}>Let's Go</button>
       </div>

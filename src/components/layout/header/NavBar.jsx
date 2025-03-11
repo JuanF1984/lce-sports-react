@@ -59,8 +59,8 @@ export const NavBar = () => {
                         </a>
                     </li>
                     <li>
-                        <a href="#buscate" onClick={(e) => handleNavClick(e, 'buscate')}>
-                            GALERÍA
+                        <a href="#torneos" onClick={(e) => handleNavClick(e, 'torneos')}>
+                            MEGAEVENTO
                         </a>
                     </li>
                     <li>

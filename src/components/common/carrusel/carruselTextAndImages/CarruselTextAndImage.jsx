@@ -23,5 +23,5 @@ export const CarruselTextAndImage = ({ imagesAndText, title, onImageLoad }) => {
     ));
 
 
-    return <CarruselCommon items={slides} title={title} />;
+    return <CarruselCommon items={slides} title={title} id="torneos"/>;
 };

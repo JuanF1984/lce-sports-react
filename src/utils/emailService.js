@@ -27,7 +27,6 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegos) 
             .join(', ');
     }
 
-    console.log("Juegos a enviar por correo:", juegosTexto);
 
     // Generar HTML de FAQs específicas para estos juegos
     const faqsHtml = getFAQsHtmlForEmail(juegos);
@@ -37,11 +36,11 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegos) 
         to_name: `${inscripcion.nombre || ''} ${inscripcion.apellido || ''}`,
         evento_fecha: evento.fecha_inicio || '',
         evento_lugar: evento.localidad || '',
+        evento_hora: evento.hora_inicio || '',
         juegos_lista_texto: juegosTexto,
         faqs_html: faqsHtml // Añadir las FAQs como HTML
     };
 
-    console.log('Enviando email con parámetros:', templateParams);
 
     return emailjs.send(
         EMAIL_SERVICE_ID,
@@ -73,8 +72,7 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
         juegoTexto = propiedades.length > 0 ? propiedades[0] : 'Juego seleccionado';
     }
 
-    console.log("Juego de equipo a enviar por correo:", juegoTexto);
-
+  
     // Generar HTML de FAQs específicas para este juego
     const faqsHtml = getFAQsHtmlForEmail([juegoTexto]);
 
@@ -90,12 +88,12 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
         to_name: `${capitan.nombre || ''} ${capitan.apellido || ''}`,
         evento_fecha: evento?.fecha_inicio || '',
         evento_lugar: evento?.localidad || '',
+        evento_hora: evento.hora_inicio || '',
         juegos_lista_texto: `${juegoTexto} (${infoEquipo})`,
         faqs_html: faqsHtml // Añadir las FAQs como HTML
     };
 
-    console.log('Enviando email al capitán con parámetros:', templateParamsCapitan);
-
+    
     // Enviar correo al capitán
     const resultadoCapitan = await emailjs.send(
         EMAIL_SERVICE_ID,
@@ -113,11 +111,11 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
                 to_name: `${jugador.nombre || ''} ${jugador.apellido || ''}`,
                 evento_fecha: evento?.fecha_inicio || '',
                 evento_lugar: evento?.localidad || '',
+                evento_hora: evento.hora_inicio || '',
                 juegos_lista_texto: `${juegoTexto} (${infoEquipo} - Capitán: ${capitan.nombre || ''} ${capitan.apellido || ''})`,
                 faqs_html: faqsHtml // Añadir las FAQs como HTML
             };
 
-            console.log('Enviando email a jugador con parámetros:', templateParamsJugador);
 
             return emailjs.send(
                 EMAIL_SERVICE_ID,

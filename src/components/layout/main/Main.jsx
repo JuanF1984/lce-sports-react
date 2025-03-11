@@ -106,16 +106,16 @@ export const Main = ({ onLoadComplete }) => {
       <RelojRegresivo />
       <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded} />
       
-      <CarruselImages
+      {/* <CarruselImages
         images={images}
         title="Buscate"
         onImageLoad={handleImageLoad}
-      />
+      /> */}
 
       <FAQ />
       <CarruselTextAndImage
         imagesAndText = {textImageItems}
-        title = "Torneos"
+        title = "MEGAEVENTO"
         onImageLoad={handleImageLoad}
       />
       <RedesSociales />

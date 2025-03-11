@@ -39,7 +39,8 @@ export const FormularioEquipo = ({ onBack }) => {
         celular: false,
         localidad: false,
         team_name: false,
-        selectedGame: false
+        selectedGame: false,
+        edad: false
     });
 
     // Estado para controlar errores en los campos de jugadores
@@ -59,7 +60,7 @@ export const FormularioEquipo = ({ onBack }) => {
     const [successMessage, setSuccessMessage] = useState("");
     const [showLoading, setShowLoading] = useState(false);
     const [formSubmitted, setFormSubmitted] = useState(false);
-    const { proximoEvento, fecha_inicio, fecha_fin, localidad, loading } = useProximoEvento();
+    const { proximoEvento, fecha_inicio, fecha_fin, localidad, loading, hora_inicio } = useProximoEvento();
     const { eventGames, loading: loadingGames, error: errorGames } = useEventGames(proximoEvento ? [proximoEvento.id] : []);
 
     // Filtrar solo juegos que permiten equipos
@@ -88,7 +89,7 @@ export const FormularioEquipo = ({ onBack }) => {
 
     // Función para validar el formulario
     const validateForm = () => {
-        const { nombre, apellido, celular, localidad, team_name, email } = formValues;
+        const { nombre, apellido, celular, localidad, team_name, email, edad } = formValues;
 
         // Reiniciar errores
         const newFieldErrors = {
@@ -98,7 +99,8 @@ export const FormularioEquipo = ({ onBack }) => {
             localidad: !localidad,
             team_name: !team_name,
             email: !email,
-            selectedGame: !selectedGame
+            selectedGame: !selectedGame,
+            edad: !edad
         };
 
         setFieldErrors(newFieldErrors);
@@ -108,7 +110,8 @@ export const FormularioEquipo = ({ onBack }) => {
             nombre: !jugador.nombre,
             apellido: !jugador.apellido,
             celular: !jugador.celular,
-            email: !jugador.email
+            email: !jugador.email,
+            edad: !jugador.edad
         }));
 
         setJugadoresErrors(newJugadoresErrors);
@@ -172,7 +175,7 @@ export const FormularioEquipo = ({ onBack }) => {
 
     const addJugador = () => {
         setJugadores(prev => [...prev, { nombre: "", apellido: "", edad: "", celular: "", email: "" }]);
-        setJugadoresErrors(prev => [...prev, { nombre: false, apellido: false, celular: false, email: false }]);
+        setJugadoresErrors(prev => [...prev, { nombre: false, apellido: false, celular: false, email: false, edad: false }]);
     };
 
     const removeJugador = (index) => {
@@ -202,6 +205,7 @@ export const FormularioEquipo = ({ onBack }) => {
             if (firstErrorElement) {
                 firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+            setIsSaving(false)
             return;
         }
 
@@ -284,6 +288,7 @@ export const FormularioEquipo = ({ onBack }) => {
                         {
                             nombre: proximoEvento.nombre,
                             fecha_inicio: fecha_inicio,
+                            hora_inicio: hora_inicio,
                             localidad: localidad
                         },
                         juegoSeleccionado,
@@ -316,9 +321,10 @@ export const FormularioEquipo = ({ onBack }) => {
                 celular: false,
                 localidad: false,
                 team_name: false,
-                selectedGame: false
+                selectedGame: false,
+                edad: false
             });
-            setJugadoresErrors([{ nombre: false, apellido: false, celular: false, email: false }]);
+            setJugadoresErrors([{ nombre: false, apellido: false, celular: false, email: false, edad: false }]);
 
         } catch (err) {
             setErrorMessage("Hubo un error al procesar tu solicitud. Intenta nuevamente.");
@@ -364,7 +370,9 @@ export const FormularioEquipo = ({ onBack }) => {
                                     {fecha_inicio !== fecha_fin && (
                                         <p> al {fecha_fin}</p>
                                     )}
+                                    <p>Hora de inicio: {hora_inicio.slice(0, 5)}</p>
                                     <p>Lugar: {localidad}</p>
+                                    <p>El evento es libre y gratuito</p>
                                 </>
                             )}
                         </div>
@@ -447,7 +455,7 @@ export const FormularioEquipo = ({ onBack }) => {
                             </div>
                             <div className="form-group">
                                 <label>
-                                    Edad:
+                                    Edad:{requiredFieldIndicator(fieldErrors.edad)}
                                     <input
                                         type="text"
                                         name="edad"
@@ -455,6 +463,9 @@ export const FormularioEquipo = ({ onBack }) => {
                                         onChange={handleInputChange}
                                     />
                                 </label>
+                                {fieldErrors.edad && (
+                                    <p className="error-text">Edad es requerido</p>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label>
@@ -548,13 +559,16 @@ export const FormularioEquipo = ({ onBack }) => {
                                     </div>
                                     <div className="form-group">
                                         <label>
-                                            Edad:
+                                            Edad:{requiredFieldIndicator(jugadoresErrors[index]?.edad)}
                                             <input
                                                 type="text"
                                                 value={jugador.edad}
                                                 onChange={(e) => handleJugadorChange(index, "edad", e.target.value)}
                                             />
                                         </label>
+                                        {jugadoresErrors[index]?.edad && (
+                                            <p className="error-text">Edad es requerido</p>
+                                        )}
                                     </div>
                                     <div className="form-group">
                                         <label>
@@ -615,10 +629,10 @@ export const FormularioEquipo = ({ onBack }) => {
                                 <div className="modal-insc-overlay">
                                     <div className="modal-insc-content">
                                         <h3>¡Registro exitoso!</h3>
-                                        <p>
-                                            Se registró correctamente el equipo al torneo. Ante cualquier duda, comuníquese al
-                                            celular (011) 5095-6508.
-                                        </p>
+                                        <p>Se registró correctamente al torneo</p>
+                                        <p>A la brevedad te llegará mail de confirmación. Revisa spam por las dudas</p>
+                                        <p>¡Nos vemos en el torneo!</p>
+
                                         <button onClick={handleModalAccept}>Aceptar</button>
                                     </div>
                                 </div>
@@ -635,7 +649,7 @@ export const FormularioEquipo = ({ onBack }) => {
                     </div>
                 </main>
             )}
-            
+
         </>
     );
 };
