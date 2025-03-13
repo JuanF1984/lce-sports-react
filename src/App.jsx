@@ -46,18 +46,38 @@ const SocialAppRedirectWrapper = ({ children }) => {
 
   const openInExternalBrowser = () => {
     const currentUrl = window.location.href;
+
+    // Intentar múltiples métodos para abrir en navegador externo
+
+    // Método 1: Navegación directa
     window.location.href = currentUrl;
 
-    // Método de respaldo
+    // Método 2: Usar window.open con target _blank
     setTimeout(() => {
-      window.open(currentUrl, '_system');
+      const newWindow = window.open(currentUrl, '_blank');
+      if (newWindow) {
+        newWindow.focus();
+      }
     }, 100);
-  };
 
-  // Mostrar pantalla de carga mientras verificamos
-  if (isCheckingBrowser) {
-    return <div>Cargando...</div>;
-  }
+    // Método 3: Para iOS, intentar con el esquema de URL de Safari
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+      setTimeout(() => {
+        window.location.href = `googlechrome://navigate?url=${encodeURIComponent(currentUrl)}`;
+      }, 200);
+
+      setTimeout(() => {
+        window.location.href = `x-web-search://?${encodeURIComponent(currentUrl)}`;
+      }, 300);
+    }
+
+    // Método 4: Para Android, intentar con intent
+    if (/android/i.test(navigator.userAgent)) {
+      setTimeout(() => {
+        window.location.href = `intent://${window.location.host}${window.location.pathname}${window.location.search}#Intent;scheme=https;package=com.android.chrome;end`;
+      }, 200);
+    }
+  };
 
   // Si estamos en una app social, mostrar pantalla de redirección
   if (isInSocialApp) {
@@ -66,42 +86,77 @@ const SocialAppRedirectWrapper = ({ children }) => {
         padding: '20px',
         maxWidth: '500px',
         margin: '0 auto',
-        textAlign: 'center'
+        textAlign: 'center',
+        fontFamily: 'Arial, sans-serif'
       }}>
-        <h2>Acceso bloqueado</h2>
+        <h2 style={{ color: '#e91e63' }}>No se puede abrir en Instagram</h2>
+
         <p>
-          Esta aplicación no puede abrirse correctamente desde Instagram
-          debido a restricciones de seguridad de Google.
+          Esta aplicación requiere un navegador completo para funcionar correctamente.
         </p>
-        <button
-          onClick={openInExternalBrowser}
-          style={{
-            backgroundColor: '#1a73e8',
-            color: 'white',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '4px',
-            fontSize: '16px',
-            cursor: 'pointer',
-            margin: '20px 0'
-          }}
-        >
-          Abrir en navegador
-        </button>
-        <p style={{ fontSize: '14px', color: '#666' }}>
-          O copia esta URL y ábrela en tu navegador:
-        </p>
+
         <div style={{
-          padding: '10px',
-          backgroundColor: '#f1f3f4',
-          borderRadius: '4px',
-          fontSize: '14px',
-          wordBreak: 'break-all'
+          margin: '20px 0',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px'
         }}>
-          {window.location.href}
+          <button
+            onClick={openInExternalBrowser}
+            style={{
+              backgroundColor: '#e91e63',
+              color: 'white',
+              border: 'none',
+              padding: '15px 24px',
+              borderRadius: '4px',
+              fontSize: '16px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            Abrir en navegador externo
+          </button>
+
+          <p style={{ marginTop: '20px', fontSize: '14px' }}>Si el botón no funciona:</p>
+
+          <ol style={{ textAlign: 'left', fontSize: '14px' }}>
+            <li>Copia esta URL:</li>
+            <input
+              value={window.location.href}
+              readOnly
+              onClick={(e) => e.target.select()}
+              style={{
+                width: '100%',
+                padding: '10px',
+                marginTop: '5px',
+                marginBottom: '10px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                fontSize: '14px'
+              }}
+            />
+            <li>Abre tu navegador (Chrome, Safari, etc.)</li>
+            <li>Pega la URL y navega a ella</li>
+          </ol>
+        </div>
+
+        <div style={{
+          marginTop: '20px',
+          padding: '10px',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '8px',
+          fontSize: '14px'
+        }}>
+          <p><strong>¿Por qué ocurre esto?</strong></p>
+          <p>Google bloquea los inicios de sesión desde navegadores integrados como el de Instagram por razones de seguridad.</p>
         </div>
       </div>
     );
+  }
+
+  // Mostrar pantalla de carga mientras verificamos
+  if (isCheckingBrowser) {
+    return <div>Cargando...</div>;
   }
 
   // Si estamos en un navegador normal, mostrar la aplicación
@@ -157,7 +212,9 @@ export const AppWrapper = () => {
     <AuthProvider>
       <Router>
         <ScrollToTop />
+        <SocialAppRedirectWrapper>
           <App />
+        </SocialAppRedirectWrapper>
       </Router>
     </AuthProvider>
   )
