@@ -89,9 +89,9 @@ const SocialAppRedirectWrapper = ({ children }) => {
         textAlign: 'center',
         fontFamily: 'Arial, sans-serif'
       }}>
-        <h2 style={{ color: '#e91e63' }}>No se puede abrir en Instagram</h2>
+        <h2 style={{ color: '#001080' }}>Para mejorar tu experiencia usa el navegador de tu dispositivo</h2>
 
-        <p>
+        <p style={{ color: '#FFFFFF' }}>
           Esta aplicación requiere un navegador completo para funcionar correctamente.
         </p>
 
@@ -104,7 +104,7 @@ const SocialAppRedirectWrapper = ({ children }) => {
           <button
             onClick={openInExternalBrowser}
             style={{
-              backgroundColor: '#e91e63',
+              backgroundColor: '#001080',
               color: 'white',
               border: 'none',
               padding: '15px 24px',
