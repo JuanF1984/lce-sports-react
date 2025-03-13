@@ -27,6 +27,88 @@ import { useAuth } from './context/UseAuth.jsx'
 
 import { Helmet } from 'react-helmet'
 
+// Componente de verificación para Instagram/Facebook
+const SocialAppRedirectWrapper = ({ children }) => {
+  const [isInSocialApp, setIsInSocialApp] = useState(false);
+  const [isCheckingBrowser, setIsCheckingBrowser] = useState(true);
+
+  useEffect(() => {
+    // Detectar navegador de Instagram o Facebook
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const inSocialApp =
+      userAgent.indexOf('Instagram') > -1 ||
+      userAgent.indexOf('FBAN') > -1 ||
+      userAgent.indexOf('FBAV') > -1;
+
+    setIsInSocialApp(inSocialApp);
+    setIsCheckingBrowser(false);
+  }, []);
+
+  const openInExternalBrowser = () => {
+    const currentUrl = window.location.href;
+    window.location.href = currentUrl;
+
+    // Método de respaldo
+    setTimeout(() => {
+      window.open(currentUrl, '_system');
+    }, 100);
+  };
+
+  // Mostrar pantalla de carga mientras verificamos
+  if (isCheckingBrowser) {
+    return <div>Cargando...</div>;
+  }
+
+  // Si estamos en una app social, mostrar pantalla de redirección
+  if (isInSocialApp) {
+    return (
+      <div style={{
+        padding: '20px',
+        maxWidth: '500px',
+        margin: '0 auto',
+        textAlign: 'center'
+      }}>
+        <h2>Acceso bloqueado</h2>
+        <p>
+          Esta aplicación no puede abrirse correctamente desde Instagram
+          debido a restricciones de seguridad de Google.
+        </p>
+        <button
+          onClick={openInExternalBrowser}
+          style={{
+            backgroundColor: '#1a73e8',
+            color: 'white',
+            border: 'none',
+            padding: '12px 24px',
+            borderRadius: '4px',
+            fontSize: '16px',
+            cursor: 'pointer',
+            margin: '20px 0'
+          }}
+        >
+          Abrir en navegador
+        </button>
+        <p style={{ fontSize: '14px', color: '#666' }}>
+          O copia esta URL y ábrela en tu navegador:
+        </p>
+        <div style={{
+          padding: '10px',
+          backgroundColor: '#f1f3f4',
+          borderRadius: '4px',
+          fontSize: '14px',
+          wordBreak: 'break-all'
+        }}>
+          {window.location.href}
+        </div>
+      </div>
+    );
+  }
+
+  // Si estamos en un navegador normal, mostrar la aplicación
+  return children;
+};
+
+
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [headerLoaded, setHeaderLoaded] = useState(false);
@@ -75,7 +157,9 @@ export const AppWrapper = () => {
     <AuthProvider>
       <Router>
         <ScrollToTop />
-        <App />
+        <SocialAppRedirectWrapper>
+          <App />
+        </SocialAppRedirectWrapper>
       </Router>
     </AuthProvider>
   )
