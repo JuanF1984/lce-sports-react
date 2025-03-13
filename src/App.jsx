@@ -25,12 +25,11 @@ import { AuthProvider } from './context/AuthProvider.jsx'
 
 import { useAuth } from './context/UseAuth.jsx'
 
-import { Helmet } from 'react-helmet'
-
 // Componente de verificación para Instagram/Facebook
 const SocialAppRedirectWrapper = ({ children }) => {
   const [isInSocialApp, setIsInSocialApp] = useState(false);
   const [isCheckingBrowser, setIsCheckingBrowser] = useState(true);
+  const [redirectAttempts, setRedirectAttempts] = useState(0);
 
   useEffect(() => {
     // Detectar navegador de Instagram o Facebook
@@ -45,6 +44,9 @@ const SocialAppRedirectWrapper = ({ children }) => {
   }, []);
 
   const openInExternalBrowser = () => {
+    // Incrementar el contador de intentos
+    setRedirectAttempts(prev => prev + 1);
+    
     const currentUrl = window.location.href;
 
     // Intentar múltiples métodos para abrir en navegador externo
@@ -114,12 +116,14 @@ const SocialAppRedirectWrapper = ({ children }) => {
               fontWeight: 'bold'
             }}
           >
-            Abrir en navegador externo
+            {redirectAttempts > 0 
+              ? `Intentar de nuevo (${redirectAttempts})` 
+              : 'Abrir en navegador externo'}
           </button>
 
-          <p style={{ marginTop: '20px', fontSize: '14px' }}>Si el botón no funciona:</p>
+          <p style={{ marginTop: '20px', fontSize: '14px', color: '#FFFFFF' }}>Si el botón no funciona:</p>
 
-          <ol style={{ textAlign: 'left', fontSize: '14px' }}>
+          <ol style={{ textAlign: 'left', fontSize: '14px', color: '#FFFFFF' }}>
             <li>Copia esta URL:</li>
             <input
               value={window.location.href}
