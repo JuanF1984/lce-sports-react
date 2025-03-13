@@ -157,9 +157,7 @@ export const AppWrapper = () => {
     <AuthProvider>
       <Router>
         <ScrollToTop />
-        <SocialAppRedirectWrapper>
           <App />
-        </SocialAppRedirectWrapper>
       </Router>
     </AuthProvider>
   )
