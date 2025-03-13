@@ -1,7 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState } from "react"
 import '@styles/NavBar.css'
-
 import { useMediaQuery } from 'react-responsive';
 
 import { LogIn } from "./LogIn";
@@ -40,6 +39,11 @@ export const NavBar = () => {
         }
     };
 
+    const handleNavigate = () => {
+        // Esta función se pasa como prop y se llamará cuando se navegue desde LogIn
+        setIsOpen(false);
+    };
+
     return (
         <nav>
             <div className="menu-container">
@@ -68,7 +72,7 @@ export const NavBar = () => {
                             CONTACTO
                         </a>
                     </li>
-                    {isMobile && <LogIn />}
+                    {isMobile && <LogIn onNavigate={handleNavigate} />}
                 </ul>
             </div>
         </nav>

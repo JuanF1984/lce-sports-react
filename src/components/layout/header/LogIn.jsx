@@ -8,7 +8,7 @@ import { useUserInscriptions } from '../../../hooks/useUserInscriptions ';
 
 import { AuthModal } from './AuthModal';
 
-export const LogIn = () => {
+export const LogIn = ({ onNavigate }) => { // Añadir prop onNavigate
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userEmail, setUserEmail] = useState('');
@@ -67,6 +67,8 @@ export const LogIn = () => {
 
         const handleClick = () => {
             navigate("/inscriptions"); // Redirige a la página del formulario
+            // Notificar al NavBar que se ha navegado para cerrar el menú
+            if (onNavigate) onNavigate();
         };
 
         return (
