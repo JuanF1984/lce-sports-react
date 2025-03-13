@@ -11,7 +11,6 @@ import '../../../../styles/InscriptionsList.css';
 
 const InscriptionsList = () => {
   const [inscriptions, setInscriptions] = useState([]);
-  // const [events, setEvents] = useState([]);
   const [filteredInscriptions, setFilteredInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [games, setGames] = useState([]);
@@ -54,7 +53,7 @@ const InscriptionsList = () => {
           `)
           .order('team_name', { ascending: false });
 
-       
+
         const { data: gamesData, error: gamesError } = await supabase
           .from("games")
           .select("id, game_name");
@@ -77,7 +76,6 @@ const InscriptionsList = () => {
           });
 
           setInscriptions(formattedInscriptions);
-          // setEvents(eventsData);
           setGames(gamesData);
           setFilteredInscriptions(formattedInscriptions); // Mostrar todas las inscripciones inicialmente
         }
@@ -128,13 +126,22 @@ const InscriptionsList = () => {
       ) : (
         <div>Cargando eventos...</div>
       )}
+      <div className="inscriptions-header">
+        <h2 className='titulos-admin'>Lista de Inscripciones</h2>
+        <div className="inscriptions-count">
+          Total: <strong>{filteredInscriptions.length}</strong> inscripciones
+          {inscriptions.length !== filteredInscriptions.length && (
+            <span> (de {inscriptions.length} totales)</span>
+          )}
+        </div>
+      </div>
+
       <ExportToExcelButton
         data={filteredInscriptions}
         getEventDetails={getEventDetails}
         headerTable={headerTable}
       />
 
-      <h2 className='titulos-admin'>Lista de Inscripciones</h2>
       <table className="inscriptions-table">
         <thead>
           <tr>
@@ -166,10 +173,12 @@ const InscriptionsList = () => {
           )}
         </tbody>
       </table>
+
+      <div className="mobile-notice">
+        <small>* En dispositivos móviles solo se muestran apellido, nombre y juegos</small>
+      </div>
     </div>
   );
 };
-
-
 
 export default InscriptionsList;

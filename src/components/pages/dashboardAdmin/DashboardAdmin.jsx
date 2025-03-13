@@ -34,7 +34,7 @@ export const DashboardAdmin = () => {
         <>
             <aside>
                 <button onClick={handleInscriptions} className='export-button'>Listar Inscripciones</button>
-                <button onClick={handleEvents} className='export-button'>Listar Eventos</button>
+                <button onClick={handleEvents} className='export-button' >Listar Eventos</button>
             </aside>
             <LineaNeon />
             <main>
