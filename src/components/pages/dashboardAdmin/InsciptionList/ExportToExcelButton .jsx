@@ -17,7 +17,7 @@ export const ExportToExcelButton = ({ data, getEventDetails, headerTable }) => {
         // Definir las columnas del archivo Excel
         worksheet.columns = headerTable.map(header => ({
             header,
-            key: header.toLowerCase(), // Asumimos que el nombre de la clave es en minúsculas
+            key: header.toLowerCase(), // nombre de la clave es en minúsculas
         }));
 
         // Agregar filas con los datos de las inscripciones
@@ -30,6 +30,7 @@ export const ExportToExcelButton = ({ data, getEventDetails, headerTable }) => {
                 juegos: inscription.juegos,
                 localidad: inscription.localidad,
                 evento: getEventDetails(inscription.id_evento),
+                equipo: inscription.team_name,
             });
         });
 
