@@ -19,7 +19,6 @@ import { enviarConfirmacionIndividual } from "../../../utils/emailService";
 import '../../../styles/Formulario.css';
 
 export const Formulario = ({ onBack }) => {
-    const navigate = useNavigate();
     const { user, isLoading } = useAuth();
     const [formValues, setFormValues] = useState({
         nombre: "",
@@ -63,13 +62,9 @@ export const Formulario = ({ onBack }) => {
         if (isLoading) {
             setShowLoading(true);
         } else {
-            if (!user) {
-                navigate("/"); // Si no hay usuario, redirigir.
-            } else {
-                setShowLoading(false); // Si hay usuario, ocultar el loading.
-            }
+            setShowLoading(false); // Si hay usuario, ocultar el loading.
         }
-    }, [isLoading, user, navigate]);
+    }, [isLoading]);
 
     // Función para validar el formulario
     const validateForm = () => {
@@ -148,14 +143,21 @@ export const Formulario = ({ onBack }) => {
         }
 
         try {
+            // Creamos un objeto con los datos a insertar
+            const dataToInsert = {
+                ...formValues,
+                id_evento: proximoEvento.id,
+            };
+
+            // Solo agregamos user_id si user.id existe
+            if (user && user.id) {
+                dataToInsert.user_id = user.id;
+            }
+
             // Insertar en la tabla inscriptions y obtener los datos insertados
             const { data: inscriptionData, error: insertError } = await supabase
                 .from("inscriptions")
-                .insert({
-                    user_id: user.id,
-                    ...formValues,
-                    id_evento: proximoEvento.id,
-                })
+                .insert(dataToInsert)
                 .select() //  .select() para obtener los datos insertados
                 .single();
 

@@ -79,13 +79,9 @@ export const FormularioEquipo = ({ onBack }) => {
         if (isLoading) {
             setShowLoading(true);
         } else {
-            if (!user) {
-                navigate("/"); // Si no hay usuario, redirigir.
-            } else {
-                setShowLoading(false); // Si hay usuario, ocultar el loading.
-            }
+            setShowLoading(false); // Si hay usuario, ocultar el loading.
         }
-    }, [isLoading, user, navigate]);
+    }, [isLoading]);
 
     // Función para validar el formulario
     const validateForm = () => {
@@ -216,7 +212,7 @@ export const FormularioEquipo = ({ onBack }) => {
             const { data: capitanData, error: capitanError } = await supabase
                 .from("inscriptions")
                 .insert({
-                    user_id: user.id,
+                    ...(user ? { user_id: user.id } : {}),
                     ...formValues,
                     id_evento: proximoEvento.id,
                     team_name: team_name // Nombre del equipo
@@ -248,7 +244,7 @@ export const FormularioEquipo = ({ onBack }) => {
                 const { data: jugadorData, error: jugadorError } = await supabase
                     .from("inscriptions")
                     .insert({
-                        user_id: user.id, // El mismo usuario que crea el equipo
+                        ...(user ? { user_id: user.id } : {}),
                         nombre: jugador.nombre,
                         apellido: jugador.apellido,
                         edad: jugador.edad || null,

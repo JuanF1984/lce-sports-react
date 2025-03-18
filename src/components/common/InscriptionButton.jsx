@@ -1,54 +1,23 @@
-import { useState, useEffect } from 'react';
-import { AuthModal } from '../layout/header/AuthModal';
-import { useAuth } from '../../context/UseAuth';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export const InscriptionButton = ({ onLoadComplete}) => {
-    const [showAuthModal, setShowAuthModal] = useState(false);
-    // Añadir estado para intendedDestination
-    const [intendedDestination, setIntendedDestination] = useState(null);
-    const { user, isLoading } = useAuth();
+export const InscriptionButton = ({ onLoadComplete }) => {
     const navigate = useNavigate();
 
-    // Cuando el componente se monta, verificar si hay una ruta guardada
+    // Llamar a onLoadComplete cuando el componente se monte
     useEffect(() => {
-        const savedDestination = localStorage.getItem('intendedDestination');
-        if (savedDestination) {
-            setIntendedDestination(savedDestination);
-        }
-        if (!isLoading && !savedDestination) {
-            onLoadComplete?.();
-        }
-    }, [isLoading, onLoadComplete]);
+        onLoadComplete?.();
+    }, [onLoadComplete]);
 
     const handleTournamentClick = () => {
-        if (user) {
-            navigate('/formulario');
-        } else {
-            localStorage.setItem('intendedDestination', '/formulario');
-            setIntendedDestination('/formulario'); // Actualizar el estado también
-            setShowAuthModal(true);
-        }
+        navigate('/formulario');
     };
 
-    useEffect(() => {
-        if (intendedDestination && user) {
-            navigate(intendedDestination);
-            localStorage.removeItem('intendedDestination');
-            setIntendedDestination(null); // Limpiar el estado
-        } else if (!intendedDestination) {
-            onLoadComplete?.();
-        } 
-    }, [user, intendedDestination, navigate, onLoadComplete]);
-
     return (
-        <>
-            <div className="container">
-                <button className="main-button" onClick={handleTournamentClick}>
-                    ¡Inscribite!
-                </button>
-            </div>
-            {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
-        </>
+        <div className="container">
+            <button className="main-button" onClick={handleTournamentClick}>
+                ¡Inscribite!
+            </button>
+        </div>
     );
 };
