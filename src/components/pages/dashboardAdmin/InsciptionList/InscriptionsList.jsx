@@ -15,9 +15,8 @@ const InscriptionsList = () => {
   const [loading, setLoading] = useState(true);
   const [games, setGames] = useState([]);
   const [uniquePlayersCount, setUniquePlayersCount] = useState(0);
+
   const { eventsData, eventsError, loadingError } = useEvents();
-
-
 
   const headerTable = [
     'Nombre',
@@ -37,7 +36,6 @@ const InscriptionsList = () => {
         const { data: inscriptionsWithGames, error: inscriptionsError } = await supabase
           .from("inscriptions")
           .select(`
-            id,
             nombre,
             apellido,
             edad,
@@ -83,8 +81,8 @@ const InscriptionsList = () => {
           setFilteredInscriptions(formattedInscriptions); // Mostrar todas las inscripciones inicialmente
 
           // Calcular la cantidad de jugadores únicos utilizando un Set
-          const uniqueIds = new Set(formattedInscriptions.map(inscription => inscription.id));
-          setUniquePlayersCount(uniqueIds.size);
+          const uniqueEmails = new Set(formattedInscriptions.map(inscription => inscription.email));
+          setUniquePlayersCount(uniqueEmails.size);
         }
       } catch (err) {
         console.error("Unexpected error:", err);
@@ -99,8 +97,8 @@ const InscriptionsList = () => {
   // Actualizar el conteo de jugadores únicos cuando cambian las inscripciones filtradas
   useEffect(() => {
     if (filteredInscriptions.length > 0) {
-      const uniqueIds = new Set(filteredInscriptions.map(inscription => inscription.id));
-      setUniquePlayersCount(uniqueIds.size);
+      const uniqueEmails = new Set(filteredInscriptions.map(inscription => inscription.email));
+      setUniquePlayersCount(uniqueEmails.size);
     } else {
       setUniquePlayersCount(0);
     }
@@ -145,7 +143,7 @@ const InscriptionsList = () => {
       <div className="inscriptions-header">
         <h2 className='titulos-admin'>Lista de Inscripciones</h2>
         <div className="inscriptions-count">
-          Total: <strong>{uniquePlayersCount}</strong> jugadores únicos
+          Total: <strong>{uniquePlayersCount}</strong> emails únicos
           {filteredInscriptions.length !== uniquePlayersCount && (
             <span> (con {filteredInscriptions.length} inscripciones)</span>
           )}
