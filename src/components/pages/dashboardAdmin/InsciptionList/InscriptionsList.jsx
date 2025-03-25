@@ -14,7 +14,7 @@ const InscriptionsList = () => {
   const [filteredInscriptions, setFilteredInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [games, setGames] = useState([]);
-
+  const [uniquePlayersCount, setUniquePlayersCount] = useState(0);
   const { eventsData, eventsError, loadingError } = useEvents();
 
 
@@ -24,6 +24,7 @@ const InscriptionsList = () => {
     'Apellido',
     'Edad',
     'Celular',
+    'Email',
     'Localidad',
     'Juegos',
     'Evento',
@@ -36,10 +37,12 @@ const InscriptionsList = () => {
         const { data: inscriptionsWithGames, error: inscriptionsError } = await supabase
           .from("inscriptions")
           .select(`
+            id,
             nombre,
             apellido,
             edad,
             celular,
+            email,
             localidad,
             id_evento,
             team_name,
@@ -78,6 +81,10 @@ const InscriptionsList = () => {
           setInscriptions(formattedInscriptions);
           setGames(gamesData);
           setFilteredInscriptions(formattedInscriptions); // Mostrar todas las inscripciones inicialmente
+
+          // Calcular la cantidad de jugadores únicos utilizando un Set
+          const uniqueIds = new Set(formattedInscriptions.map(inscription => inscription.id));
+          setUniquePlayersCount(uniqueIds.size);
         }
       } catch (err) {
         console.error("Unexpected error:", err);
@@ -89,6 +96,15 @@ const InscriptionsList = () => {
     fetchData();
   }, []);
 
+  // Actualizar el conteo de jugadores únicos cuando cambian las inscripciones filtradas
+  useEffect(() => {
+    if (filteredInscriptions.length > 0) {
+      const uniqueIds = new Set(filteredInscriptions.map(inscription => inscription.id));
+      setUniquePlayersCount(uniqueIds.size);
+    } else {
+      setUniquePlayersCount(0);
+    }
+  }, [filteredInscriptions]);
 
   const getEventDetails = (eventId) => {
     if (eventsError || loadingError) {
@@ -129,9 +145,12 @@ const InscriptionsList = () => {
       <div className="inscriptions-header">
         <h2 className='titulos-admin'>Lista de Inscripciones</h2>
         <div className="inscriptions-count">
-          Total: <strong>{filteredInscriptions.length}</strong> inscripciones
+          Total: <strong>{uniquePlayersCount}</strong> jugadores únicos
+          {filteredInscriptions.length !== uniquePlayersCount && (
+            <span> (con {filteredInscriptions.length} inscripciones)</span>
+          )}
           {inscriptions.length !== filteredInscriptions.length && (
-            <span> (de {inscriptions.length} totales)</span>
+            <span> (de {inscriptions.length} inscripciones totales)</span>
           )}
         </div>
       </div>
@@ -158,6 +177,7 @@ const InscriptionsList = () => {
                 <td>{inscription.apellido}</td>
                 <td>{inscription.edad}</td>
                 <td>{inscription.celular}</td>
+                <td>{inscription.email}</td>
                 <td>{inscription.localidad}</td>
                 <td>{inscription.juegos}</td>
                 <td>{getEventDetails(inscription.id_evento)}</td>

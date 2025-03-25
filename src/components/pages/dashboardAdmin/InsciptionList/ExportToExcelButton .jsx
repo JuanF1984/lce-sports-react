@@ -27,6 +27,7 @@ export const ExportToExcelButton = ({ data, getEventDetails, headerTable }) => {
                 apellido: inscription.apellido,
                 edad: inscription.edad,
                 celular: inscription.celular,
+                email: inscription.email,
                 juegos: inscription.juegos,
                 localidad: inscription.localidad,
                 evento: getEventDetails(inscription.id_evento),

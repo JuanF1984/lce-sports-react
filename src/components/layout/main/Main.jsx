@@ -34,6 +34,7 @@ import sanAndresDeGilesImg from '@img/torneos/sanAndresDeGiles.webp';
 export const Main = ({ onLoadComplete }) => {
   const [heroLoaded, setHeroLoaded] = useState(false)
   const [inscriptionButtonLoaded, setInscriptionsButtonLoaded] = useState(false);
+  const [hayEvento, setHayEvento] = useState(true);
 
   // Para el CarouselCommon
   const [images, setImages] = useState([]);
@@ -98,14 +99,18 @@ export const Main = ({ onLoadComplete }) => {
     }
   };
 
- 
+  const handleEventoStatusChange = (status) => {
+    setHayEvento(status);
+  };
+
+
   return (
     <main>
       <Hero onLoadComplete={handleHeroLoad} onNavigateToBuscate={handleScroll} />
-     
-      <RelojRegresivo />
-      <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded} />
-      
+
+      <RelojRegresivo onEventoStatusChange={handleEventoStatusChange} />
+      {hayEvento && <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded} />}
+
       {/* <CarruselImages
         images={images}
         title="Buscate"
@@ -114,8 +119,8 @@ export const Main = ({ onLoadComplete }) => {
 
       <FAQ />
       <CarruselTextAndImage
-        imagesAndText = {textImageItems}
-        title = "MEGAEVENTO"
+        imagesAndText={textImageItems}
+        title="MEGAEVENTO"
         onImageLoad={handleImageLoad}
       />
       <RedesSociales />

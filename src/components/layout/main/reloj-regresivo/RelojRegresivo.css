@@ -19,6 +19,26 @@
     padding: 0;
 }
 
+.no-event-message {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    color: #fff; /* O el color que uses para los números */
+    width: 100%;
+    padding: 20px 0;
+    /* Puedes añadir más estilos para que coincida con la apariencia de los números */
+}
+
+/* Asegúrate que el mensaje de evento finalizado también tenga el estilo adecuado */
+.final-message {
+    font-size: 24px;
+    font-weight: bold;
+    color: #fff;
+    text-align: center;
+    width: 100%;
+    padding: 20px 0;
+}
+
 .container-reloj p {
     font-family: 'Avenir', sans-serif;
     font-size: 1.5em;
