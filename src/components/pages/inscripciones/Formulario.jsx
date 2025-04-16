@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 import supabase from "../../../utils/supabase";
 
@@ -145,13 +144,13 @@ export const Formulario = ({ onBack }) => {
         }
 
         try {
-            // Creamos un objeto con los datos a insertar
+            // Objeto con los datos a insertar
             const dataToInsert = {
                 ...formValues,
                 id_evento: proximoEvento.id,
             };
 
-            // Solo agregamos user_id si user.id existe
+            // Se agrega user_id si user.id existe
             if (user && user.id) {
                 dataToInsert.user_id = user.id;
             }

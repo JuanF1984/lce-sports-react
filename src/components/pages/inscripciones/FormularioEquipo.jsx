@@ -15,6 +15,8 @@ import { localidadesBuenosAires } from "../../../data/localidades";
 
 import { enviarConfirmacionEquipo } from "../../../utils/emailService";
 
+import { generateQRString } from "../../../utils/qrCodeGenerator";
+
 
 export const FormularioEquipo = ({ onBack }) => {
     const navigate = useNavigate();
@@ -224,6 +226,29 @@ export const FormularioEquipo = ({ onBack }) => {
                 throw capitanError;
             }
 
+            // Asegurarse de que capitanData tenga el id_evento para el QR
+            const capitanDataCompleto = {
+                ...capitanData,
+                id_evento: proximoEvento.id // Aseguramos que tenga el id_evento
+            };
+
+            // Generar código QR único para el capitán con datos completos
+            const qrStringCapitan = generateQRString(capitanDataCompleto);
+
+            // Actualizar la inscripción del capitán con el código QR
+            const { error: qrCapitanUpdateError } = await supabase
+                .from("inscriptions")
+                .update({
+                    qr_code: qrStringCapitan,
+                    asistencia: false
+                })
+                .eq("id", capitanData.id);
+
+            if (qrCapitanUpdateError) {
+                console.error("Error al guardar código QR del capitán:", qrCapitanUpdateError);
+                // No detenemos el flujo si falla la actualización del QR
+            }
+
             // 2. Crear la inscripción del juego para el capitán
             const { error: gameInsertCapitanError } = await supabase
                 .from("games_inscriptions")
@@ -235,6 +260,13 @@ export const FormularioEquipo = ({ onBack }) => {
             if (gameInsertCapitanError) {
                 throw gameInsertCapitanError;
             }
+
+            // Actualizar capitanData con el QR generado y el id_evento para uso posterior en el email
+            capitanData.qr_code = qrStringCapitan;
+            capitanData.id_evento = proximoEvento.id; // Aseguramos que tenga el id_evento
+
+            // Array para almacenar los datos de todos los jugadores con sus QRs
+            const jugadoresConQR = [];
 
             // 3. Inscribir a cada jugador adicional
             for (let i = 0; i < jugadores.length; i++) {
@@ -261,6 +293,30 @@ export const FormularioEquipo = ({ onBack }) => {
                     throw jugadorError;
                 }
 
+                // Asegurarse de que jugadorData tenga el id_evento para el QR
+                // Esto es necesario porque a veces Supabase no devuelve todos los campos en el select()
+                const jugadorDataCompleto = {
+                    ...jugadorData,
+                    id_evento: proximoEvento.id // Aseguramos que tenga el id_evento
+                };
+
+                // Generar código QR único para este jugador con datos completos
+                const qrStringJugador = generateQRString(jugadorDataCompleto);
+
+                // Actualizar la inscripción del jugador con el código QR
+                const { error: qrJugadorUpdateError } = await supabase
+                    .from("inscriptions")
+                    .update({
+                        qr_code: qrStringJugador,
+                        asistencia: false
+                    })
+                    .eq("id", jugadorData.id);
+
+                if (qrJugadorUpdateError) {
+                    console.error(`Error al guardar código QR del jugador ${i + 1}:`, qrJugadorUpdateError);
+                    // No detenemos el flujo si falla la actualización del QR
+                }
+
                 // Crear inscripción del juego para este jugador
                 const { error: gameInsertJugadorError } = await supabase
                     .from("games_inscriptions")
@@ -272,15 +328,24 @@ export const FormularioEquipo = ({ onBack }) => {
                 if (gameInsertJugadorError) {
                     throw gameInsertJugadorError;
                 }
+
+                // Guardar jugador con su QR para uso posterior
+                jugadoresConQR.push({
+                    ...jugador,
+                    id: jugadorData.id,
+                    id_evento: proximoEvento.id, // Aseguramos que tenga el id_evento
+                    qr_code: qrStringJugador
+                });
             }
+
             const juegoSeleccionado = juegosEquipo.find(game => game.id === selectedGame);
 
             // Si el capitán tiene email, enviar confirmación
             if (formValues.email) {
                 try {
                     await enviarConfirmacionEquipo(
-                        formValues, // datos del capitán
-                        jugadores,  // datos de los jugadores
+                        capitanData, // datos del capitán con QR
+                        jugadoresConQR,  // datos de los jugadores con QRs
                         {
                             nombre: proximoEvento.nombre,
                             fecha_inicio: fecha_inicio,
