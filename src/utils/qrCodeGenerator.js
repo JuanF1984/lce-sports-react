@@ -8,10 +8,10 @@ import QRCode from 'qrcode';
  */
 export const generateQRString = (inscriptionData, baseUrl = window.location.origin) => {
   // Generamos un token único para la seguridad
-//   const uniqueToken = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+  const uniqueToken = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
   
   // Creamos una URL con los parámetros de asistencia
-  return `${baseUrl}/verify-attendance/${inscriptionData.id_evento}/${inscriptionData.id}`;
+  return `${baseUrl}/verify-attendance/${inscriptionData.id_evento}/${inscriptionData.id}/${uniqueToken}`;
 };
 
 /**
