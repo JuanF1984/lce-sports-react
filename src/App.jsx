@@ -11,7 +11,6 @@ import { Main } from './components/layout/main/Main.jsx'
 import { Footer } from './components/layout/footer/Footer.jsx'
 
 import { SeleccionInscripcion } from './components/pages/inscripciones/SeleccionInscripcion.jsx'
-
 // Importación del botón de WhatssApp
 import WhatsAppButton from './components/common/WhatsAppButton.jsx'
 
@@ -20,22 +19,32 @@ import { DashboardAdmin } from './components/pages/dashboardAdmin/DashboardAdmin
 import ScrollToTop from './components/common/ScrollToTop.jsx'
 
 import { AuthProvider } from './context/AuthProvider.jsx'
-
 import { useAuth } from './context/UseAuth.jsx'
+
+// Importar el componente de verificación de asistencia
+import VerifyAttendance from './components/pages/VerifyAttendance.jsx'
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [headerLoaded, setHeaderLoaded] = useState(false);
   const [mainLoaded, setMainLoaded] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
-  const localation = useLocation();
+  const location = useLocation();
 
-  // Agregamos logs para debug
+  // Verificar si estamos en la ruta de verificación para mostrar un layout diferente
+  const isVerifyAttendancePath = location.pathname.includes('/verify-attendance');
+
+  // Manejo del estado de carga
   useEffect(() => {
-    if (headerLoaded && (mainLoaded || localation.pathname === "/formulario" || localation.pathname === "/inscriptions")) {
+    const currentPath = window.location.pathname;
+
+    const isVerifyPath = currentPath.includes('/verify-attendance');
+    if (isVerifyPath) {
+      setIsLoading(false);
+    } else if (headerLoaded && (mainLoaded || currentPath === "/formulario" || currentPath === "/inscriptions")) {
       setIsLoading(false);
     }
-  }, [headerLoaded, mainLoaded, localation.pathname]);
+  }, [headerLoaded, mainLoaded, location.pathname]);
 
   // Funciones de callback con logs
   const handleHeaderLoad = () => {
@@ -49,17 +58,34 @@ const App = () => {
   return (
     <>
       {isLoading && <LogoNeon />}
-      <Header onLoadComplete={handleHeaderLoad} />
-      <LineaNeon />
+
+      {/* Mostrar header y neon line solo si no estamos en la página de verificación */}
+      {!isVerifyAttendancePath && (
+        <>
+          <Header onLoadComplete={handleHeaderLoad} />
+          <LineaNeon />
+        </>
+      )}
+
       <Routes>
         <Route path="/" element={<Main onLoadComplete={handleMainLoad} />} />
         <Route path="/formulario" element={<SeleccionInscripcion />} />
         <Route path="/inscriptions" element={<DashboardAdmin />} />
+
+        {/* Nueva ruta para la verificación de asistencia vía QR */}
+        <Route path="/verify-attendance/:eventoId/:inscripcionId/:token" element={<VerifyAttendance />} />
+
         {/* Redirige cualquier otra URL a la raíz */}
         <Route path="*" element={<Main />} />
       </Routes>
-      <WhatsAppButton />
-      <Footer />
+
+      {/* Mostrar WhatsApp button y footer solo si no estamos en la página de verificación */}
+      {!isVerifyAttendancePath ? (
+        <>
+          <WhatsAppButton />
+          <Footer />
+        </>
+      ) : null}
     </>
   );
 };

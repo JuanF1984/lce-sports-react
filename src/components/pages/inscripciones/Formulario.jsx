@@ -15,6 +15,8 @@ import { localidadesBuenosAires } from "../../../data/localidades";
 
 import { enviarConfirmacionIndividual } from "../../../utils/emailService";
 
+import { generateQRString } from "../../../utils/qrCodeGenerator";
+
 
 import '../../../styles/Formulario.css';
 
@@ -169,6 +171,22 @@ export const Formulario = ({ onBack }) => {
                 throw new Error("No se recibieron datos de la inscripción.");
             }
 
+            // Generar código QR único para esta inscripción
+            const qrString = generateQRString(inscriptionData);
+
+            // Actualizar la inscripción con el código QR
+            const { error: qrUpdateError } = await supabase
+                .from("inscriptions")
+                .update({
+                    qr_code: qrString,
+                    asistencia: false
+                })
+                .eq("id", inscriptionData.id);
+
+            if (qrUpdateError) {
+                console.error("Error al guardar código QR:", qrUpdateError);
+                // No detenemos el flujo si falla la actualización del QR
+            }
 
             // Crear las inscripciones de juegos usando el ID obtenido
             if (selectedGames.length > 0) {
@@ -195,8 +213,14 @@ export const Formulario = ({ onBack }) => {
                         return juego ? juego.game_name : 'Juego no especificado';
                     });
 
+                    // Pasar la inscripción actualizada con el QR ya generado
+                    const inscriptionWithQR = {
+                        ...inscriptionData,
+                        qr_code: qrString
+                    };
+
                     await enviarConfirmacionIndividual(
-                        formValues, // datos de la inscripción
+                        inscriptionWithQR, // datos de la inscripción con QR
                         {
                             nombre: proximoEvento.nombre,
                             fecha_inicio: fecha_inicio,
@@ -205,6 +229,7 @@ export const Formulario = ({ onBack }) => {
                         },
                         juegosSeleccionados
                     );
+
                 } catch (emailError) {
                     console.error("Error al enviar confirmación por email:", emailError);
                     // No interrumpimos el flujo si el email falla
