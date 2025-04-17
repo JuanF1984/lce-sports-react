@@ -35,7 +35,9 @@ export const Formulario = ({ onBack }) => {
         nombre: false,
         apellido: false,
         email: false,
+        emailFormat: false,
         celular: false,
+        celularFormat: false,
         localidad: false,
         selectedGames: false,
         edad: false
@@ -59,6 +61,24 @@ export const Formulario = ({ onBack }) => {
 
     const [isSaving, setIsSaving] = useState(false);
 
+    // Funciones para validar email y teléfono
+    const validateEmail = (email) => {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email);
+    };
+
+    const validatePhone = (phone) => {
+        // Validar que sea numérico y tenga entre 8 y 15 dígitos
+        const regex = /^\d{8,15}$/;
+        return regex.test(phone);
+    };
+
+    // Función para validar que la edad sea solo números
+    const validateAge = (age) => {
+        const regex = /^\d+$/;  // Solo dígitos
+        return regex.test(age);
+    };
+
     useEffect(() => {
         if (isLoading) {
             setShowLoading(true);
@@ -76,9 +96,13 @@ export const Formulario = ({ onBack }) => {
             nombre: !nombre,
             apellido: !apellido,
             celular: !celular,
+            celularFormat: celular ? !validatePhone(celular) : false,
             localidad: !localidad,
             email: !email,
+            emailFormat: email ? !validateEmail(email) : false,
             edad: !edad,
+            edadFormat: edad ? !validateAge(edad) : false,
+            edadFormat: false,
             selectedGames: selectedGames.length === 0
         };
 
@@ -92,14 +116,35 @@ export const Formulario = ({ onBack }) => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
+
+        // Para el campo de edad, solo permitir dígitos
+        if (name === "edad" && value !== "" && !/^\d*$/.test(value)) {
+            // No actualizar el estado si se intenta ingresar algo que no sea un número
+            return;
+        }
+
         setFormValues((prev) => ({ ...prev, [name]: value }));
 
         // Si el formulario ha sido enviado, validar el campo en tiempo real
         if (formSubmitted) {
-            setFieldErrors(prev => ({
-                ...prev,
-                [name]: value.trim() === ""
-            }));
+            if (name === 'email') {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    [name]: value.trim() === "",
+                    emailFormat: value.trim() !== "" && !validateEmail(value)
+                }));
+            } else if (name === 'celular') {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    [name]: value.trim() === "",
+                    celularFormat: value.trim() !== "" && !validatePhone(value)
+                }));
+            } else {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    [name]: value.trim() === ""
+                }));
+            }
         }
     };
 
@@ -251,10 +296,13 @@ export const Formulario = ({ onBack }) => {
                 nombre: false,
                 apellido: false,
                 email: false,
+                emailFormat: false,
                 celular: false,
+                celularFormat: false,
                 localidad: false,
                 selectedGames: false,
-                edad: false
+                edad: false, 
+                edadFormat: false
             });
 
         } catch (err) {
@@ -367,6 +415,9 @@ export const Formulario = ({ onBack }) => {
                                     {fieldErrors.email && (
                                         <p className="error-text">Email es requerido</p>
                                     )}
+                                    {fieldErrors.emailFormat && (
+                                        <p className="error-text">Formato de email inválido</p>
+                                    )}
                                 </div>
                                 <div className="form-group">
                                     <label>
@@ -382,6 +433,9 @@ export const Formulario = ({ onBack }) => {
                                     </label>
                                     {fieldErrors.celular && (
                                         <p className="error-text">Celular es requerido</p>
+                                    )}
+                                    {fieldErrors.celularFormat && (
+                                        <p className="error-text">El celular debe contener entre 8 y 15 dígitos numéricos</p>
                                     )}
                                 </div>
                                 <div className="form-group">

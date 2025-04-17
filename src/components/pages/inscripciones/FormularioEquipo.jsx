@@ -22,6 +22,24 @@ export const FormularioEquipo = ({ onBack }) => {
     const navigate = useNavigate();
     const { user, isLoading } = useAuth();
 
+    // Funciones para validar email y teléfono
+    const validateEmail = (email) => {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email);
+    };
+
+    const validatePhone = (phone) => {
+        // Validar que sea numérico y tenga entre 8 y 15 dígitos
+        const regex = /^\d{8,15}$/;
+        return regex.test(phone);
+    };
+
+    const validateAge = (age) => {
+        // Validar que sea un número entero positivo (sin decimales)
+        const regex = /^[1-9][0-9]*$/;
+        return regex.test(age);
+    };
+
     // Datos del capitán
     const [formValues, setFormValues] = useState({
         nombre: "",
@@ -38,16 +56,19 @@ export const FormularioEquipo = ({ onBack }) => {
         nombre: false,
         apellido: false,
         email: false,
+        emailFormat: false,
         celular: false,
+        celularFormat: false,
         localidad: false,
         team_name: false,
         selectedGame: false,
-        edad: false
+        edad: false,
+        edadFormat: false
     });
 
     // Estado para controlar errores en los campos de jugadores
     const [jugadoresErrors, setJugadoresErrors] = useState([
-        { nombre: false, apellido: false, celular: false, email: false }
+        { nombre: false, apellido: false, celular: false, celularFormat: false, email: false, emailFormat: false, edad: false, edadFormat: false }
     ]);
 
     // Datos de los miembros del equipo
@@ -94,11 +115,14 @@ export const FormularioEquipo = ({ onBack }) => {
             nombre: !nombre,
             apellido: !apellido,
             celular: !celular,
+            celularFormat: celular && !validatePhone(celular),
             localidad: !localidad,
             team_name: !team_name,
             email: !email,
+            emailFormat: email && !validateEmail(email),
             selectedGame: !selectedGame,
-            edad: !edad
+            edad: !edad,
+            edadFormat: edad && !validateAge(edad)
         };
 
         setFieldErrors(newFieldErrors);
@@ -108,8 +132,11 @@ export const FormularioEquipo = ({ onBack }) => {
             nombre: !jugador.nombre,
             apellido: !jugador.apellido,
             celular: !jugador.celular,
+            celularFormat: jugador.celular && !validatePhone(jugador.celular),
             email: !jugador.email,
-            edad: !jugador.edad
+            emailFormat: jugador.email && !validateEmail(jugador.email),
+            edad: !jugador.edad,
+            edadFormat: jugador.edad && !validateAge(jugador.edad)
         }));
 
         setJugadoresErrors(newJugadoresErrors);
@@ -129,10 +156,30 @@ export const FormularioEquipo = ({ onBack }) => {
 
         // Si el formulario ha sido enviado, validar el campo en tiempo real
         if (formSubmitted) {
-            setFieldErrors(prev => ({
-                ...prev,
-                [name]: value.trim() === ""
-            }));
+            if (name === "email") {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    [name]: value.trim() === "",
+                    emailFormat: value.trim() !== "" && !validateEmail(value)
+                }));
+            } else if (name === "celular") {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    [name]: value.trim() === "",
+                    celularFormat: value.trim() !== "" && !validatePhone(value)
+                }));
+            } else if (name === "edad") {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    [name]: value.trim() === "",
+                    edadFormat: value.trim() !== "" && !validateAge(value)
+                }));
+            } else {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    [name]: value.trim() === ""
+                }));
+            }
         }
     };
 
@@ -148,14 +195,46 @@ export const FormularioEquipo = ({ onBack }) => {
 
         // Si el formulario ha sido enviado, validar el campo en tiempo real
         if (formSubmitted) {
-            setJugadoresErrors(prev => {
-                const newErrors = [...prev];
-                newErrors[index] = {
-                    ...newErrors[index],
-                    [field]: value.trim() === ""
-                };
-                return newErrors;
-            });
+            if (field === "email") {
+                setJugadoresErrors(prev => {
+                    const newErrors = [...prev];
+                    newErrors[index] = {
+                        ...newErrors[index],
+                        [field]: value.trim() === "",
+                        emailFormat: value.trim() !== "" && !validateEmail(value)
+                    };
+                    return newErrors;
+                });
+            } else if (field === "celular") {
+                setJugadoresErrors(prev => {
+                    const newErrors = [...prev];
+                    newErrors[index] = {
+                        ...newErrors[index],
+                        [field]: value.trim() === "",
+                        celularFormat: value.trim() !== "" && !validatePhone(value)
+                    };
+                    return newErrors;
+                });
+            } else if (field === "edad") {
+                setJugadoresErrors(prev => {
+                    const newErrors = [...prev];
+                    newErrors[index] = {
+                        ...newErrors[index],
+                        [field]: value.trim() === "",
+                        edadFormat: value.trim() !== "" && !validateAge(value)
+                    };
+                    return newErrors;
+                });
+            } else {
+                setJugadoresErrors(prev => {
+                    const newErrors = [...prev];
+                    newErrors[index] = {
+                        ...newErrors[index],
+                        [field]: value.trim() === ""
+                    };
+                    return newErrors;
+                });
+            }
         }
     };
 
@@ -173,7 +252,16 @@ export const FormularioEquipo = ({ onBack }) => {
 
     const addJugador = () => {
         setJugadores(prev => [...prev, { nombre: "", apellido: "", edad: "", celular: "", email: "" }]);
-        setJugadoresErrors(prev => [...prev, { nombre: false, apellido: false, celular: false, email: false, edad: false }]);
+        setJugadoresErrors(prev => [...prev, {
+            nombre: false,
+            apellido: false,
+            celular: false,
+            celularFormat: false,
+            email: false,
+            emailFormat: false,
+            edad: false,
+            edadFormat: false
+        }]);
     };
 
     const removeJugador = (index) => {
@@ -385,7 +473,16 @@ export const FormularioEquipo = ({ onBack }) => {
                 selectedGame: false,
                 edad: false
             });
-            setJugadoresErrors([{ nombre: false, apellido: false, celular: false, email: false, edad: false }]);
+            setJugadoresErrors([{
+                nombre: false,
+                apellido: false,
+                celular: false,
+                celularFormat: false,
+                email: false,
+                emailFormat: false,
+                edad: false,
+                edadFormat: false
+            }]);
 
         } catch (err) {
             setErrorMessage("Hubo un error al procesar tu solicitud. Intenta nuevamente.");
@@ -527,6 +624,9 @@ export const FormularioEquipo = ({ onBack }) => {
                                 {fieldErrors.edad && (
                                     <p className="error-text">Edad es requerido</p>
                                 )}
+                                {fieldErrors.edadFormat && (
+                                    <p className="error-text">La edad debe ser un número entero positivo</p>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label>
@@ -543,6 +643,9 @@ export const FormularioEquipo = ({ onBack }) => {
                                 {fieldErrors.email && (
                                     <p className="error-text">Email es requerido</p>
                                 )}
+                                {fieldErrors.emailFormat && (
+                                    <p className="error-text">Formato de email inválido</p>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label>
@@ -558,6 +661,9 @@ export const FormularioEquipo = ({ onBack }) => {
                                 </label>
                                 {fieldErrors.celular && (
                                     <p className="error-text">Celular es requerido</p>
+                                )}
+                                {fieldErrors.celularFormat && (
+                                    <p className="error-text">El celular debe tener entre 8 y 15 dígitos</p>
                                 )}
                             </div>
                             <div className="form-group">
@@ -625,10 +731,15 @@ export const FormularioEquipo = ({ onBack }) => {
                                                 type="text"
                                                 value={jugador.edad}
                                                 onChange={(e) => handleJugadorChange(index, "edad", e.target.value)}
+                                                className={jugadoresErrors[index]?.edad || jugadoresErrors[index]?.edadFormat ? 'error-field' : ''}
+                                                style={(jugadoresErrors[index]?.edad || jugadoresErrors[index]?.edadFormat) ? errorStyle : {}}
                                             />
                                         </label>
                                         {jugadoresErrors[index]?.edad && (
                                             <p className="error-text">Edad es requerido</p>
+                                        )}
+                                        {jugadoresErrors[index]?.edadFormat && (
+                                            <p className="error-text">La edad debe ser un número entero positivo</p>
                                         )}
                                     </div>
                                     <div className="form-group">
@@ -638,12 +749,15 @@ export const FormularioEquipo = ({ onBack }) => {
                                                 type="email"
                                                 value={jugador.email}
                                                 onChange={(e) => handleJugadorChange(index, "email", e.target.value)}
-                                                className={jugadoresErrors[index]?.email ? 'error-field' : ''}
-                                                style={jugadoresErrors[index]?.email ? errorStyle : {}}
+                                                className={jugadoresErrors[index]?.email || jugadoresErrors[index]?.emailFormat ? 'error-field' : ''}
+                                                style={(jugadoresErrors[index]?.email || jugadoresErrors[index]?.emailFormat) ? errorStyle : {}}
                                             />
                                         </label>
                                         {jugadoresErrors[index]?.email && (
                                             <p className="error-text">Email es requerido</p>
+                                        )}
+                                        {jugadoresErrors[index]?.emailFormat && (
+                                            <p className="error-text">Formato de email inválido</p>
                                         )}
                                     </div>
                                     <div className="form-group">
@@ -653,12 +767,15 @@ export const FormularioEquipo = ({ onBack }) => {
                                                 type="tel"
                                                 value={jugador.celular}
                                                 onChange={(e) => handleJugadorChange(index, "celular", e.target.value)}
-                                                className={jugadoresErrors[index]?.celular ? 'error-field' : ''}
-                                                style={jugadoresErrors[index]?.celular ? errorStyle : {}}
+                                                className={jugadoresErrors[index]?.celular || jugadoresErrors[index]?.celularFormat ? 'error-field' : ''}
+                                                style={(jugadoresErrors[index]?.celular || jugadoresErrors[index]?.celularFormat) ? errorStyle : {}}
                                             />
                                         </label>
                                         {jugadoresErrors[index]?.celular && (
                                             <p className="error-text">Celular es requerido</p>
+                                        )}
+                                        {jugadoresErrors[index]?.celularFormat && (
+                                            <p className="error-text">El celular debe tener entre 8 y 15 dígitos</p>
                                         )}
                                     </div>
 
