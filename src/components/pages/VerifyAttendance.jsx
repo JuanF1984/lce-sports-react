@@ -6,7 +6,7 @@ import '../../styles/VerifyAttendance.css';
 
 const VerifyAttendance = () => {
     // Extraer parametros de la URL 
-    const { eventoId, inscripcionId } = useParams();
+    const { eventoId, inscripcionId, token } = useParams();
     const navigate = useNavigate();
 
     // Utilización del contexto de autenticación
