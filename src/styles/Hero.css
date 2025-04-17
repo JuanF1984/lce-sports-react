@@ -43,9 +43,11 @@
     .hero {
         padding: 2em 0;
         font-size: 10px;
+        min-height: 80dvh;
     }
 
     .hero img {
-        height: 25dvh;
+        height: 50dvh;
+        margin-bottom: 5dvh;
     }
 }

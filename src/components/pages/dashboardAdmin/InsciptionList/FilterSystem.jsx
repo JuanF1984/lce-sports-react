@@ -1,12 +1,20 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-export const FilterSystem = ({ inscriptions, events, games, onFilter }) => {
-    const [filters, setFilters] = useState({
+export const FilterSystem = ({ inscriptions, events, games, onFilter, onFiltersChange, initialFilters }) => {
+    const [filters, setFilters] = useState(initialFilters || {
         eventId: "",
         startDate: "",
         endDate: "",
         gameId: "", // Nuevo filtro
     });
+
+    // useEffect para detectar cuando cambian los initialFilters
+    useEffect(() => {
+        if (initialFilters) {
+            setFilters(initialFilters);
+            applyFilters(initialFilters);
+        }
+    }, [initialFilters]);
 
     // Función centralizada de filtrado
     const applyFilters = useCallback((currentFilters = filters) => {
@@ -39,7 +47,8 @@ export const FilterSystem = ({ inscriptions, events, games, onFilter }) => {
         });
 
         onFilter(filtered);
-    }, [inscriptions, onFilter]);
+        onFiltersChange(currentFilters); // Actualiza los filtros en el componente padre
+    }, [inscriptions, onFilter, onFiltersChange]);
 
     // Manejador genérico para cambios en los filtros
     const handleFilterChange = (filterKey, value) => {

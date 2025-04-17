@@ -7,6 +7,8 @@ import { ExportToExcelButton } from './ExportToExcelButton ';
 
 import { useEvents } from '../../../../hooks/useEvents';
 
+import { useProximoEvento } from '../../../../hooks/useProximoEvento';
+
 import '../../../../styles/InscriptionsList.css';
 
 const InscriptionsList = () => {
@@ -15,8 +17,16 @@ const InscriptionsList = () => {
   const [loading, setLoading] = useState(true);
   const [games, setGames] = useState([]);
   const [uniquePlayersCount, setUniquePlayersCount] = useState(0);
+  const { proximoEvento, loading: loadingProximoEvento } = useProximoEvento();
 
   const { eventsData, eventsError, loadingError } = useEvents();
+
+  const [activeFilters, setActiveFilters] = useState({
+    eventId: "",
+    startDate: "",
+    endDate: "",
+    gameId: "",
+  });
 
   const headerTable = [
     'Nombre',
@@ -33,6 +43,7 @@ const InscriptionsList = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Obtener los datos de inscripciones y juegos como lo haces actualmente
         const { data: inscriptionsWithGames, error: inscriptionsError } = await supabase
           .from("inscriptions")
           .select(`
@@ -54,7 +65,6 @@ const InscriptionsList = () => {
           `)
           .order('team_name', { ascending: false });
 
-
         const { data: gamesData, error: gamesError } = await supabase
           .from("games")
           .select("id, game_name");
@@ -62,7 +72,7 @@ const InscriptionsList = () => {
         if (inscriptionsError || eventsError || gamesError) {
           console.error("Error fetching data:", inscriptionsError || eventsError || gamesError);
         } else {
-
+          // Procesar las inscripciones como lo haces actualmente
           const formattedInscriptions = inscriptionsWithGames.map(inscription => {
             const gamesArray = inscription.games_inscriptions || [];
             const games = gamesArray
@@ -76,13 +86,44 @@ const InscriptionsList = () => {
             };
           });
 
+          // Guardar todos los datos completos
           setInscriptions(formattedInscriptions);
           setGames(gamesData);
-          setFilteredInscriptions(formattedInscriptions); // Mostrar todas las inscripciones inicialmente
 
-          // Calcular la cantidad de jugadores únicos utilizando un Set
-          const uniqueEmails = new Set(formattedInscriptions.map(inscription => inscription.email));
-          setUniquePlayersCount(uniqueEmails.size);
+          // NUEVO: Verificar si tenemos proximoEvento disponible
+          if (proximoEvento?.id) {
+            // Crear un filtro inicial con el ID del último evento
+            const initialFilters = {
+              eventId: proximoEvento.id,
+              startDate: "",
+              endDate: "",
+              gameId: ""
+            };
+
+            // Filtrar las inscripciones para mostrar solo las del último evento
+            const inscriptionsDelUltimoEvento = formattedInscriptions.filter(
+              inscription => inscription.id_evento === proximoEvento.id
+            );
+
+            // Actualizar el estado con las inscripciones filtradas
+            setFilteredInscriptions(inscriptionsDelUltimoEvento);
+
+            // Actualizar los filtros activos
+            setActiveFilters(initialFilters);
+
+            // Calcular la cantidad de jugadores únicos del evento filtrado
+            const uniqueEmailsDelEvento = new Set(
+              inscriptionsDelUltimoEvento.map(inscription => inscription.email)
+            );
+            setUniquePlayersCount(uniqueEmailsDelEvento.size);
+          } else {
+            // Si no hay proximoEvento, mostrar todas las inscripciones
+            setFilteredInscriptions(formattedInscriptions);
+
+            // Calcular la cantidad de jugadores únicos de todas las inscripciones
+            const uniqueEmails = new Set(formattedInscriptions.map(inscription => inscription.email));
+            setUniquePlayersCount(uniqueEmails.size);
+          }
         }
       } catch (err) {
         console.error("Unexpected error:", err);
@@ -92,7 +133,7 @@ const InscriptionsList = () => {
     };
 
     fetchData();
-  }, []);
+  }, [proximoEvento]); // IMPORTANTE: Agregar proximoEvento como dependencia
 
   // Actualizar el conteo de jugadores únicos cuando cambian las inscripciones filtradas
   useEffect(() => {
@@ -136,6 +177,8 @@ const InscriptionsList = () => {
           events={eventsData}
           games={games}
           onFilter={setFilteredInscriptions}
+          onFiltersChange={setActiveFilters}
+          initialFilters={activeFilters}
         />
       ) : (
         <div>Cargando eventos...</div>
@@ -147,8 +190,12 @@ const InscriptionsList = () => {
           {filteredInscriptions.length !== uniquePlayersCount && (
             <span> (con {filteredInscriptions.length} inscripciones)</span>
           )}
-          {inscriptions.length !== filteredInscriptions.length && (
-            <span> (de {inscriptions.length} inscripciones totales)</span>
+          {activeFilters.eventId ? (
+            <span> del evento seleccionado</span>
+          ) : (
+            inscriptions.length !== filteredInscriptions.length && (
+              <span> (de {inscriptions.length} inscripciones totales)</span>
+            )
           )}
         </div>
       </div>
