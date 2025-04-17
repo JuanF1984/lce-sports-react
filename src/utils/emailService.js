@@ -65,9 +65,9 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegos) 
     const qrHtml = qrDataUrl ? `
     <div style="margin: 30px 0; text-align: center;">
         <h3 style="margin-bottom: 10px;">Tu código QR de asistencia:</h3>
-        <p style="margin-bottom: 15px;">Escanea este código con <strong>cualquier aplicación</strong> de lectura de QR al llegar al evento para registrar tu asistencia.</p>
+        <p style="margin-bottom: 15px;">Mostra este <strong> código QR </strong> al llegar al evento para registrar tu asistencia.</p>
         <img src="${qrDataUrl}" alt="Código QR" style="max-width: 300px; height: auto; margin-bottom: 10px;" />
-        <p style="font-size: 14px; margin-top: 10px;">Si prefieres registrarte manualmente, usa este enlace: <a href="${qrUrl}">${qrUrl}</a></p>
+        
     </div>` : '';
 
     // 7. Configurar parámetros para la plantilla de email
@@ -154,9 +154,8 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
     const qrHtmlCapitan = qrDataUrlCapitan ? `
     <div style="margin: 30px 0; text-align: center;">
         <h3 style="margin-bottom: 10px;">Tu código QR de asistencia (capitán):</h3>
-        <p style="margin-bottom: 15px;">Escanea este código con <strong>cualquier aplicación</strong> de lectura de QR al llegar al evento para registrar tu asistencia.</p>
+        <p style="margin-bottom: 15px;">Mostra este <strong> código QR </strong> al llegar al evento para registrar tu asistencia.</p>
         <img src="${qrDataUrlCapitan}" alt="Código QR" style="max-width: 300px; height: auto; margin-bottom: 10px;" />
-        <p style="font-size: 14px; margin-top: 10px;">Si prefieres registrarte manualmente, usa este enlace: <a href="${qrUrlCapitan}">${qrUrlCapitan}</a></p>
     </div>` : '';
 
     // 9. Crear parámetros para el template del email del capitán
@@ -211,8 +210,7 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
             const qrHtmlJugador = qrDataUrlJugador ? `
             <div style="margin: 30px 0; text-align: center;">
                 <h3 style="margin-bottom: 10px;">Tu código QR de asistencia:</h3>
-                <p style="margin-bottom: 15px;">Escanea este código con <strong>cualquier aplicación</strong> de lectura de QR al llegar al evento para registrar tu asistencia.</p>
-                <img src="${qrDataUrlJugador}" alt="Código QR" style="max-width: 300px; height: auto; margin-bottom: 10px;" />
+                <p style="margin-bottom: 15px;">Mostra este <strong> código QR </strong> al llegar al evento para registrar tu asistencia.</p>
                 <p style="font-size: 14px; margin-top: 10px;">Si prefieres registrarte manualmente, usa este enlace: <a href="${qrUrlJugador}">${qrUrlJugador}</a></p>
             </div>` : '';
 
