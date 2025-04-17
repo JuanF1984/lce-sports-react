@@ -66,7 +66,7 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegos) 
     <div style="margin: 30px 0; text-align: center;">
         <h3 style="margin-bottom: 10px;">Tu código QR de asistencia:</h3>
         <p style="margin-bottom: 15px;">Mostra este <strong> código QR </strong> al llegar al evento para registrar tu asistencia.</p>
-        <img src="${qrDataUrl}" alt="Código QR" style="max-width: 300px; height: auto; margin-bottom: 10px;" />
+        <img src="${qrDataUrl}" alt="Código QR" style="max-width: 200px; height: auto; margin-bottom: 10px;" />
         
     </div>` : '';
 
@@ -155,7 +155,7 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
     <div style="margin: 30px 0; text-align: center;">
         <h3 style="margin-bottom: 10px;">Tu código QR de asistencia (capitán):</h3>
         <p style="margin-bottom: 15px;">Mostra este <strong> código QR </strong> al llegar al evento para registrar tu asistencia.</p>
-        <img src="${qrDataUrlCapitan}" alt="Código QR" style="max-width: 300px; height: auto; margin-bottom: 10px;" />
+        <img src="${qrDataUrlCapitan}" alt="Código QR" style="max-width: 200px; height: auto; margin-bottom: 10px;" />
     </div>` : '';
 
     // 9. Crear parámetros para el template del email del capitán
@@ -211,7 +211,7 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
             <div style="margin: 30px 0; text-align: center;">
                 <h3 style="margin-bottom: 10px;">Tu código QR de asistencia:</h3>
                 <p style="margin-bottom: 15px;">Mostra este <strong> código QR </strong> al llegar al evento para registrar tu asistencia.</p>
-                <p style="font-size: 14px; margin-top: 10px;">Si prefieres registrarte manualmente, usa este enlace: <a href="${qrUrlJugador}">${qrUrlJugador}</a></p>
+                <img src="${qrDataUrlJugador}" alt="Código QR" style="max-width: 200px; height: auto; margin-bottom: 10px;" />
             </div>` : '';
 
             const templateParamsJugador = {
