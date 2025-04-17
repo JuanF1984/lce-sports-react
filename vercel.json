@@ -1,7 +1,8 @@
 {
+  "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/:path*",
+      "source": "/(formulario|inscriptions|verify-attendance.*)",
       "destination": "/index.html"
     }
   ]
