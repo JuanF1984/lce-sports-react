@@ -40,6 +40,32 @@ const InscriptionsList = () => {
     'Equipo'
   ];
 
+  const filterDuplicatesByPersonAndGame = (inscriptions) => {
+    // Mapa donde la clave es una combinación de email+nombre+apellido+juego
+    const uniqueKeyMap = new Map();
+
+    return inscriptions.filter(inscription => {
+      // Normalizar los datos para la comparación
+      const emailLowerCase = inscription.email.toLowerCase().trim();
+      const fullName = `${inscription.nombre.toLowerCase().trim()}-${inscription.apellido.toLowerCase().trim()}`;
+
+      // Obtener juegos como una cadena ordenada
+      const juegos = inscription.juegos || 'Sin juegos registrados';
+
+      // Crear una clave única que incluya persona+juegos
+      const uniqueKey = `${emailLowerCase}|${fullName}|${juegos}`;
+
+      // Si no hemos visto esta combinación antes, la aceptamos
+      if (!uniqueKeyMap.has(uniqueKey)) {
+        uniqueKeyMap.set(uniqueKey, true);
+        return true;
+      }
+
+      // Si ya tenemos esta combinación exacta, la rechazamos (es un duplicado)
+      return false;
+    });
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -106,7 +132,7 @@ const InscriptionsList = () => {
             );
 
             // Actualizar el estado con las inscripciones filtradas
-            setFilteredInscriptions(inscriptionsDelUltimoEvento);
+            setFilteredInscriptions(filterDuplicatesByPersonAndGame(inscriptionsDelUltimoEvento));
 
             // Actualizar los filtros activos
             setActiveFilters(initialFilters);
@@ -118,7 +144,7 @@ const InscriptionsList = () => {
             setUniquePlayersCount(uniqueEmailsDelEvento.size);
           } else {
             // Si no hay proximoEvento, mostrar todas las inscripciones
-            setFilteredInscriptions(formattedInscriptions);
+            setFilteredInscriptions(filterDuplicatesByPersonAndGame(formattedInscriptions));
 
             // Calcular la cantidad de jugadores únicos de todas las inscripciones
             const uniqueEmails = new Set(formattedInscriptions.map(inscription => inscription.email));

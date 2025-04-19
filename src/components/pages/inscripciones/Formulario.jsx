@@ -20,6 +20,26 @@ import { generateQRString } from "../../../utils/qrCodeGenerator";
 import '../../../styles/Formulario.css';
 
 export const Formulario = ({ onBack }) => {
+    // Función para capitalizar cada palabra (primera letra mayúscula, resto minúsculas)
+    const capitalizeText = (text) => {
+        if (!text) return '';
+
+        // Dividir el texto por espacios, capitalizar cada palabra y volver a unir
+        return text
+            .trim()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .filter(word => word) // Eliminar palabras vacías que podrían surgir de múltiples espacios
+            .join(' ');
+    };
+
+    // Función para normalizar emails (todo a minúsculas)
+    const normalizeEmail = (email) => {
+        if (!email) return '';
+        return email.trim().toLowerCase();
+    };
+
+
     const { user, isLoading } = useAuth();
     const [formValues, setFormValues] = useState({
         nombre: "",
@@ -189,9 +209,17 @@ export const Formulario = ({ onBack }) => {
         }
 
         try {
+            // Normalizar los datos antes de insertar
+            const normalizedFormValues = {
+                ...formValues,
+                nombre: capitalizeText(formValues.nombre),
+                apellido: capitalizeText(formValues.apellido),
+                email: normalizeEmail(formValues.email),
+            };
+
             // Objeto con los datos a insertar
             const dataToInsert = {
-                ...formValues,
+                ...normalizedFormValues,
                 id_evento: proximoEvento.id,
             };
 
@@ -301,7 +329,7 @@ export const Formulario = ({ onBack }) => {
                 celularFormat: false,
                 localidad: false,
                 selectedGames: false,
-                edad: false, 
+                edad: false,
                 edadFormat: false
             });
 

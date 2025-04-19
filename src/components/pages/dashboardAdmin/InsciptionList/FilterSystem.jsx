@@ -46,6 +46,29 @@ export const FilterSystem = ({ inscriptions, events, games, onFilter, onFiltersC
             filtered = filtered.filter(filterRules[filterKey]);
         });
 
+        // Eliminar duplicados por combinación de email+nombre+apellido+juegos
+        const uniqueKeyMap = new Map();
+        filtered = filtered.filter(inscription => {
+            // Normalizar los datos para la comparación
+            const emailLowerCase = inscription.email.toLowerCase().trim();
+            const fullName = `${inscription.nombre.toLowerCase().trim()}-${inscription.apellido.toLowerCase().trim()}`;
+
+            // Obtener juegos como una cadena ordenada
+            const juegos = inscription.juegos || 'Sin juegos registrados';
+
+            // Crear una clave única que incluya persona+juegos
+            const uniqueKey = `${emailLowerCase}|${fullName}|${juegos}`;
+
+            // Si no hemos visto esta combinación antes, la aceptamos
+            if (!uniqueKeyMap.has(uniqueKey)) {
+                uniqueKeyMap.set(uniqueKey, true);
+                return true;
+            }
+
+            // Si ya tenemos esta combinación exacta, la rechazamos (es un duplicado)
+            return false;
+        });
+
         onFilter(filtered);
         onFiltersChange(currentFilters); // Actualiza los filtros en el componente padre
     }, [inscriptions, onFilter, onFiltersChange]);
