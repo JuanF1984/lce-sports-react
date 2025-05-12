@@ -113,6 +113,7 @@ export const localidadesBuenosAires = [
     "San Fernando",
     "San Isidro",
     "San Miguel",
+    "San Miguel del Monte",
     "San Nicolás",
     "San Pedro",
     "San Vicente",
