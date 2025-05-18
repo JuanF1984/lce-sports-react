@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useProximosEventos } from '../../../../hooks/useProximosEventos';
 import { InscriptionButton } from '../../../common/InscriptionButton';
+import { formatearFecha, formatearHora } from '../../../../utils/dateUtils';
 import './RelojRegresivo.css';
 
 export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 2 }) => {
@@ -105,8 +106,8 @@ export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 2 }) => {
                                         <div className="evento-info">
                                             <p className="evento-localidad">{evento.localidad}</p>
                                             <p className="evento-fecha">
-                                                {evento.diaSemana} {evento.fecha_inicio}
-                                                {evento.hora_inicio && ` - ${evento.hora_inicio}`}
+                                                {formatearFecha(evento.fecha_inicio)}
+                                                {evento.hora_inicio && ` - ${formatearHora(evento.hora_inicio)}`}
                                             </p>
                                         </div>
 
