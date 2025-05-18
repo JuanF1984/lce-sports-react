@@ -1,49 +1,65 @@
+.reloj {
+    /* background-color: #111; */
+    padding: 0;
+}
+
 .container-reloj {
     font-family: 'Akashi', sans-serif;
     text-align: center;
-    height: 75dvh;
+    /* height: 75dvh; */
     display: flex;
     align-items: center;
     flex-direction: column;
     justify-content: center;
     gap: 3em;
+    max-width: 1200px;
+    margin: 2em auto;
 }
 
 .container-reloj h3 {
     font-size: 2.5rem;
-    /* margin-bottom: 40px; */
-    /* margin-left: 1em; */
-    /* margin-right: 1em; */
     color: #DADADA;
     text-shadow: 0 0 10px #312783, 0 0 20px #312783, 0 0 40px #312783;
     padding: 0;
-}
-
-.no-event-message {
-    font-size: 24px;
-    font-weight: bold;
-    text-align: center;
-    color: #fff; /* O el color que uses para los números */
-    width: 100%;
-    padding: 20px 0;
-    /* Puedes añadir más estilos para que coincida con la apariencia de los números */
-}
-
-/* Asegúrate que el mensaje de evento finalizado también tenga el estilo adecuado */
-.final-message {
-    font-size: 24px;
-    font-weight: bold;
-    color: #fff;
-    text-align: center;
-    width: 100%;
-    padding: 20px 0;
 }
 
 .container-reloj p {
     font-family: 'Avenir', sans-serif;
     font-size: 1.5em;
     text-align: center;
-    /* padding-bottom: 2em; */
+    color: #DADADA;
+}
+
+.eventos-container {
+    display: flex;
+    flex-direction: column;
+    gap: 3em;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.evento-item {
+    /* background-color: #111; */
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(49, 39, 131, 0.5);
+}
+
+.evento-info {
+    margin-bottom: 15px;
+}
+
+.evento-localidad {
+    font-family: 'Avenir', sans-serif;
+    font-size: 1.5em;
+    color: #DADADA;
+    margin-bottom: 5px;
+}
+
+.evento-fecha {
+    font-family: 'Avenir', sans-serif;
+    font-size: 1.2em;
     color: #DADADA;
 }
 
@@ -52,6 +68,12 @@
     justify-content: center;
     align-items: center;
     gap: 10px;
+}
+
+.time-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .time {
@@ -68,19 +90,27 @@
     font-size: 1.5rem;
     font-family: 'Avenir';
     color: #DADADA;
-    /* text-shadow: 0 0 5px #00ffcc, 0 0 10px #00ffcc; */
 }
 
-.final-message {
+.final-message,
+.no-event-message {
     font-family: 'Avenir', sans-serif;
     font-size: 2em;
-    color: #DADADA;
+    font-weight: bold;
     text-align: center;
+    color: #DADADA;
+    width: 100%;
+    padding: 20px 0;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
     .container-reloj {
-        height: 60dvh;
+        gap: 2em;
+    }
+
+    .eventos-container {
+        gap: 2em;
     }
 
     .clock {
@@ -89,15 +119,39 @@
 
     .time {
         font-size: 2em;
+        padding: 10px;
     }
 
-    #minutes {
+    .label {
+        font-size: 1rem;
+    }
+
+    .evento-localidad {
+        font-size: 1.3em;
+    }
+
+    .evento-fecha {
+        font-size: 1em;
+    }
+
+    /* Ocultar minutos y segundos en móvil para cada reloj */
+    .time-container:nth-child(3),
+    .time-container:nth-child(4) {
         display: none;
     }
+}
 
-    #minutes~div {
-        display: none;
+@media (max-width: 480px) {
+    .container-reloj h3 {
+        font-size: 2rem;
     }
 
+    .time {
+        font-size: 1.7em;
+        padding: 8px;
+    }
 
+    .evento-localidad {
+        font-size: 1.2em;
+    }
 }

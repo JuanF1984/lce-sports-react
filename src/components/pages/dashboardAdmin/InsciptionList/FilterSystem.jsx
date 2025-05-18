@@ -1,86 +1,118 @@
 import { useState, useEffect, useCallback } from "react";
 
+import { formatearFecha } from "../../../../utils/dateUtils";
+
 export const FilterSystem = ({ inscriptions, events, games, onFilter, onFiltersChange, initialFilters }) => {
     const [filters, setFilters] = useState(initialFilters || {
         eventId: "",
         startDate: "",
         endDate: "",
-        gameId: "", // Nuevo filtro
+        gameId: "",
     });
 
     // useEffect para detectar cuando cambian los initialFilters
     useEffect(() => {
         if (initialFilters) {
+            console.log("Actualizando filtros con initialFilters:", initialFilters);
             setFilters(initialFilters);
-            applyFilters(initialFilters);
+            // No aplicamos los filtros aquí, porque el cambio de evento ya será manejado por el componente padre
         }
     }, [initialFilters]);
 
     // Función centralizada de filtrado
     const applyFilters = useCallback((currentFilters = filters) => {
+        console.log("Aplicando filtros en FilterSystem:", currentFilters);
+        console.log("Total de inscripciones a filtrar:", inscriptions.length);
+
+        // Si no hay inscripciones, no hay nada que filtrar
+        if (inscriptions.length === 0) {
+            console.log("No hay inscripciones para filtrar");
+            onFilter([]);
+            return;
+        }
+
+        // Clonamos el array de inscripciones para no modificar el original
         let filtered = [...inscriptions];
 
-        // Objeto que define las reglas de filtrado
+        // Objeto que define las reglas de filtrado con logs de diagnóstico
         const filterRules = {
-            eventId: (inscription) =>
-                !currentFilters.eventId || inscription.id_evento === currentFilters.eventId,
+            // Ya no filtramos por eventId aquí, porque ya cargamos solo las del evento seleccionado
+            startDate: (inscription) => {
+                if (!currentFilters.startDate) return true;
 
-            startDate: (inscription) =>
-                !currentFilters.startDate ||
-                new Date(inscription.created_at).toISOString().split('T')[0] >= currentFilters.startDate,
+                // Verificamos que tenemos una fecha válida
+                if (!inscription.created_at) {
+                    console.warn("Inscripción sin fecha de creación:", inscription);
+                    return false;
+                }
 
-            endDate: (inscription) =>
-                !currentFilters.endDate ||
-                new Date(inscription.created_at).toISOString().split('T')[0] <= currentFilters.endDate,
+                const inscriptionDate = new Date(inscription.created_at).toISOString().split('T')[0];
+                return inscriptionDate >= currentFilters.startDate;
+            },
+            endDate: (inscription) => {
+                if (!currentFilters.endDate) return true;
 
+                // Verificamos que tenemos una fecha válida
+                if (!inscription.created_at) {
+                    console.warn("Inscripción sin fecha de creación:", inscription);
+                    return false;
+                }
+
+                const inscriptionDate = new Date(inscription.created_at).toISOString().split('T')[0];
+                return inscriptionDate <= currentFilters.endDate;
+            },
             gameId: (inscription) => {
                 if (!currentFilters.gameId) return true;
-                const inscriptionGames = inscription.games_inscriptions || [];
-                return inscriptionGames.some(gi => gi.game?.id === currentFilters.gameId);
 
+                // Verificamos que tenemos juegos asociados
+                const inscriptionGames = inscription.games_inscriptions || [];
+                if (inscriptionGames.length === 0) {
+                    // Si estamos filtrando por juego y esta inscripción no tiene juegos, no la mostramos
+                    return false;
+                }
+
+                return inscriptionGames.some(gi => gi.game?.id === currentFilters.gameId);
             }
         };
 
-        // Aplicar todos los filtros
+        // Aplicar cada filtro por separado para poder diagnosticar
         Object.keys(filterRules).forEach(filterKey => {
+            const countBefore = filtered.length;
             filtered = filtered.filter(filterRules[filterKey]);
-        });
+            const countAfter = filtered.length;
 
-        // Eliminar duplicados por combinación de email+nombre+apellido+juegos
-        const uniqueKeyMap = new Map();
-        filtered = filtered.filter(inscription => {
-            // Normalizar los datos para la comparación
-            const emailLowerCase = inscription.email.toLowerCase().trim();
-            const fullName = `${inscription.nombre.toLowerCase().trim()}-${inscription.apellido.toLowerCase().trim()}`;
-
-            // Obtener juegos como una cadena ordenada
-            const juegos = inscription.juegos || 'Sin juegos registrados';
-
-            // Crear una clave única que incluya persona+juegos
-            const uniqueKey = `${emailLowerCase}|${fullName}|${juegos}`;
-
-            // Si no hemos visto esta combinación antes, la aceptamos
-            if (!uniqueKeyMap.has(uniqueKey)) {
-                uniqueKeyMap.set(uniqueKey, true);
-                return true;
+            // Solo loguear si el filtro está activo y elimina registros
+            if (currentFilters[filterKey] && countBefore !== countAfter) {
+                console.log(`Filtro ${filterKey} eliminó ${countBefore - countAfter} inscripciones. Quedan ${countAfter}`);
             }
-
-            // Si ya tenemos esta combinación exacta, la rechazamos (es un duplicado)
-            return false;
         });
 
+        console.log("Total de inscripciones después de filtrar:", filtered.length);
         onFilter(filtered);
-        onFiltersChange(currentFilters); // Actualiza los filtros en el componente padre
-    }, [inscriptions, onFilter, onFiltersChange]);
+    }, [inscriptions, onFilter]);
 
-    // Manejador genérico para cambios en los filtros
-    const handleFilterChange = (filterKey, value) => {
+    // Cuando cambia el evento, notificamos al componente padre
+    const handleEventChange = (eventId) => {
+        console.log(`Evento seleccionado cambiado a: ${eventId}`);
+        const newFilters = {
+            ...filters,
+            eventId
+        };
+
+        setFilters(newFilters);
+        onFiltersChange(newFilters);
+    };
+
+    // Manejador para otros filtros (fecha, juego)
+    const handleOtherFilterChange = (filterKey, value) => {
         const newFilters = {
             ...filters,
             [filterKey]: value
         };
+
         setFilters(newFilters);
         applyFilters(newFilters);
+        onFiltersChange(newFilters);
     };
 
     return (
@@ -91,54 +123,59 @@ export const FilterSystem = ({ inscriptions, events, games, onFilter, onFiltersC
                 <select
                     id="event-filter"
                     value={filters.eventId}
-                    onChange={(e) => handleFilterChange('eventId', e.target.value)}
+                    onChange={(e) => handleEventChange(e.target.value)}
                     className="filter-select"
                 >
-                    <option value="">Todos los eventos</option>
+                    <option value="">Selecciona un evento</option>
                     {events.map(event => (
                         <option key={event.id} value={event.id}>
-                            {event.localidad} - {new Date(event.fecha_inicio).toLocaleDateString()}
+                            {event.localidad} - {formatearFecha (event.fecha_inicio)}
                         </option>
                     ))}
                 </select>
             </div>
 
-            {/* Filtro de Juegos */}
-            <div className="filter-group">
-                <label htmlFor="game-filter" className="filter-label">Filtrar por juego:</label>
-                <select
-                    id="game-filter"
-                    value={filters.gameId}
-                    onChange={(e) => handleFilterChange('gameId', e.target.value)}
-                    className="filter-select"
-                >
-                    <option value="">Todos los juegos</option>
-                    {games.map(game => (
-                        <option key={game.id} value={game.id}>
-                            {game.game_name}
-                        </option>
-                    ))}
-                </select>
-            </div>
+            {/* Solo mostramos el resto de filtros si hay un evento seleccionado */}
+            {filters.eventId && (
+                <>
+                    {/* Filtro de Juegos */}
+                    <div className="filter-group">
+                        <label htmlFor="game-filter" className="filter-label">Filtrar por juego:</label>
+                        <select
+                            id="game-filter"
+                            value={filters.gameId}
+                            onChange={(e) => handleOtherFilterChange('gameId', e.target.value)}
+                            className="filter-select"
+                        >
+                            <option value="">Todos los juegos</option>
+                            {games.map(game => (
+                                <option key={game.id} value={game.id}>
+                                    {game.game_name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-            {/* Filtros de Fecha */}
-            <div className="filter-group date-filters">
-                <label className="filter-label">Filtrar por fecha de inscripción:</label>
-                <div className="date-inputs">
-                    <input
-                        type="date"
-                        value={filters.startDate}
-                        onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                        className="filter-date"
-                    />
-                    <input
-                        type="date"
-                        value={filters.endDate}
-                        onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                        className="filter-date"
-                    />
-                </div>
-            </div>
+                    {/* Filtros de Fecha */}
+                    <div className="filter-group date-filters">
+                        <label className="filter-label">Filtrar por fecha de inscripción:</label>
+                        <div className="date-inputs">
+                            <input
+                                type="date"
+                                value={filters.startDate}
+                                onChange={(e) => handleOtherFilterChange('startDate', e.target.value)}
+                                className="filter-date"
+                            />
+                            <input
+                                type="date"
+                                value={filters.endDate}
+                                onChange={(e) => handleOtherFilterChange('endDate', e.target.value)}
+                                className="filter-date"
+                            />
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };

@@ -1,275 +1,86 @@
-import React, { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { EventoInfo } from "./common/EventoInfo";
 import { useNavigate } from "react-router-dom";
-
 import supabase from "../../../utils/supabase";
-
 import { LogoNeon } from '../../common/LogoNeon';
-
 import { useAuth } from "../../../context/UseAuth";
-
-import { useProximoEvento } from "../../../hooks/useProximoEvento";
-
 import { useEventGames } from "../../../hooks/useEventGames";
-
 import { localidadesBuenosAires } from "../../../data/localidades";
-
 import { enviarConfirmacionEquipo } from "../../../utils/emailService";
-
 import { generateQRString } from "../../../utils/qrCodeGenerator";
+import { useEventoSeleccionado } from "./hooks/useEventoSeleccionado";
+import { useFormularioEquipo } from "../../../hooks/useFormularioEquipo";
+import { capitalizeText, normalizeEmail } from "../../../utils/validations";
 
-
-export const FormularioEquipo = ({ onBack }) => {
+export const FormularioEquipo = ({ onBack, eventoId }) => {
     const navigate = useNavigate();
     const { user, isLoading } = useAuth();
 
-    // Funciones para validar email y teléfono
-    const validateEmail = (email) => {
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return regex.test(email);
-    };
+    // Usar el hook useEventoSeleccionado
+    const {
+        eventoSeleccionado,
+        loadingEvento,
+        errorMessage: eventoErrorMessage
+    } = useEventoSeleccionado(eventoId);
 
-    const validatePhone = (phone) => {
-        // Validar que sea numérico y tenga entre 8 y 15 dígitos
-        const regex = /^\d{8,15}$/;
-        return regex.test(phone);
-    };
+    // Usar el hook useEventGames
+    const {
+        eventGames,
+        loading: loadingGames,
+        error: errorGames
+    } = useEventGames(
+        eventoSeleccionado ? [eventoSeleccionado.id] : []
+    );
 
-    const validateAge = (age) => {
-        // Validar que sea un número entero positivo (sin decimales)
-        const regex = /^[1-9][0-9]*$/;
-        return regex.test(age);
-    };
-
-    // Datos del capitán
-    const [formValues, setFormValues] = useState({
-        nombre: "",
-        apellido: "",
-        edad: "",
-        email: "",
-        celular: "",
-        localidad: "",
-        team_name: "",
-    });
-
-    // Estado para controlar campos con error
-    const [fieldErrors, setFieldErrors] = useState({
-        nombre: false,
-        apellido: false,
-        email: false,
-        emailFormat: false,
-        celular: false,
-        celularFormat: false,
-        localidad: false,
-        team_name: false,
-        selectedGame: false,
-        edad: false,
-        edadFormat: false
-    });
-
-    // Estado para controlar errores en los campos de jugadores
-    const [jugadoresErrors, setJugadoresErrors] = useState([
-        { nombre: false, apellido: false, celular: false, celularFormat: false, email: false, emailFormat: false, edad: false, edadFormat: false }
-    ]);
-
-    // Datos de los miembros del equipo
-    const [jugadores, setJugadores] = useState([
-        { nombre: "", apellido: "", edad: "", celular: "", email: "" }
-    ]);
-
-    // Juego seleccionado para todo el equipo
-    const [selectedGame, setSelectedGame] = useState("");
-
-    const [errorMessage, setErrorMessage] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
-    const [showLoading, setShowLoading] = useState(false);
-    const [formSubmitted, setFormSubmitted] = useState(false);
-    const { proximoEvento, fecha_inicio, fecha_fin, localidad, loading, hora_inicio } = useProximoEvento();
-    const { eventGames, loading: loadingGames, error: errorGames } = useEventGames(proximoEvento ? [proximoEvento.id] : []);
-
-    // Filtrar solo juegos que permiten equipos
-    const juegosEquipo = proximoEvento?.id ?
-        (eventGames[proximoEvento.id] || []).filter(game => game.team_option) :
+    // Filtrar juegos de equipo
+    const juegosEquipo = eventoSeleccionado?.id ?
+        (eventGames[eventoSeleccionado.id] || []).filter(game => game.team_option) :
         [];
+
+    // Usar el hook useFormularioEquipo
+    const {
+        formValues,
+        setFormValues,
+        fieldErrors,
+        setFieldErrors,
+        jugadores,
+        setJugadores,
+        jugadoresErrors,
+        setJugadoresErrors,
+        selectedGame,
+        setSelectedGame,
+        errorMessage,
+        setErrorMessage,
+        successMessage,
+        setSuccessMessage,
+        showLoading,
+        setShowLoading,
+        isSaving,
+        setIsSaving,
+        formSubmitted,
+        setFormSubmitted,
+        handleInputChange,
+        handleJugadorChange,
+        handleGameChange,
+        addJugador,
+        removeJugador,
+        validateForm,
+        resetForm
+    } = useFormularioEquipo();
 
     const localidadesOptions = localidadesBuenosAires.map((localidad) => ({
         value: localidad,
         label: localidad,
     }));
 
-    const [isSaving, setIsSaving] = useState(false);
-
+    // Manejar estado de carga
     useEffect(() => {
         if (isLoading) {
             setShowLoading(true);
         } else {
             setShowLoading(false); // Si hay usuario, ocultar el loading.
         }
-    }, [isLoading]);
-
-    // Función para validar el formulario
-    const validateForm = () => {
-        const { nombre, apellido, celular, localidad, team_name, email, edad } = formValues;
-
-        // Reiniciar errores
-        const newFieldErrors = {
-            nombre: !nombre,
-            apellido: !apellido,
-            celular: !celular,
-            celularFormat: celular && !validatePhone(celular),
-            localidad: !localidad,
-            team_name: !team_name,
-            email: !email,
-            emailFormat: email && !validateEmail(email),
-            selectedGame: !selectedGame,
-            edad: !edad,
-            edadFormat: edad && !validateAge(edad)
-        };
-
-        setFieldErrors(newFieldErrors);
-
-        // Validar jugadores
-        const newJugadoresErrors = jugadores.map(jugador => ({
-            nombre: !jugador.nombre,
-            apellido: !jugador.apellido,
-            celular: !jugador.celular,
-            celularFormat: jugador.celular && !validatePhone(jugador.celular),
-            email: !jugador.email,
-            emailFormat: jugador.email && !validateEmail(jugador.email),
-            edad: !jugador.edad,
-            edadFormat: jugador.edad && !validateAge(jugador.edad)
-        }));
-
-        setJugadoresErrors(newJugadoresErrors);
-
-        // Verificar si hay algún error en el formulario
-        const hasCapitanErrors = Object.values(newFieldErrors).some(error => error);
-        const hasJugadoresErrors = newJugadoresErrors.some(jugador =>
-            Object.values(jugador).some(error => error)
-        );
-
-        return !hasCapitanErrors && !hasJugadoresErrors;
-    };
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormValues((prev) => ({ ...prev, [name]: value }));
-
-        // Si el formulario ha sido enviado, validar el campo en tiempo real
-        if (formSubmitted) {
-            if (name === "email") {
-                setFieldErrors(prev => ({
-                    ...prev,
-                    [name]: value.trim() === "",
-                    emailFormat: value.trim() !== "" && !validateEmail(value)
-                }));
-            } else if (name === "celular") {
-                setFieldErrors(prev => ({
-                    ...prev,
-                    [name]: value.trim() === "",
-                    celularFormat: value.trim() !== "" && !validatePhone(value)
-                }));
-            } else if (name === "edad") {
-                setFieldErrors(prev => ({
-                    ...prev,
-                    [name]: value.trim() === "",
-                    edadFormat: value.trim() !== "" && !validateAge(value)
-                }));
-            } else {
-                setFieldErrors(prev => ({
-                    ...prev,
-                    [name]: value.trim() === ""
-                }));
-            }
-        }
-    };
-
-    const handleJugadorChange = (index, field, value) => {
-        setJugadores(prev => {
-            const newJugadores = [...prev];
-            newJugadores[index] = {
-                ...newJugadores[index],
-                [field]: value
-            };
-            return newJugadores;
-        });
-
-        // Si el formulario ha sido enviado, validar el campo en tiempo real
-        if (formSubmitted) {
-            if (field === "email") {
-                setJugadoresErrors(prev => {
-                    const newErrors = [...prev];
-                    newErrors[index] = {
-                        ...newErrors[index],
-                        [field]: value.trim() === "",
-                        emailFormat: value.trim() !== "" && !validateEmail(value)
-                    };
-                    return newErrors;
-                });
-            } else if (field === "celular") {
-                setJugadoresErrors(prev => {
-                    const newErrors = [...prev];
-                    newErrors[index] = {
-                        ...newErrors[index],
-                        [field]: value.trim() === "",
-                        celularFormat: value.trim() !== "" && !validatePhone(value)
-                    };
-                    return newErrors;
-                });
-            } else if (field === "edad") {
-                setJugadoresErrors(prev => {
-                    const newErrors = [...prev];
-                    newErrors[index] = {
-                        ...newErrors[index],
-                        [field]: value.trim() === "",
-                        edadFormat: value.trim() !== "" && !validateAge(value)
-                    };
-                    return newErrors;
-                });
-            } else {
-                setJugadoresErrors(prev => {
-                    const newErrors = [...prev];
-                    newErrors[index] = {
-                        ...newErrors[index],
-                        [field]: value.trim() === ""
-                    };
-                    return newErrors;
-                });
-            }
-        }
-    };
-
-    const handleGameChange = (e) => {
-        const value = e.target.value;
-        setSelectedGame(value);
-
-        if (formSubmitted) {
-            setFieldErrors(prev => ({
-                ...prev,
-                selectedGame: value === ""
-            }));
-        }
-    };
-
-    const addJugador = () => {
-        setJugadores(prev => [...prev, { nombre: "", apellido: "", edad: "", celular: "", email: "" }]);
-        setJugadoresErrors(prev => [...prev, {
-            nombre: false,
-            apellido: false,
-            celular: false,
-            celularFormat: false,
-            email: false,
-            emailFormat: false,
-            edad: false,
-            edadFormat: false
-        }]);
-    };
-
-    const removeJugador = (index) => {
-        if (jugadores.length > 1) {
-            setJugadores(prev => prev.filter((_, i) => i !== index));
-            setJugadoresErrors(prev => prev.filter((_, i) => i !== index));
-        }
-    };
+    }, [isLoading, setShowLoading]);
 
     const handleModalAccept = () => {
         setSuccessMessage("");
@@ -280,6 +91,12 @@ export const FormularioEquipo = ({ onBack }) => {
         setIsSaving(true);
         setFormSubmitted(true);
         setErrorMessage("");
+
+        if (!eventoSeleccionado || !eventoSeleccionado.id) {
+            setErrorMessage("No se ha seleccionado ningún evento válido.");
+            setIsSaving(false);
+            return;
+        }
 
         // Validar el formulario
         const isValid = validateForm();
@@ -296,16 +113,22 @@ export const FormularioEquipo = ({ onBack }) => {
         }
 
         try {
-            const { nombre, apellido, celular, localidad, team_name, email } = formValues;
+            // Normalizar los datos del capitán
+            const normalizedFormValues = {
+                ...formValues,
+                nombre: capitalizeText(formValues.nombre),
+                apellido: capitalizeText(formValues.apellido),
+                email: normalizeEmail(formValues.email),
+            };
 
             // 1. Inscribir al capitán
             const { data: capitanData, error: capitanError } = await supabase
                 .from("inscriptions")
                 .insert({
                     ...(user ? { user_id: user.id } : {}),
-                    ...formValues,
-                    id_evento: proximoEvento.id,
-                    team_name: team_name // Nombre del equipo
+                    ...normalizedFormValues,
+                    id_evento: eventoSeleccionado.id,
+                    team_name: normalizedFormValues.team_name
                 })
                 .select()
                 .single();
@@ -317,7 +140,7 @@ export const FormularioEquipo = ({ onBack }) => {
             // Asegurarse de que capitanData tenga el id_evento para el QR
             const capitanDataCompleto = {
                 ...capitanData,
-                id_evento: proximoEvento.id // Aseguramos que tenga el id_evento
+                id_evento: eventoSeleccionado.id // Aseguramos que tenga el id_evento
             };
 
             // Generar código QR único para el capitán con datos completos
@@ -351,7 +174,7 @@ export const FormularioEquipo = ({ onBack }) => {
 
             // Actualizar capitanData con el QR generado y el id_evento para uso posterior en el email
             capitanData.qr_code = qrStringCapitan;
-            capitanData.id_evento = proximoEvento.id; // Aseguramos que tenga el id_evento
+            capitanData.id_evento = eventoSeleccionado.id; // Aseguramos que tenga el id_evento
 
             // Array para almacenar los datos de todos los jugadores con sus QRs
             const jugadoresConQR = [];
@@ -360,19 +183,27 @@ export const FormularioEquipo = ({ onBack }) => {
             for (let i = 0; i < jugadores.length; i++) {
                 const jugador = jugadores[i];
 
+                // Normalizar datos del jugador
+                const jugadorNormalizado = {
+                    ...jugador,
+                    nombre: capitalizeText(jugador.nombre),
+                    apellido: capitalizeText(jugador.apellido),
+                    email: jugador.email ? normalizeEmail(jugador.email) : null,
+                };
+
                 // Crear inscripción para el jugador
                 const { data: jugadorData, error: jugadorError } = await supabase
                     .from("inscriptions")
                     .insert({
                         ...(user ? { user_id: user.id } : {}),
-                        nombre: jugador.nombre,
-                        apellido: jugador.apellido,
-                        edad: jugador.edad || null,
-                        email: jugador.email || null,
-                        celular: jugador.celular,
-                        localidad: formValues.localidad, // Misma localidad que el capitán
-                        id_evento: proximoEvento.id,
-                        team_name: team_name // Mismo nombre de equipo
+                        nombre: jugadorNormalizado.nombre,
+                        apellido: jugadorNormalizado.apellido,
+                        edad: jugadorNormalizado.edad || null,
+                        email: jugadorNormalizado.email || null,
+                        celular: jugadorNormalizado.celular,
+                        localidad: normalizedFormValues.localidad, // Misma localidad que el capitán
+                        id_evento: eventoSeleccionado.id,
+                        team_name: normalizedFormValues.team_name // Mismo nombre de equipo
                     })
                     .select()
                     .single();
@@ -382,10 +213,9 @@ export const FormularioEquipo = ({ onBack }) => {
                 }
 
                 // Asegurarse de que jugadorData tenga el id_evento para el QR
-                // Esto es necesario porque a veces Supabase no devuelve todos los campos en el select()
                 const jugadorDataCompleto = {
                     ...jugadorData,
-                    id_evento: proximoEvento.id // Aseguramos que tenga el id_evento
+                    id_evento: eventoSeleccionado.id
                 };
 
                 // Generar código QR único para este jugador con datos completos
@@ -402,7 +232,6 @@ export const FormularioEquipo = ({ onBack }) => {
 
                 if (qrJugadorUpdateError) {
                     console.error(`Error al guardar código QR del jugador ${i + 1}:`, qrJugadorUpdateError);
-                    // No detenemos el flujo si falla la actualización del QR
                 }
 
                 // Crear inscripción del juego para este jugador
@@ -419,9 +248,9 @@ export const FormularioEquipo = ({ onBack }) => {
 
                 // Guardar jugador con su QR para uso posterior
                 jugadoresConQR.push({
-                    ...jugador,
+                    ...jugadorNormalizado,
                     id: jugadorData.id,
-                    id_evento: proximoEvento.id, // Aseguramos que tenga el id_evento
+                    id_evento: eventoSeleccionado.id,
                     qr_code: qrStringJugador
                 });
             }
@@ -429,66 +258,34 @@ export const FormularioEquipo = ({ onBack }) => {
             const juegoSeleccionado = juegosEquipo.find(game => game.id === selectedGame);
 
             // Si el capitán tiene email, enviar confirmación
-            if (formValues.email) {
+            if (normalizedFormValues.email) {
                 try {
                     await enviarConfirmacionEquipo(
                         capitanData, // datos del capitán con QR
                         jugadoresConQR,  // datos de los jugadores con QRs
                         {
-                            nombre: proximoEvento.nombre,
-                            fecha_inicio: fecha_inicio,
-                            hora_inicio: hora_inicio,
-                            localidad: localidad
+                            nombre: eventoSeleccionado.nombre,
+                            fecha_inicio: eventoSeleccionado.fecha_inicio,
+                            hora_inicio: eventoSeleccionado.hora_inicio,
+                            localidad: eventoSeleccionado.localidad
                         },
                         juegoSeleccionado,
-                        formValues.team_name
+                        normalizedFormValues.team_name
                     );
                 } catch (emailError) {
                     console.error("Error al enviar confirmación por email:", emailError);
-                    // No interrumpimos el flujo si el email falla
                 }
             }
 
             // Limpiar el formulario y mostrar mensaje de éxito
             setSuccessMessage("Inscripción de equipo realizada con éxito.");
-            setFormValues({
-                nombre: "",
-                apellido: "",
-                edad: "",
-                email: "",
-                celular: "",
-                localidad: "",
-                team_name: "",
-            });
-            setJugadores([{ nombre: "", apellido: "", edad: "", celular: "", email: "" }]);
-            setSelectedGame("");
-            setFormSubmitted(false);
-            setFieldErrors({
-                nombre: false,
-                apellido: false,
-                email: false,
-                celular: false,
-                localidad: false,
-                team_name: false,
-                selectedGame: false,
-                edad: false
-            });
-            setJugadoresErrors([{
-                nombre: false,
-                apellido: false,
-                celular: false,
-                celularFormat: false,
-                email: false,
-                emailFormat: false,
-                edad: false,
-                edadFormat: false
-            }]);
+            resetForm(); // Utilizamos la función del hook para resetear el formulario
 
         } catch (err) {
             setErrorMessage("Hubo un error al procesar tu solicitud. Intenta nuevamente.");
             console.error("Error:", err);
         }
-        setIsSaving(false)
+        setIsSaving(false);
     };
 
     // Estilos CSS adicionales para los campos con error
@@ -519,21 +316,8 @@ export const FormularioEquipo = ({ onBack }) => {
                             </button>
                         )}
 
-                        <div className="info-text">
-                            {loading ? (
-                                <p>Cargando...</p>
-                            ) : (
-                                <>
-                                    <p>Fecha del torneo: {fecha_inicio}</p>
-                                    {fecha_inicio !== fecha_fin && (
-                                        <p> al {fecha_fin}</p>
-                                    )}
-                                    <p>Hora de inicio: {hora_inicio.slice(0, 5)}</p>
-                                    <p>Lugar: {localidad}</p>
-                                    <p>El evento es libre y gratuito</p>
-                                </>
-                            )}
-                        </div>
+                        <EventoInfo evento={eventoSeleccionado} loading={loadingEvento} />
+
                         <form onSubmit={handleSubmit} className="inscription-form">
                             {/* Selección de juego para todo el equipo */}
                             <div className="form-group game-selection">

@@ -1,18 +1,13 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export const InscriptionButton = ({ onLoadComplete }) => {
+export const InscriptionButton = ({ eventId }) => {
     const navigate = useNavigate();
-
-    // Llamar a onLoadComplete cuando el componente se monte
-    useEffect(() => {
-        onLoadComplete?.();
-    }, [onLoadComplete]);
-
+    
     const handleTournamentClick = () => {
-        navigate('/formulario');
+        // Navegar al formulario pasando el ID del evento como state
+        navigate('/formulario', { state: { eventId } });
     };
-
+    
     return (
         <div className="container">
             <button className="main-button" onClick={handleTournamentClick}>

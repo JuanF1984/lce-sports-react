@@ -17,9 +17,6 @@ import { CarruselImages } from '../../common/carrusel/carruselImages/CarruselIma
 // Importación para carrusel de imagenes y texto
 import { CarruselTextAndImage } from '../../common/carrusel/carruselTextAndImages/CarruselTextAndImage'
 
-// Imortación de botón para inscribirse
-import { InscriptionButton } from '../../common/InscriptionButton'
-
 // Importación de estilos
 import '@styles/Main.css'
 
@@ -33,7 +30,6 @@ import sanAndresDeGilesImg from '@img/torneos/sanAndresDeGiles.webp';
 // Componente Main
 export const Main = ({ onLoadComplete }) => {
   const [heroLoaded, setHeroLoaded] = useState(false)
-  const [inscriptionButtonLoaded, setInscriptionsButtonLoaded] = useState(false);
   const [hayEvento, setHayEvento] = useState(true);
 
   // Para el CarouselCommon
@@ -82,12 +78,8 @@ export const Main = ({ onLoadComplete }) => {
     setHeroLoaded(true);
   }, []);
 
-  const handleInscriptionButtonLoaded = useCallback(() => {
-    setInscriptionsButtonLoaded(true);
-  }, []);
-
   useEffect(() => {
-    if (heroLoaded && inscriptionButtonLoaded && !carouselLoading) {
+    if (heroLoaded && !carouselLoading) {
       onLoadComplete?.(); // Notifica al padre cuando se han cargado los componentes
     }
   }, [heroLoaded, carouselLoading, onLoadComplete])
@@ -109,7 +101,6 @@ export const Main = ({ onLoadComplete }) => {
       <Hero onLoadComplete={handleHeroLoad} onNavigateToBuscate={handleScroll} />
 
       <RelojRegresivo onEventoStatusChange={handleEventoStatusChange} />
-      {hayEvento && <InscriptionButton onLoadComplete={handleInscriptionButtonLoaded} />}
 
       {/* <CarruselImages
         images={images}
