@@ -59,6 +59,7 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegos) 
         to_name: `${inscripcion.nombre || ''} ${inscripcion.apellido || ''}`,
         evento_fecha: evento.fecha_inicio || '',
         evento_lugar: evento.localidad || '',
+        evento_direccion: evento.direccion || '',
         evento_hora: evento.hora_inicio || '',
         juegos_lista_texto: juegosTexto,
         faqs_html: faqsHtml, // Añadir las FAQs como HTML
@@ -131,6 +132,7 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
         to_name: `${capitan.nombre || ''} ${capitan.apellido || ''}`,
         evento_fecha: evento?.fecha_inicio || '',
         evento_lugar: evento?.localidad || '',
+        evento_direccion: evento.direccion || '',
         evento_hora: evento.hora_inicio || '',
         juegos_lista_texto: `${juegoTexto} (${infoEquipo})`,
         faqs_html: faqsHtml, // Añadir las FAQs como HTML
@@ -170,6 +172,7 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
                 to_name: `${jugador.nombre || ''} ${jugador.apellido || ''}`,
                 evento_fecha: evento?.fecha_inicio || '',
                 evento_lugar: evento?.localidad || '',
+                evento_direccion: evento.direccion || '',
                 evento_hora: evento.hora_inicio || '',
                 juegos_lista_texto: `${juegoTexto} (${infoEquipo} - Capitán: ${capitan.nombre || ''} ${capitan.apellido || ''})`,
                 faqs_html: faqsHtml, // Añadir las FAQs como HTML

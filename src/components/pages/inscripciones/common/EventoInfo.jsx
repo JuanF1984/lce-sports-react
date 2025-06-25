@@ -20,14 +20,14 @@ export const EventoInfo = ({ evento, loading }) => {
     
     return (
         <div className="info-text">
-            {evento.nombre && <h4>{evento.nombre}</h4>}
+            {evento.localidad && <h4>{evento.localidad}</h4>}
+            <p>Dirección: {evento.direccion}</p>
             <p>Fecha del torneo: {formatearFecha(evento.fecha_inicio)}</p>
             {evento.fecha_inicio !== evento.fecha_fin && (
                 <p> al {formatearFecha(evento.fecha_fin)}</p>
             )}
             <p>Hora de inicio: {formatearHora(evento.hora_inicio)}</p>
-            <p>Lugar: {evento.localidad}</p>
-            <p>El evento es libre y gratuito</p>
+            <p className="info-adicional">El evento es libre y gratuito</p>
         </div>
     );
 };

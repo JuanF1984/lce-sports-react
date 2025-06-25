@@ -267,7 +267,8 @@ export const FormularioEquipo = ({ onBack, eventoId }) => {
                             nombre: eventoSeleccionado.nombre,
                             fecha_inicio: eventoSeleccionado.fecha_inicio,
                             hora_inicio: eventoSeleccionado.hora_inicio,
-                            localidad: eventoSeleccionado.localidad
+                            localidad: eventoSeleccionado.localidad,
+                            direccion: eventoSeleccionado.direccion,
                         },
                         juegoSeleccionado,
                         normalizedFormValues.team_name

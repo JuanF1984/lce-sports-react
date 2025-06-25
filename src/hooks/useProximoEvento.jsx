@@ -16,7 +16,7 @@ export const useProximoEvento = () => {
 
                 const { data, error } = await supabase
                     .from('events')
-                    .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio')
+                    .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion')
                     .gte('fecha_inicio', ayerFormatoYYYYMMDD)
                     .order('fecha_inicio', { ascending: true });
 
@@ -56,13 +56,15 @@ export const useProximoEvento = () => {
     const fecha_fin = proximoEvento?.fecha_fin || '';
     const localidad = proximoEvento?.localidad || '';
     const hora_inicio = proximoEvento?.hora_inicio || '';
+    const direccion = proximoEvento?.direccion || '';
 
     return { 
         proximoEvento, 
         fecha_inicio, 
         fecha_fin, 
         localidad,
-        hora_inicio, 
+        hora_inicio,
+        direccion, 
         diaSemana, 
         loading, 
         error 

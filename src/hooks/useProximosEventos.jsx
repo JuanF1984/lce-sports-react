@@ -16,7 +16,7 @@ export const useProximosEventos = (cantidad = 2) => {
 
                 const { data, error } = await supabase
                     .from('events')
-                    .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio')
+                    .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion')
                     .gte('fecha_inicio', ayerFormatoYYYYMMDD)
                     .order('fecha_inicio', { ascending: true })
                     .limit(cantidad);

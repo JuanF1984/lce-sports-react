@@ -25,7 +25,6 @@
 
 .container-reloj p {
     font-family: 'Avenir', sans-serif;
-    font-size: 1.5em;
     text-align: center;
     color: #DADADA;
 }
@@ -52,15 +51,19 @@
 
 .evento-localidad {
     font-family: 'Avenir', sans-serif;
-    font-size: 1.5em;
+    font-size: 2.5em;
     color: #DADADA;
     margin-bottom: 5px;
 }
 
 .evento-fecha {
     font-family: 'Avenir', sans-serif;
-    font-size: 1.2em;
+    font-size: 1.5em;
     color: #DADADA;
+}
+
+.evento-direccion{
+    font-size: 1.2em;
 }
 
 .clock {

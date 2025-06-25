@@ -93,6 +93,7 @@ export const SeleccionInscripcion = () => {
                 <h3>Inscripción al Torneo</h3>
                 <div className="info-text">
                     <h4>{eventoSeleccionado.localidad}</h4>
+                    <p>Dirección: {eventoSeleccionado.direccion}</p>
                     <p>Fecha: {formatearFecha(eventoSeleccionado.fecha_inicio)}</p>
                     {eventoSeleccionado.hora_inicio && (
                         <p>Hora: {formatearHora(eventoSeleccionado.hora_inicio)}</p>

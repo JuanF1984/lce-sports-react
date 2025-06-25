@@ -202,10 +202,10 @@ export const Formulario = ({ onBack, eventoId }) => {
                     await enviarConfirmacionIndividual(
                         inscriptionWithQR, // datos de la inscripción con QR
                         {
-                            nombre: eventoSeleccionado.nombre,
+                            localidad: eventoSeleccionado.localidad,
                             fecha_inicio: eventoSeleccionado.fecha_inicio,
                             hora_inicio: eventoSeleccionado.hora_inicio,
-                            localidad: eventoSeleccionado.localidad
+                            direccion: eventoSeleccionado.direccion,
                         },
                         juegosSeleccionados
                     );

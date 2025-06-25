@@ -109,6 +109,7 @@ export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 2 }) => {
                                                 {formatearFecha(evento.fecha_inicio)}
                                                 {evento.hora_inicio && ` - ${formatearHora(evento.hora_inicio)}`}
                                             </p>
+                                            <p className='evento-direccion'>{evento.direccion}</p>
                                         </div>
 
                                         {evento.activo && evento.timeRemaining ? (
