@@ -16,6 +16,7 @@ export const localidadesBuenosAires = [
     "Bolívar",
     "Bragado",
     "Brandsen",
+    "CABA",
     "Campana",
     "Cañuelas",
     "Capitán Sarmiento",

@@ -1,7 +1,7 @@
 import emailjs from '@emailjs/browser'
 import { getFAQsHtmlForEmail } from './faqEmail'
 import { generateQRString, generateQRAsDataURL } from './qrCodeGenerator'
-import supabase from './supabase' 
+import supabase from './supabase'
 
 // Configurar con tus credenciales de EmailJS
 const EMAIL_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID
@@ -50,6 +50,10 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegos) 
             .join(', ');
     }
 
+    const esEventoEspecial = evento.fecha_inicio === '2025-07-05' && evento.localidad === 'Salto';
+    const tieneJuegosEspeciales = juegos.includes('Valorant') || juegos.includes('Clash Royale');
+    const horarioAUsar = esEventoEspecial && tieneJuegosEspeciales ? '16:00' : evento.hora_inicio;
+
     // 4. Generar HTML de FAQs específicas para estos juegos
     const faqsHtml = getFAQsHtmlForEmail(juegos);
 
@@ -60,7 +64,7 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegos) 
         evento_fecha: evento.fecha_inicio || '',
         evento_lugar: evento.localidad || '',
         evento_direccion: evento.direccion || '',
-        evento_hora: evento.hora_inicio || '',
+        evento_hora: horarioAUsar || '',
         juegos_lista_texto: juegosTexto,
         faqs_html: faqsHtml, // Añadir las FAQs como HTML
         qr_code_html: ''  // HTML vacío para el QR
@@ -120,7 +124,12 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
     // 4. Generar HTML de FAQs específicas para este juego
     const faqsHtml = getFAQsHtmlForEmail([juegoTexto]);
 
-    // 5. Asegurarse de que los miembros del equipo sean un array
+    // Determinar el horario a usar
+    const esEventoEspecial = evento?.fecha_inicio === '2025-07-05' && evento?.localidad === 'Salto';
+    const esJuegoEspecial = juegoTexto === 'Valorant' || juegoTexto === 'Clash Royale';
+    const horarioAUsar = esEventoEspecial && esJuegoEspecial ? '16:00' : evento?.hora_inicio;
+
+    // . Asegurarse de que los miembros del equipo sean un array
     const jugadoresArray = Array.isArray(jugadores) ? jugadores : [];
 
     // 6. Información adicional para incluir en el correo
@@ -133,7 +142,7 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
         evento_fecha: evento?.fecha_inicio || '',
         evento_lugar: evento?.localidad || '',
         evento_direccion: evento.direccion || '',
-        evento_hora: evento.hora_inicio || '',
+        evento_hora: horarioAUsar || '',
         juegos_lista_texto: `${juegoTexto} (${infoEquipo})`,
         faqs_html: faqsHtml, // Añadir las FAQs como HTML
         qr_code_html: '' // HTML vacío para el QR
@@ -173,7 +182,7 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
                 evento_fecha: evento?.fecha_inicio || '',
                 evento_lugar: evento?.localidad || '',
                 evento_direccion: evento.direccion || '',
-                evento_hora: evento.hora_inicio || '',
+                evento_hora: horarioAUsar || '',
                 juegos_lista_texto: `${juegoTexto} (${infoEquipo} - Capitán: ${capitan.nombre || ''} ${capitan.apellido || ''})`,
                 faqs_html: faqsHtml, // Añadir las FAQs como HTML
                 qr_code_html: '' // HTML vacío para el QR
