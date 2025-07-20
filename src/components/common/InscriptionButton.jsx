@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 
-export const InscriptionButton = ({ eventId }) => {
+export const InscriptionButton = ({ eventId, localidad }) => {
     const navigate = useNavigate();
     
     const handleTournamentClick = () => {
@@ -11,7 +11,7 @@ export const InscriptionButton = ({ eventId }) => {
     return (
         <div className="container">
             <button className="main-button" onClick={handleTournamentClick}>
-                ¡Inscribite!
+                ¡Inscripción {localidad}!
             </button>
         </div>
     );
