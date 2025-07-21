@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Formulario } from "./Formulario";
 import { FormularioEquipo } from "./FormularioEquipo";
 import { useEventGames } from "../../../hooks/useEventGames";
@@ -8,54 +8,48 @@ import supabase from "../../../utils/supabase";
 import { formatearFecha, formatearHora } from "../../../utils/dateUtils";
 
 export const SeleccionInscripcion = () => {
+    const { eventoSlug } = useParams();
     const [tipoInscripcion, setTipoInscripcion] = useState(null);
     const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
     const [loading, setLoading] = useState(true);
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Obtener el ID del evento de la navegación
-    const eventId = location.state?.eventId;
-
-    // Cargar los datos del evento seleccionado
     useEffect(() => {
         const fetchEventoSeleccionado = async () => {
-            if (!eventId) {
-                // Si no hay ID del evento en state, volvemos a la página principal
-                navigate('/');
+
+
+            if (eventoSlug) {
+                try {
+                    const { data, error } = await supabase
+                        .from('events')
+                        .select('*')
+                        .eq('slug', eventoSlug)
+                        .single();
+
+                    if (error || !data) {
+
+                        navigate('/');
+                        return;
+                    }
+
+
+                    setEventoSeleccionado(data);
+                } catch (err) {
+
+                    navigate('/');
+                } finally {
+
+                    setLoading(false);
+                }
                 return;
             }
 
-            try {
-                const { data, error } = await supabase
-                    .from('events')
-                    .select('*')
-                    .eq('id', eventId)
-                    .single();
-
-                if (error) {
-                    console.error('Error al cargar el evento:', error);
-                    navigate('/');
-                    return;
-                }
-
-                if (!data) {
-                    console.error('No se encontró el evento');
-                    navigate('/');
-                    return;
-                }
-
-                setEventoSeleccionado(data);
-            } catch (err) {
-                console.error('Error:', err);
-                navigate('/');
-            } finally {
-                setLoading(false);
-            }
+            navigate('/');
         };
 
         fetchEventoSeleccionado();
-    }, [eventId, navigate]);
+    }, [eventoSlug, navigate]);
 
     // Cargar los juegos del evento seleccionado
     const { eventGames, loading: loadingGames } = useEventGames(
@@ -79,6 +73,8 @@ export const SeleccionInscripcion = () => {
         />;
     }
 
+
+
     if (tipoInscripcion === "equipo") {
         // Pasar el ID del evento al formulario de equipo
         return <FormularioEquipo
@@ -86,6 +82,7 @@ export const SeleccionInscripcion = () => {
             eventoId={eventoSeleccionado.id}
         />;
     }
+
 
     return (
         <main>

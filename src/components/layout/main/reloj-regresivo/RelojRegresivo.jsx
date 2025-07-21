@@ -138,7 +138,7 @@ export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 2 }) => {
                                         {/* Botón de inscripción para cada evento activo */}
                                         {evento.activo && (
                                             <div className="inscripcion-container">
-                                                <InscriptionButton eventId={evento.id} localidad ={evento.localidad}/>
+                                                <InscriptionButton eventId={evento.id} localidad ={evento.localidad} slug={evento.slug}/>
                                             </div>
                                         )}
                                     </div>

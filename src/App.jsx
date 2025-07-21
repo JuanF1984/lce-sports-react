@@ -41,7 +41,7 @@ const App = () => {
     const isVerifyPath = currentPath.includes('/verify-attendance');
     if (isVerifyPath) {
       setIsLoading(false);
-    } else if (headerLoaded && (mainLoaded || currentPath === "/formulario" || currentPath === "/inscriptions")) {
+    } else if (headerLoaded && (mainLoaded || currentPath.startsWith("/formulario") || currentPath === "/inscriptions")) {
       setIsLoading(false);
     }
   }, [headerLoaded, mainLoaded, location.pathname]);
@@ -70,6 +70,9 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Main onLoadComplete={handleMainLoad} />} />
         <Route path="/formulario" element={<SeleccionInscripcion />} />
+        
+        <Route path="/formulario/:eventoSlug" element={<SeleccionInscripcion />} />
+
         <Route path="/inscriptions" element={<DashboardAdmin />} />
 
         {/* Nueva ruta para la verificación de asistencia vía QR */}
