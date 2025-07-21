@@ -4,7 +4,7 @@ import { InscriptionButton } from '../../../common/InscriptionButton';
 import { formatearFecha, formatearHora } from '../../../../utils/dateUtils';
 import './RelojRegresivo.css';
 
-export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 2 }) => {
+export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 5 }) => {
     const [eventosConTiempo, setEventosConTiempo] = useState([]);
     const { proximosEventos, loading, error } = useProximosEventos(maxEventos);
     const [hayEventos, setHayEventos] = useState(false);
