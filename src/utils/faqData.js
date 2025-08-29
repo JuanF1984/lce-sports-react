@@ -124,7 +124,7 @@ export const faqData = {
       },
       {
         "question": "¿El torneo es individual o por equipos?",
-        "answer": "Se juegan ambas versiones: individual y por equipo (2v2). Primero se juega el torneo individual para luego jugar el 2v2."
+        "answer": "Se juega individual (1v1)."
       },
       {
         "question": "¿Se puede elegir cualquier equipo?",
