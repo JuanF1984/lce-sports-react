@@ -18,10 +18,7 @@ export const Hero = ({ onLoadComplete, onNavigateToBuscate }) => {
       <img src={img1} title="Imagen de MegaEvento Gamer" alt="Imagen de un evento Gamer organizado por LC E-Sport" />
       <div className="container">
         <h1>LC e-sports</h1>
-        {/* <p>
-          Una nueva manera de disfrutar ser Gamer
-        </p> */}
-        <button className='main-button'onClick={onNavigateToBuscate}>Let's Go</button>
+        <button className='main-button' onClick={onNavigateToBuscate}>Let's Go</button>
       </div>
 
     </section>

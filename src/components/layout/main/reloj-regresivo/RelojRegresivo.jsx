@@ -107,6 +107,9 @@ export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 5 }) => {
                                             <p className="evento-localidad">{evento.localidad}</p>
                                             <p className="evento-fecha">
                                                 {formatearFecha(evento.fecha_inicio)}
+                                                {evento.fecha_fin && evento.fecha_fin !== evento.fecha_inicio && (
+                                                    <> y {formatearFecha(evento.fecha_fin)}</>
+                                                )}
                                                 {evento.hora_inicio && ` - ${formatearHora(evento.hora_inicio)}`}
                                             </p>
                                             <p className='evento-direccion'>{evento.direccion}</p>
@@ -138,7 +141,7 @@ export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 5 }) => {
                                         {/* Botón de inscripción para cada evento activo */}
                                         {evento.activo && (
                                             <div className="inscripcion-container">
-                                                <InscriptionButton eventId={evento.id} localidad ={evento.localidad} slug={evento.slug}/>
+                                                <InscriptionButton eventId={evento.id} localidad={evento.localidad} slug={evento.slug} />
                                             </div>
                                         )}
                                     </div>
