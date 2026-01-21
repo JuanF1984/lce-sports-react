@@ -82,6 +82,7 @@ export const localidadesBuenosAires = [
   "Marcos Paz",
   "Mercedes",
   "Merlo",
+  "Miramar",
   "Monte",
   "Monte Hermoso",
   "Moreno",
