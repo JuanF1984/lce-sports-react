@@ -84,6 +84,7 @@ export const FormularioEquipo = ({ onBack, eventoId }) => {
 
     const handleModalAccept = () => {
         setSuccessMessage("");
+        window.location.assign("https://www.instagram.com/lcesports/");
     }
 
     const handleSubmit = async (e) => {
