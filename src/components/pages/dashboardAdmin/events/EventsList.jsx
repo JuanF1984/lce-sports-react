@@ -151,6 +151,7 @@ export const EventsList = () => {
                 </div>
             )}
 
+            <div className="table-wrapper">
             <table className="inscriptions-table">
                 <thead>
                     <tr>
@@ -270,6 +271,7 @@ export const EventsList = () => {
                     ))}
                 </tbody>
             </table>
+            </div>
 
             {showModal && (
                 <div className="modal-torneo">

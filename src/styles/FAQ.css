@@ -1,7 +1,7 @@
 /* src/styles/FAQ.css */
 
 .faq {
-    padding: 1em;
+    padding: 3rem clamp(1rem, 5vw, 3rem);
     min-height: 20em;
     max-width: 800px;
     margin: 0 auto;
@@ -27,6 +27,7 @@
     padding: 0.5rem 1rem;
     cursor: pointer;
     font-weight: 500;
+    font-size: 0.9rem;
     color: #fff;
     transition: all 0.3s ease;
 }
@@ -89,16 +90,16 @@
 .faq-answer {
     margin-top: 5px;
     padding: 10px;
-    background: #f9f9f9;
-    border-left: 4px solid #007BFF;
+    background: rgba(255, 0, 255, 0.05);
+    border-left: 4px solid #ff00ff;
     font-size: 14px;
-    color: #333;
+    color: #DADADA;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-    .faq-container {
-        padding: 10px;
+    .faq {
+        padding: 1em 1.5em;
     }
 
     .faq-question {
@@ -108,7 +109,9 @@
     .faq-answer {
         font-size: 13px;
     }
+}
 
+@media (max-width: 479px) {
     .faq-categories {
         flex-direction: column;
         align-items: stretch;

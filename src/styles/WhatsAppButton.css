@@ -22,4 +22,12 @@
 
 .whatsapp-button svg {
     font-size: 28px;
-  }
+}
+
+@media (max-width: 480px) {
+    .whatsapp-button {
+        bottom: 80px;
+        width: 52px;
+        height: 52px;
+    }
+}

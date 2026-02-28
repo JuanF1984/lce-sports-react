@@ -1,53 +1,28 @@
 .hero {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1.5em;
-    padding: 2em 0;
-    min-height: 90dvh;
+    position: relative;
+    padding: 0;
+    gap: 0;
+    min-height: 0;
 }
+
 .hero img {
     width: 100%;
-    height: 40dvh;
+    height: 65vh;
     object-fit: cover;
+    object-position: center;
+    display: block;
 }
 
-
-
-.container {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 1em;
-    color: #fff;
-    padding: 2em;
+.hero-cta {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
 }
 
-
-.container h1 {
-    font-family: 'Akashi', sans-serif;
-    font-size: 3.5em;
-}
-
-.container p {
-    font-family: 'Avenir', sans-serif;
-    font-size: 2em;
-    text-align: center;
-}
-
-
-
-@media (width< 480px) {
-    .hero {
-        padding: 2em 0;
-        font-size: 10px;
-        min-height: 80dvh;
-    }
-
+@media (max-width: 480px) {
     .hero img {
-        height: 50dvh;
-        margin-bottom: 5dvh;
+        height: 55vh;
     }
 }

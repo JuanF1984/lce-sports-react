@@ -5,6 +5,12 @@ aside {
     padding: 1.5em;
 }
 
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+}
+
 .inscriptions-container {
     padding: 20px;
     font-family: 'Avenir', sans-serif;
@@ -194,7 +200,8 @@ aside {
 
 .modal-torneo {
     position: fixed;
-    width: 75%;
+    width: 600px;
+    max-width: 90vw;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -238,7 +245,7 @@ aside {
 
 .inscriptions-table td:last-child {
     white-space: nowrap;
-    min-width: 200px;
+    min-width: 140px;
 }
 
 /* Contenedor para los tags */

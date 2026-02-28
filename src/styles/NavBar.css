@@ -29,8 +29,7 @@ nav ul li {
     padding: 10px;
     background-color: inherit;
     border: none;
-    font-size: 30px;
-    /* Ajusta el tamaño del icono */
+    font-size: 1.875rem;
 }
 
 /* Estilo del símbolo ☰ */
@@ -41,19 +40,15 @@ nav ul li {
 
 /* Estilo de la cruz */
 .close-btn {
-    font-size: 40px;
+    font-size: 2.5rem;
     color: #ffffff;
     background: transparent;
     border: none;
     cursor: pointer;
     position: absolute;
-    /* Posiciona la cruz en la esquina superior derecha */
-    top: 20px;
-    /* Ajusta la posición de la cruz */
-    right: 20px;
-    /* Ajusta la posición de la cruz */
+    top: 1.25rem;
+    right: 1.25rem;
     z-index: 10000;
-    /* Asegura que la cruz esté por encima de todos los elementos */
 }
 
 /* Menú en pantallas pequeñas */
@@ -69,8 +64,7 @@ nav ul li {
         left: 0;
         background-color: #00055B;
         padding: 0;
-        
-        font-size: 14px;
+        font-size: 0.875rem;
         z-index: 9999; /* Asegura que el menú esté por encima de otros elementos */
     }
 

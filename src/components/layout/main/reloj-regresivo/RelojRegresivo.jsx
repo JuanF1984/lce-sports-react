@@ -116,6 +116,9 @@ export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 5 }) => {
                                         </div>
 
                                         {evento.activo && evento.timeRemaining ? (
+                                            <>
+                                            <div className="evento-divider"></div>
+                                            <p className="countdown-label">Faltan</p>
                                             <div className="clock">
                                                 <div className="time-container">
                                                     <div className="time" id="days">{evento.timeRemaining.days}</div>
@@ -134,6 +137,7 @@ export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 5 }) => {
                                                     <div className="label">Segundos</div>
                                                 </div>
                                             </div>
+                                            </>
                                         ) : (
                                             <div className="final-message">¡Evento Finalizado!</div>
                                         )}
@@ -141,7 +145,7 @@ export const RelojRegresivo = ({ onEventoStatusChange, maxEventos = 5 }) => {
                                         {/* Botón de inscripción para cada evento activo */}
                                         {evento.activo && (
                                             <div className="inscripcion-container">
-                                                <InscriptionButton eventId={evento.id} localidad={evento.localidad} slug={evento.slug} />
+                                                <InscriptionButton eventId={evento.id} localidad={evento.localidad} slug={evento.slug} fecha={formatearFecha(evento.fecha_inicio)} />
                                             </div>
                                         )}
                                     </div>

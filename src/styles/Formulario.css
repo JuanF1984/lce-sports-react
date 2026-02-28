@@ -108,6 +108,8 @@
     text-align: center;
     color: #DADADA;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    max-width: 480px;
 }
 
 .modal-insc-content p {
@@ -131,8 +133,8 @@
     display: flex;
     flex-direction: column;
     gap: 1em;
-    width: 25%;
-    max-width: 1200px;
+    width: 100%;
+    max-width: 420px;
 }
 
 .error-field {

@@ -241,22 +241,24 @@ const InscriptionsList = () => {
               </div>
             </div>
 
-            <table className="inscriptions-table">
-              <thead>
-                <tr>
-                  {headerTable.map((header, index) => (
-                    <th key={index}>{header}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={headerTable.length} style={{ textAlign: "center", padding: "10px" }}>
-                    Por favor, selecciona un evento para ver sus inscripciones.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="table-wrapper">
+              <table className="inscriptions-table">
+                <thead>
+                  <tr>
+                    {headerTable.map((header, index) => (
+                      <th key={index}>{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colSpan={headerTable.length} style={{ textAlign: "center", padding: "10px" }}>
+                      Por favor, selecciona un evento para ver sus inscripciones.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
           <div>Cargando eventos...</div>
@@ -293,22 +295,24 @@ const InscriptionsList = () => {
               headerTable={headerTable}
             />
 
-            <table className="inscriptions-table">
-              <thead>
-                <tr>
-                  {headerTable.map((header, index) => (
-                    <th key={index}>{header}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={headerTable.length} style={{ textAlign: "center", padding: "10px" }}>
-                    ⚠️ No hay inscripciones disponibles.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="table-wrapper">
+              <table className="inscriptions-table">
+                <thead>
+                  <tr>
+                    {headerTable.map((header, index) => (
+                      <th key={index}>{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colSpan={headerTable.length} style={{ textAlign: "center", padding: "10px" }}>
+                      ⚠️ No hay inscripciones disponibles.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
             <div className="mobile-notice">
               <small>* En dispositivos móviles solo se muestran apellido, nombre y juegos</small>
@@ -353,38 +357,40 @@ const InscriptionsList = () => {
         headerTable={headerTable}
       />
 
-      <table className="inscriptions-table">
-        <thead>
-          <tr>
-            {headerTable.map((header, index) => (
-              <th key={index}>{header}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {filteredInscriptions.length > 0 ? (
-            filteredInscriptions.map((inscription, index) => (
-              <tr key={`${inscription.id || index}-${inscription.email}-${inscription.juegos}`}>
-                <td>{inscription.nombre}</td>
-                <td>{inscription.apellido}</td>
-                <td>{inscription.edad}</td>
-                <td>{inscription.celular}</td>
-                <td>{inscription.email}</td>
-                <td>{inscription.localidad}</td>
-                <td>{inscription.juegos}</td>
-                <td>{getEventDetails(inscription.id_evento)}</td>
-                <td>{inscription.team_name}</td>
-              </tr>
-            ))
-          ) : (
+      <div className="table-wrapper">
+        <table className="inscriptions-table">
+          <thead>
             <tr>
-              <td colSpan={headerTable.length} style={{ textAlign: "center", padding: "10px" }}>
-                ⚠️ No hay inscripciones disponibles.
-              </td>
+              {headerTable.map((header, index) => (
+                <th key={index}>{header}</th>
+              ))}
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filteredInscriptions.length > 0 ? (
+              filteredInscriptions.map((inscription, index) => (
+                <tr key={`${inscription.id || index}-${inscription.email}-${inscription.juegos}`}>
+                  <td>{inscription.nombre}</td>
+                  <td>{inscription.apellido}</td>
+                  <td>{inscription.edad}</td>
+                  <td>{inscription.celular}</td>
+                  <td>{inscription.email}</td>
+                  <td>{inscription.localidad}</td>
+                  <td>{inscription.juegos}</td>
+                  <td>{getEventDetails(inscription.id_evento)}</td>
+                  <td>{inscription.team_name}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={headerTable.length} style={{ textAlign: "center", padding: "10px" }}>
+                  ⚠️ No hay inscripciones disponibles.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <div className="mobile-notice">
         <small>* En dispositivos móviles solo se muestran apellido, nombre y juegos</small>

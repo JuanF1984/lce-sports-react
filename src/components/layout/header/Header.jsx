@@ -11,7 +11,7 @@ import { NavBar } from './NavBar';
 import { LogIn } from './LogIn';
 
 export const Header = ({ onLoadComplete }) => {
-    const isDesktop = useMediaQuery({ minWidth: 768 })
+    const isDesktop = useMediaQuery({ minWidth: 769 })
 
     useEffect(() => {
         const img = new Image();

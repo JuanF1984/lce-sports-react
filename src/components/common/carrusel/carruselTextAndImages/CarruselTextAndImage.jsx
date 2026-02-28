@@ -9,11 +9,6 @@ export const CarruselTextAndImage = ({ imagesAndText, title, onImageLoad }) => {
                 src={item.image}
                 alt={item.title}
                 onLoad={onImageLoad}
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                }}
             />
 
             <h4>{item.title}</h4>

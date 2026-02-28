@@ -1,8 +1,8 @@
 .redes {
-    height: 30dvh;
+    height: auto;
+    padding: 4rem 1.5rem;
     display: flex;
     flex-direction: column;
-    /* Para que el h3 quede encima de la lista */
     align-items: center;
     justify-content: center;
     gap: 2em;
@@ -38,10 +38,6 @@
 }
 
 @media (max-width: 768px) {
-    .redes {
-        height: 30dvh;
-    }
-
     .redes h3 {
         font-size: 2em;
     }
