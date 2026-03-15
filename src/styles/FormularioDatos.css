@@ -1,0 +1,457 @@
+/* ── Página Pantalla 6 — Tus datos ─────────────────────── */
+.fd-page {
+    min-height: calc(100vh - 64px);
+    padding: 1.25rem 1rem 3rem;
+    max-width: 480px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: transparent;
+}
+
+/* ── Barra del evento ──────────────────────────────────── */
+.fd-event-bar {
+    background: #f3f4f6;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.fd-event-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1a2744;
+    margin: 0;
+}
+
+.fd-event-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.85rem;
+    color: #3b6cb4;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: inherit;
+}
+
+.fd-event-link:hover {
+    text-decoration: underline;
+}
+
+/* ── Barra de progreso ─────────────────────────────────── */
+.fd-progress-wrap {
+    margin-bottom: 1.25rem;
+}
+
+.fd-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.fd-paso-text {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #3b6cb4;
+}
+
+.fd-step-badges {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.fd-step-badge {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #6b7280;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.fd-step-badge--done {
+    background: #3b6cb4;
+    color: #fff;
+}
+
+.fd-progress-bar {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.fd-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a7fd4, #1a2744);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+/* ── Badges de juegos ──────────────────────────────────── */
+.fd-juegos-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.fd-juego-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border: 1.5px solid #3b6cb4;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #3b6cb4;
+    background: transparent;
+}
+
+/* ── Título ────────────────────────────────────────────── */
+.fd-titulo {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #1a2744;
+    margin-bottom: 1.25rem;
+    letter-spacing: -0.01em;
+    font-family: 'Avenir', -apple-system, sans-serif;
+}
+
+/* ── Formulario ────────────────────────────────────────── */
+.fd-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Fila 2 columnas: Nombre + Apellido */
+.fd-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+/* Grupo de campo */
+.fd-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.fd-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.fd-label .fd-required {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+.fd-input,
+.fd-select {
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 0.65rem 0.75rem;
+    border: 1.5px solid #d1d5db;
+    border-radius: 10px;
+    color: #1a2744;
+    background: #fff;
+    width: 100%;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+}
+
+.fd-input:focus,
+.fd-select:focus {
+    outline: none;
+    border-color: #3b6cb4;
+    box-shadow: 0 0 0 3px rgba(59, 108, 180, 0.12);
+}
+
+.fd-input--error,
+.fd-select--error {
+    border-color: #ef4444;
+}
+
+.fd-input--error:focus,
+.fd-select--error:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+/* Celular con prefijo */
+.fd-celular-wrap {
+    display: flex;
+    align-items: stretch;
+    border: 1.5px solid #d1d5db;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+    transition: border-color 0.15s;
+}
+
+.fd-celular-wrap:focus-within {
+    border-color: #3b6cb4;
+    box-shadow: 0 0 0 3px rgba(59, 108, 180, 0.12);
+}
+
+.fd-celular-wrap--error {
+    border-color: #ef4444;
+}
+
+.fd-celular-prefix {
+    display: flex;
+    align-items: center;
+    padding: 0 0.65rem;
+    font-size: 0.88rem;
+    color: #374151;
+    font-weight: 500;
+    background: #f9fafb;
+    border-right: 1.5px solid #e5e7eb;
+    white-space: nowrap;
+    gap: 0.3rem;
+    flex-shrink: 0;
+}
+
+.fd-celular-input {
+    flex: 1;
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 0.65rem 0.75rem;
+    border: none;
+    outline: none;
+    color: #1a2744;
+    background: transparent;
+    min-width: 0;
+}
+
+/* Select: flecha custom */
+.fd-select-wrap {
+    position: relative;
+}
+
+.fd-select-wrap::after {
+    content: '▾';
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7280;
+    pointer-events: none;
+    font-size: 0.85rem;
+}
+
+.fd-select {
+    padding-right: 2rem;
+}
+
+/* Helper text */
+.fd-helper {
+    font-size: 0.78rem;
+    color: #6b7280;
+    margin-top: 0.1rem;
+    line-height: 1.4;
+}
+
+/* Error text */
+.fd-error-text {
+    font-size: 0.78rem;
+    color: #ef4444;
+}
+
+/* ── Checkbox términos ─────────────────────────────────── */
+.fd-checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    cursor: pointer;
+    padding: 0.5rem 0;
+}
+
+.fd-checkbox-group input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    accent-color: #3b6cb4;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.fd-checkbox-label {
+    font-size: 0.88rem;
+    color: #374151;
+    line-height: 1.4;
+}
+
+.fd-checkbox-label a {
+    color: #3b6cb4;
+    text-decoration: underline;
+}
+
+.fd-required {
+    color: #ef4444;
+}
+
+/* ── Mensajes de error global ──────────────────────────── */
+.fd-error-message {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.88rem;
+    color: #dc2626;
+}
+
+/* ── Modal de éxito ────────────────────────────────────── */
+.modal-insc-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.modal-insc-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    background: #fff;
+    padding: 2rem 1.5rem;
+    border-radius: 16px;
+    text-align: center;
+    color: #1a2744;
+    box-shadow: 0 8px 32px rgba(26, 39, 68, 0.2);
+    width: 90%;
+    max-width: 400px;
+}
+
+.modal-insc-content h3 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1a2744;
+    margin: 0;
+}
+
+.modal-insc-content p {
+    font-size: 0.95rem;
+    color: #4b5563;
+    margin: 0;
+}
+
+.modal-insc-content button {
+    font-family: inherit;
+    width: 100%;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.75rem 1rem;
+    border: none;
+    color: #fff;
+    background: linear-gradient(135deg, #4a7fd4 0%, #1a2744 100%);
+    cursor: pointer;
+    border-radius: 50px;
+    box-shadow: 0 4px 16px rgba(26, 39, 68, 0.35);
+}
+
+/* ── Botón submit ──────────────────────────────────────── */
+.fd-submit-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+/* ── Sección equipo ────────────────────────────────────── */
+.fd-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a2744;
+    margin: 0.5rem 0 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1.5px solid #e5e7eb;
+}
+
+.fd-jugador-card {
+    background: #f9fafb;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.fd-jugador-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fd-jugador-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #3b6cb4;
+}
+
+.fd-remove-btn {
+    background: none;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.78rem;
+    color: #6b7280;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.fd-remove-btn:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.fd-add-btn {
+    background: none;
+    border: 1.5px dashed #3b6cb4;
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #3b6cb4;
+    cursor: pointer;
+    font-family: inherit;
+    width: 100%;
+    transition: background 0.15s;
+}
+
+.fd-add-btn:hover {
+    background: rgba(59, 108, 180, 0.06);
+}
+
+/* ── Responsive ≥ 480px ────────────────────────────────── */
+@media (min-width: 480px) {
+    .fd-page {
+        padding: 1.5rem 1.25rem 3rem;
+    }
+
+    .fd-titulo {
+        font-size: 1.75rem;
+    }
+}

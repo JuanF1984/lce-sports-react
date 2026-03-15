@@ -17,6 +17,7 @@ import ScrollToTop from './components/common/ScrollToTop.jsx'
 
 import { AuthProvider } from './context/AuthProvider.jsx'
 import { useAuth } from './context/UseAuth.jsx'
+import { BackHandlerProvider } from './context/BackHandlerContext.jsx'
 
 // Importar el componente de verificación de asistencia
 import VerifyAttendance from './components/pages/VerifyAttendance.jsx'
@@ -84,10 +85,12 @@ const App = () => {
 export const AppWrapper = () => {
   return (
     <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <App />
-      </Router>
+      <BackHandlerProvider>
+        <Router>
+          <ScrollToTop />
+          <App />
+        </Router>
+      </BackHandlerProvider>
     </AuthProvider>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import { useMediaQuery } from 'react-responsive';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useBackHandler } from '../../../context/BackHandlerContext';
 
 import '@styles/Header.css';
 import logo from '@img/logo.webp';
@@ -13,6 +14,7 @@ export const Header = ({ onLoadComplete }) => {
     const isDesktop = useMediaQuery({ minWidth: 769 });
     const location = useLocation();
     const navigate = useNavigate();
+    const { backHandler } = useBackHandler();
 
     const isInnerPage = location.pathname.startsWith('/formulario');
 
@@ -25,7 +27,7 @@ export const Header = ({ onLoadComplete }) => {
     if (isInnerPage) {
         return (
             <header className="header header--inner">
-                <button className="header-back" onClick={() => navigate(-1)} aria-label="Volver">
+                <button className="header-back" onClick={() => backHandler ? backHandler() : navigate(-1)} aria-label="Volver">
                     ←
                 </button>
                 <Link to="/" className="header-brand header-brand--center">

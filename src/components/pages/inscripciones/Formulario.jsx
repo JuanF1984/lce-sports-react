@@ -1,42 +1,47 @@
 import { useState, useEffect } from "react";
+import { useBackHandler } from "../../../context/BackHandlerContext";
 
 import { EventoInfo } from "./common/EventoInfo";
 import { useEventoSeleccionado } from "./hooks/useEventoSeleccionado";
 
 import { useFormulario } from "../../../hooks/useFormulario";
-import { capitalizeText, normalizeEmail } from "../../../utils/validations";
+import { capitalizeText, normalizeEmail, validateEmail, validatePhone, validateAge } from "../../../utils/validations";
 
 import supabase from "../../../utils/supabase";
 import { LogoNeon } from '../../common/LogoNeon';
 import { useAuth } from "../../../context/UseAuth";
-import { useEventGames } from "../../../hooks/useEventGames";
 import { localidadesBuenosAires } from "../../../data/localidades";
 import { enviarConfirmacionIndividual } from "../../../utils/emailService";
 import { generateQRString } from "../../../utils/qrCodeGenerator";
-import '../../../styles/Formulario.css';
+import { getGameConfig } from "../../../data/gameConfig";
+import { formatearHora } from "../../../utils/dateUtils";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 
-export const Formulario = ({ onBack, eventoId, juegosSeleccionados }) => {
+import '@styles/FormularioDatos.css';
+
+const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+const formatearFechaCorta = (fechaStr) => {
+    if (!fechaStr) return '';
+    const [year, month, day] = fechaStr.split('-').map(Number);
+    const fecha = new Date(year, month - 1, day);
+    return `${DIAS_CORTOS[fecha.getDay()]} ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+};
+
+export const Formulario = ({ onBack, eventoId, juegosSeleccionados = [] }) => {
     const { user, isLoading } = useAuth();
+    const { setBackHandler } = useBackHandler();
+    useEffect(() => {
+        setBackHandler(() => onBack);
+        return () => setBackHandler(null);
+    }, [onBack]);
 
-    // Cargar datos del evento seleccionado usando custom hook useEventoSeleccionado
     const {
         eventoSeleccionado,
         loadingEvento,
-        errorMessage: eventoErrorMessage
     } = useEventoSeleccionado(eventoId);
 
-    // Usar el hook useEventGames con el ID del evento seleccionado
-    const { eventGames, loading: loadingGames, error: errorGames } = useEventGames(
-        eventoSeleccionado ? [eventoSeleccionado.id] : []
-    );
-
-    const games = eventoSeleccionado?.id ? eventGames[eventoSeleccionado.id] || [] : [];
-
-    const [selectedGames, setSelectedGames] = useState(
-        juegosSeleccionados?.length > 0 ? juegosSeleccionados.map(j => j.id) : []
-    );
-
-    // Usar el hook useFormulario
     const {
         formValues,
         setFormValues,
@@ -52,46 +57,79 @@ export const Formulario = ({ onBack, eventoId, juegosSeleccionados }) => {
         setIsSaving,
         formSubmitted,
         setFormSubmitted,
-        handleInputChange, // Ahora usamos handleInputChange del hook
-        validateForm
+        handleInputChange,
     } = useFormulario();
 
-    const localidadesOptions = localidadesBuenosAires.map((localidad) => ({
-        value: localidad,
-        label: localidad,
-    }));
+    // Pre-seleccionar los juegos que vienen de P3
+    const [selectedGames] = useState(
+        juegosSeleccionados?.length > 0 ? juegosSeleccionados.map(j => j.id) : []
+    );
 
-    // Manejamos el estado de carga de la autenticación
+    // Campos extra (UI only)
+    const [emailRepetir, setEmailRepetir] = useState('');
+    const [emailRepetirError, setEmailRepetirError] = useState('');
+    const [aceptaTerminos, setAceptaTerminos] = useState(false);
+    const [terminosError, setTerminosError] = useState(false);
+
+    const localidadesOptions = localidadesBuenosAires.map((l) => ({ value: l, label: l }));
+
+    // Calcular total de pasos según juegos seleccionados
+    const needsSteam = juegosSeleccionados.some(g => getGameConfig(g.game_name).verifyType === 'steam');
+    const needsRiot  = juegosSeleccionados.some(g => getGameConfig(g.game_name).verifyType === 'riot');
+    const totalPasos = 3 + (needsSteam ? 1 : 0) + (needsRiot ? 1 : 0) + 1;
+    const pasoActual = 3;
+    const progreso   = Math.round((pasoActual / totalPasos) * 100);
+
+    const stepBadges = [
+        ...Array.from({ length: pasoActual - 1 }, (_, i) => i + 1),
+        ...(totalPasos > pasoActual ? [totalPasos] : []),
+    ];
+
+    // Pre-llenar localidad con la del evento
     useEffect(() => {
-        if (isLoading) {
-            setShowLoading(true);
-        } else {
-            setShowLoading(false);
+        if (eventoSeleccionado?.localidad && !formValues.localidad) {
+            setFormValues(prev => ({ ...prev, localidad: eventoSeleccionado.localidad }));
         }
+    }, [eventoSeleccionado]);
+
+    useEffect(() => {
+        if (isLoading) setShowLoading(true);
+        else setShowLoading(false);
     }, [isLoading, setShowLoading]);
-
-    // Ya no necesitamos definir handleInputChange, usamos el del hook
-
-    const handleCheckboxChange = (gameId) => {
-        const newSelectedGames = selectedGames.includes(gameId)
-            ? selectedGames.filter((id) => id !== gameId)
-            : [...selectedGames, gameId];
-
-        setSelectedGames(newSelectedGames);
-
-        // Si el formulario ha sido enviado, validar los juegos seleccionados en tiempo real
-        if (formSubmitted) {
-            setFieldErrors(prev => ({
-                ...prev,
-                selectedGames: newSelectedGames.length === 0
-            }));
-        }
-    };
 
     const handleModalAccept = () => {
         setSuccessMessage("");
         window.location.assign("https://www.instagram.com/lcesports/");
-    }
+    };
+
+    const validateFormNuevo = () => {
+        const { nombre, apellido, celular, localidad, email, edad } = formValues;
+
+        let repError = '';
+        if (!emailRepetir) repError = 'Repetir email es requerido';
+        else if (emailRepetir !== email) repError = 'Los emails no coinciden';
+        setEmailRepetirError(repError);
+
+        const noTerminos = !aceptaTerminos;
+        setTerminosError(noTerminos);
+
+        const newErrors = {
+            nombre:        !nombre.trim(),
+            apellido:      !apellido.trim(),
+            celular:       !celular.trim(),
+            celularFormat: celular.trim() ? !validatePhone(celular.trim()) : false,
+            localidad:     !localidad,
+            email:         !email.trim(),
+            emailFormat:   email.trim() ? !validateEmail(email.trim()) : false,
+            edad:          !edad.trim(),
+            edadFormat:    edad.trim() ? !validateAge(edad.trim()) : false,
+            selectedGames: false,
+        };
+        setFieldErrors(newErrors);
+
+        const hasErrors = Object.values(newErrors).some(Boolean) || repError || noTerminos;
+        return !hasErrors;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -105,349 +143,314 @@ export const Formulario = ({ onBack, eventoId, juegosSeleccionados }) => {
             return;
         }
 
-        // Validar el formulario pasando selectedGames como parámetro
-        const isValid = validateForm(selectedGames);
+        const isValid = validateFormNuevo();
 
         if (!isValid) {
-            setErrorMessage("Por favor, completa todos los campos obligatorios.");
-            // Hacer scroll al primer error
-            const firstErrorElement = document.querySelector('.error-field');
-            if (firstErrorElement) {
-                firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            setErrorMessage("Por favor, completá todos los campos obligatorios.");
+            const firstError = document.querySelector('.fd-input--error, .fd-select--error');
+            if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setIsSaving(false);
             return;
         }
 
         try {
-            // Importamos capitalizeText y normalizeEmail de utils/validations
             const normalizedFormValues = {
                 ...formValues,
-                nombre: capitalizeText(formValues.nombre),
+                nombre:   capitalizeText(formValues.nombre),
                 apellido: capitalizeText(formValues.apellido),
-                email: normalizeEmail(formValues.email),
+                email:    normalizeEmail(formValues.email),
             };
 
-            // Objeto con los datos a insertar
             const dataToInsert = {
                 ...normalizedFormValues,
                 id_evento: eventoSeleccionado.id,
             };
 
-            // Se agrega user_id si user.id existe
-            if (user && user.id) {
-                dataToInsert.user_id = user.id;
-            }
+            if (user?.id) dataToInsert.user_id = user.id;
 
-            // Insertar en la tabla inscriptions y obtener los datos insertados
             const { data: inscriptionData, error: insertError } = await supabase
                 .from("inscriptions")
                 .insert(dataToInsert)
-                .select() // .select() para obtener los datos insertados
+                .select()
                 .single();
 
-            if (insertError) {
-                throw insertError;
-            }
+            if (insertError) throw insertError;
+            if (!inscriptionData) throw new Error("No se recibieron datos de la inscripción.");
 
-            if (!inscriptionData) {
-                throw new Error("No se recibieron datos de la inscripción.");
-            }
-
-            // Generar código QR único para esta inscripción
             const qrString = generateQRString(inscriptionData);
 
-            // Actualizar la inscripción con el código QR
-            const { error: qrUpdateError } = await supabase
+            await supabase
                 .from("inscriptions")
-                .update({
-                    qr_code: qrString,
-                    asistencia: false
-                })
+                .update({ qr_code: qrString, asistencia: false })
                 .eq("id", inscriptionData.id);
 
-            if (qrUpdateError) {
-                console.error("Error al guardar código QR:", qrUpdateError);
-                // No detenemos el flujo si falla la actualización del QR
-            }
-
-            // Crear las inscripciones de juegos usando el ID obtenido
             if (selectedGames.length > 0) {
                 const gameInscriptions = selectedGames.map(gameId => ({
-                    id_inscription: inscriptionData.id, // Usar directamente inscriptionData.id
+                    id_inscription: inscriptionData.id,
                     id_game: gameId,
                 }));
-
                 const { error: gameInsertError } = await supabase
                     .from("games_inscriptions")
                     .insert(gameInscriptions);
-
-                if (gameInsertError) {
-                    console.error(gameInsertError)
-                    throw gameInsertError;
-                }
+                if (gameInsertError) throw gameInsertError;
             }
 
             if (formValues.email) {
                 try {
-                    // Obtener nombres de los juegos seleccionados
-                    const juegosSeleccionados = selectedGames.map(gameId => {
-                        const juego = games.find(g => g.id === gameId);
-                        return juego ? juego.game_name : 'Juego no especificado';
-                    });
-
-                    // Pasar la inscripción actualizada con el QR ya generado
-                    const inscriptionWithQR = {
-                        ...inscriptionData,
-                        qr_code: qrString
-                    };
-
+                    const juegosNombres = juegosSeleccionados.map(j => j.game_name);
                     await enviarConfirmacionIndividual(
-                        inscriptionWithQR, // datos de la inscripción con QR
+                        { ...inscriptionData, qr_code: qrString },
                         {
-                            localidad: eventoSeleccionado.localidad,
-                            fecha_inicio: eventoSeleccionado.fecha_inicio,
-                            hora_inicio: eventoSeleccionado.hora_inicio,
-                            direccion: eventoSeleccionado.direccion,
+                            localidad:     eventoSeleccionado.localidad,
+                            fecha_inicio:  eventoSeleccionado.fecha_inicio,
+                            hora_inicio:   eventoSeleccionado.hora_inicio,
+                            direccion:     eventoSeleccionado.direccion,
                         },
-                        juegosSeleccionados
+                        juegosNombres
                     );
-
                 } catch (emailError) {
                     console.error("Error al enviar confirmación por email:", emailError);
-                    // No interrumpimos el flujo si el email falla
                 }
             }
 
-            // Limpiar el formulario y mostrar mensaje de éxito
             setSuccessMessage("Inscripción realizada con éxito.");
-            setFormValues({
-                nombre: "",
-                apellido: "",
-                edad: "",
-                email: "",
-                celular: "",
-                localidad: "",
-            });
-            setSelectedGames([]);
+            setFormValues({ nombre: "", apellido: "", edad: "", email: "", celular: "", localidad: "" });
+            setEmailRepetir('');
+            setAceptaTerminos(false);
             setFormSubmitted(false);
-            setFieldErrors({
-                nombre: false,
-                apellido: false,
-                email: false,
-                emailFormat: false,
-                celular: false,
-                celularFormat: false,
-                localidad: false,
-                selectedGames: false,
-                edad: false,
-                edadFormat: false
-            });
+            setFieldErrors({ nombre: false, apellido: false, email: false, emailFormat: false, celular: false, celularFormat: false, localidad: false, selectedGames: false, edad: false, edadFormat: false });
 
         } catch (err) {
-            setErrorMessage("Hubo un error al procesar tu solicitud. Intenta nuevamente.");
+            setErrorMessage("Hubo un error al procesar tu solicitud. Intentá nuevamente.");
             console.error("Error:", err);
         }
         setIsSaving(false);
     };
 
-    // Estilos CSS adicionales para los campos con error
-    const errorStyle = {
-        border: '1px solid red',
-    };
+    const fechaCorta = formatearFechaCorta(eventoSeleccionado?.fecha_inicio);
+    const hora       = formatearHora(eventoSeleccionado?.hora_inicio);
 
-    // Contenido para indicar que el campo es requerido
-    const requiredFieldIndicator = (isError) => (
-        <span className={`required-field ${isError ? 'error-text' : ''}`}>*</span>
-    );
+    const btnLabel = (needsSteam || needsRiot) ? 'Siguiente' : 'Confirmar inscripción';
 
-    // Formatear la hora (eliminar segundos si los hay)
-    const formatearHora = (hora) => {
-        if (!hora) return '';
-        return hora.slice(0, 5); // Obtener solo HH:MM
-    };
+    if (showLoading) return <LogoNeon onClose={() => setShowLoading(false)} />;
 
     return (
-        <>
-            {showLoading ? (
-                <LogoNeon onClose={() => setShowLoading(false)} />
-            ) : (
-                <main>
-                    <div className="form-container">
-                        <h3>Formulario Inscripción al Torneo</h3>
-                        {onBack && (
-                            <button
-                                onClick={onBack}
-                                className="export-button"
+        <main className="fd-page">
+            {/* Barra de info del evento */}
+            <div className="fd-event-bar">
+                <p className="fd-event-text">
+                    {eventoSeleccionado?.localidad}
+                    {fechaCorta && <> · {fechaCorta}</>}
+                    {hora && <> · {hora}</>}
+                </p>
+                <button className="fd-event-link" onClick={onBack} type="button">
+                    <FontAwesomeIcon icon={faCalendarAlt} />
+                    {' '}Ver detalles &gt;
+                </button>
+            </div>
+
+            {/* Barra de progreso */}
+            <div className="fd-progress-wrap">
+                <div className="fd-progress-header">
+                    <span className="fd-paso-text">Paso {pasoActual} de {totalPasos}</span>
+                    <div className="fd-step-badges">
+                        {stepBadges.map(n => (
+                            <span
+                                key={n}
+                                className={`fd-step-badge${n < pasoActual ? ' fd-step-badge--done' : ''}`}
                             >
-                                ← Volver
-                            </button>
-                        )}
-                        <EventoInfo evento={eventoSeleccionado} loading={loadingEvento} />
-                        <form onSubmit={handleSubmit} className="inscription-form">
-                            <div className="form-group">
-                                <label>
-                                    Nombre:{requiredFieldIndicator(fieldErrors.nombre)}
-                                    <input
-                                        type="text"
-                                        name="nombre"
-                                        value={formValues.nombre}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.nombre ? 'error-field' : ''}
-                                        style={fieldErrors.nombre ? errorStyle : {}}
-                                    />
-                                </label>
-                                {fieldErrors.nombre && (
-                                    <p className="error-text">Nombre es requerido</p>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Apellido:{requiredFieldIndicator(fieldErrors.apellido)}
-                                    <input
-                                        type="text"
-                                        name="apellido"
-                                        value={formValues.apellido}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.apellido ? 'error-field' : ''}
-                                        style={fieldErrors.apellido ? errorStyle : {}}
-                                    />
-                                </label>
-                                {fieldErrors.apellido && (
-                                    <p className="error-text">Apellido es requerido</p>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Edad:{requiredFieldIndicator(fieldErrors.edad)}
-                                    <input
-                                        type="text"
-                                        name="edad"
-                                        value={formValues.edad}
-                                        onChange={handleInputChange}
-                                    />
-                                </label>
-                                {fieldErrors.edad && (
-                                    <p className="error-text">Edad es requerido</p>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Email:{requiredFieldIndicator(fieldErrors.email)}
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formValues.email}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.email ? 'error-field' : ''}
-                                        style={fieldErrors.email ? errorStyle : {}}
-                                    />
-                                </label>
-                                {fieldErrors.email && (
-                                    <p className="error-text">Email es requerido</p>
-                                )}
-                                {fieldErrors.emailFormat && (
-                                    <p className="error-text">Formato de email inválido</p>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Celular:{requiredFieldIndicator(fieldErrors.celular)}
-                                    <input
-                                        type="tel"
-                                        name="celular"
-                                        value={formValues.celular}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.celular ? 'error-field' : ''}
-                                        style={fieldErrors.celular ? errorStyle : {}}
-                                    />
-                                </label>
-                                {fieldErrors.celular && (
-                                    <p className="error-text">Celular es requerido</p>
-                                )}
-                                {fieldErrors.celularFormat && (
-                                    <p className="error-text">El celular debe contener entre 8 y 15 dígitos numéricos</p>
-                                )}
-                            </div>
-                            {!(juegosSeleccionados?.length > 0) && (
-                            <div className="form-group">
-                                <label>Juegos:{requiredFieldIndicator(fieldErrors.selectedGames)}</label>
-
-                                {loadingGames && <p>Cargando juegos...</p>}
-                                {errorGames && <p>Error al cargar juegos: {errorGames}</p>}
-
-                                <div className={`checkbox-grid ${fieldErrors.selectedGames ? 'error-field' : ''}`}
-                                    style={fieldErrors.selectedGames ? { ...errorStyle, padding: '10px' } : {}}>
-                                    {!loadingGames && !errorGames && games?.length > 0 ? (
-                                        games.map((game) => (
-                                            <label key={game.id}>
-                                                <input
-                                                    type="checkbox"
-                                                    value={game.id}
-                                                    checked={selectedGames.includes(game.id)}
-                                                    onChange={() => handleCheckboxChange(game.id)}
-                                                />
-                                                {game.game_name}
-                                            </label>
-                                        ))
-                                    ) : (
-                                        !loadingGames && <p>No hay juegos disponibles.</p>
-                                    )}
-                                </div>
-                                {fieldErrors.selectedGames && (
-                                    <p className="error-text">Debes seleccionar al menos un juego</p>
-                                )}
-                            </div>
-                            )}
-                            <div className="form-group">
-                                <label>
-                                    Localidad:{requiredFieldIndicator(fieldErrors.localidad)}
-                                    <select
-                                        name="localidad"
-                                        value={formValues.localidad}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.localidad ? 'error-field' : ''}
-                                        style={fieldErrors.localidad ? errorStyle : {}}
-                                    >
-                                        <option value="">Selecciona una localidad</option>
-                                        {localidadesOptions.map((localidad, index) => (
-                                            <option key={index} value={localidad.value}>
-                                                {localidad.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                                {fieldErrors.localidad && (
-                                    <p className="error-text">Localidad es requerida</p>
-                                )}
-                            </div>
-                            {errorMessage && (
-                                <p className="error-message">{errorMessage}</p>
-                            )}
-                            {successMessage && (
-                                <div className="modal-insc-overlay">
-                                    <div className="modal-insc-content">
-                                        <h3>¡Registro exitoso!</h3>
-                                        <p>Se registró correctamente al torneo</p>
-                                        <p>A la brevedad te llegará mail de confirmación. Revisa spam por las dudas</p>
-                                        <p>¡Nos vemos en el torneo!</p>
-
-                                        <button onClick={handleModalAccept}>Aceptar</button>
-                                    </div>
-                                </div>
-                            )}
-
-                            <button
-                                type="submit"
-                                className="main-button"
-                                disabled={isSaving}
-                            >
-                                {isSaving ? 'Guardando...' : 'Enviar inscripción'}
-                            </button>
-                        </form>
+                                {n}
+                            </span>
+                        ))}
                     </div>
-                </main>
+                </div>
+                <div className="fd-progress-bar">
+                    <div className="fd-progress-fill" style={{ width: `${progreso}%` }} />
+                </div>
+            </div>
+
+            {/* Badges de juegos seleccionados */}
+            {juegosSeleccionados.length > 0 && (
+                <div className="fd-juegos-badges">
+                    {juegosSeleccionados.map(j => (
+                        <span key={j.id} className="fd-juego-badge">{j.game_name}</span>
+                    ))}
+                </div>
             )}
-        </>
-    )
-}
+
+            {/* Título */}
+            <h2 className="fd-titulo">Tus datos</h2>
+
+            <form className="fd-form" onSubmit={handleSubmit} noValidate>
+
+                {/* Nombre + Apellido en 2 columnas */}
+                <div className="fd-row-2">
+                    <div className="fd-group">
+                        <label className="fd-label">
+                            Nombre<span className="fd-required">*</span>
+                        </label>
+                        <input
+                            className={`fd-input${fieldErrors.nombre ? ' fd-input--error' : ''}`}
+                            type="text"
+                            name="nombre"
+                            value={formValues.nombre}
+                            onChange={handleInputChange}
+                            placeholder="Tomás"
+                        />
+                        {fieldErrors.nombre && <span className="fd-error-text">Requerido</span>}
+                    </div>
+                    <div className="fd-group">
+                        <label className="fd-label">
+                            Apellido<span className="fd-required">*</span>
+                        </label>
+                        <input
+                            className={`fd-input${fieldErrors.apellido ? ' fd-input--error' : ''}`}
+                            type="text"
+                            name="apellido"
+                            value={formValues.apellido}
+                            onChange={handleInputChange}
+                            placeholder="Pérez"
+                        />
+                        {fieldErrors.apellido && <span className="fd-error-text">Requerido</span>}
+                    </div>
+                </div>
+
+                {/* Edad */}
+                <div className="fd-group">
+                    <label className="fd-label">
+                        Edad<span className="fd-required">*</span>
+                    </label>
+                    <input
+                        className={`fd-input${fieldErrors.edad || fieldErrors.edadFormat ? ' fd-input--error' : ''}`}
+                        type="text"
+                        inputMode="numeric"
+                        name="edad"
+                        value={formValues.edad}
+                        onChange={handleInputChange}
+                        placeholder="18"
+                    />
+                    {fieldErrors.edad && <span className="fd-error-text">Requerido</span>}
+                    {fieldErrors.edadFormat && <span className="fd-error-text">Solo números</span>}
+                </div>
+
+                {/* Email */}
+                <div className="fd-group">
+                    <label className="fd-label">
+                        Email<span className="fd-required">*</span>
+                    </label>
+                    <input
+                        className={`fd-input${fieldErrors.email || fieldErrors.emailFormat ? ' fd-input--error' : ''}`}
+                        type="email"
+                        name="email"
+                        value={formValues.email}
+                        onChange={handleInputChange}
+                        placeholder="tomas@gmail.com"
+                    />
+                    {fieldErrors.email && <span className="fd-error-text">Requerido</span>}
+                    {fieldErrors.emailFormat && <span className="fd-error-text">Email inválido</span>}
+                </div>
+
+                {/* Repetir email */}
+                <div className="fd-group">
+                    <label className="fd-label">
+                        Repetir email<span className="fd-required">*</span>
+                    </label>
+                    <input
+                        className={`fd-input${emailRepetirError ? ' fd-input--error' : ''}`}
+                        type="email"
+                        value={emailRepetir}
+                        onChange={e => setEmailRepetir(e.target.value)}
+                        placeholder="tomas@gmail.com"
+                    />
+                    {emailRepetirError
+                        ? <span className="fd-error-text">{emailRepetirError}</span>
+                        : <span className="fd-helper">Te enviaremos la confirmación y la info del juego a este email.</span>
+                    }
+                </div>
+
+                {/* Celular con prefijo */}
+                <div className="fd-group">
+                    <label className="fd-label">
+                        Celular<span className="fd-required">*</span>
+                    </label>
+                    <div className={`fd-celular-wrap${fieldErrors.celular || fieldErrors.celularFormat ? ' fd-celular-wrap--error' : ''}`}>
+                        <span className="fd-celular-prefix">🇦🇷 +54 9</span>
+                        <input
+                            className="fd-celular-input"
+                            type="tel"
+                            name="celular"
+                            value={formValues.celular}
+                            onChange={handleInputChange}
+                            placeholder="11 2456 7890"
+                        />
+                    </div>
+                    {fieldErrors.celular && <span className="fd-error-text">Requerido</span>}
+                    {fieldErrors.celularFormat && <span className="fd-error-text">Debe tener entre 8 y 15 dígitos</span>}
+                </div>
+
+                {/* Localidad */}
+                <div className="fd-group">
+                    <label className="fd-label">
+                        Localidad<span className="fd-required">*</span>
+                    </label>
+                    <div className="fd-select-wrap">
+                        <select
+                            className={`fd-select${fieldErrors.localidad ? ' fd-select--error' : ''}`}
+                            name="localidad"
+                            value={formValues.localidad}
+                            onChange={handleInputChange}
+                        >
+                            <option value="">Seleccioná una localidad</option>
+                            {localidadesOptions.map((l, i) => (
+                                <option key={i} value={l.value}>{l.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                    {fieldErrors.localidad && <span className="fd-error-text">Requerido</span>}
+                </div>
+
+                {/* Términos y condiciones */}
+                <label className="fd-checkbox-group">
+                    <input
+                        type="checkbox"
+                        checked={aceptaTerminos}
+                        onChange={e => setAceptaTerminos(e.target.checked)}
+                    />
+                    <span className="fd-checkbox-label">
+                        Acepto <a href="#" onClick={e => e.preventDefault()}>términos y condiciones</a>
+                        <span className="fd-required"> *</span>
+                    </span>
+                </label>
+                {terminosError && <span className="fd-error-text">Debés aceptar los términos</span>}
+
+                {/* Error general */}
+                {errorMessage && (
+                    <div className="fd-error-message">{errorMessage}</div>
+                )}
+
+                {/* Modal de éxito */}
+                {successMessage && (
+                    <div className="modal-insc-overlay">
+                        <div className="modal-insc-content">
+                            <h3>¡Registro exitoso!</h3>
+                            <p>Te registraste correctamente al torneo.</p>
+                            <p>A la brevedad te llegará mail de confirmación. Revisá spam por las dudas.</p>
+                            <p>¡Nos vemos en el torneo!</p>
+                            <button type="button" onClick={handleModalAccept}>Aceptar</button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Botón */}
+                <button
+                    type="submit"
+                    className="main-button fd-submit-btn"
+                    disabled={isSaving}
+                >
+                    {isSaving ? 'Guardando...' : btnLabel}
+                </button>
+
+            </form>
+        </main>
+    );
+};

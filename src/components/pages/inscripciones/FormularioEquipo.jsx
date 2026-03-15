@@ -1,50 +1,48 @@
-import { useEffect } from "react";
-import { EventoInfo } from "./common/EventoInfo";
-import { useNavigate } from "react-router-dom";
-import supabase from "../../../utils/supabase";
-import { LogoNeon } from '../../common/LogoNeon';
-import { useAuth } from "../../../context/UseAuth";
-import { useEventGames } from "../../../hooks/useEventGames";
-import { localidadesBuenosAires } from "../../../data/localidades";
-import { enviarConfirmacionEquipo } from "../../../utils/emailService";
-import { generateQRString } from "../../../utils/qrCodeGenerator";
+import { useState, useEffect } from "react";
+import { useBackHandler } from "../../../context/BackHandlerContext";
 import { useEventoSeleccionado } from "./hooks/useEventoSeleccionado";
 import { useFormularioEquipo } from "../../../hooks/useFormularioEquipo";
 import { capitalizeText, normalizeEmail } from "../../../utils/validations";
 
-export const FormularioEquipo = ({ onBack, eventoId }) => {
-    const navigate = useNavigate();
+import supabase from "../../../utils/supabase";
+import { LogoNeon } from '../../common/LogoNeon';
+import { useAuth } from "../../../context/UseAuth";
+import { localidadesBuenosAires } from "../../../data/localidades";
+import { enviarConfirmacionEquipo } from "../../../utils/emailService";
+import { generateQRString } from "../../../utils/qrCodeGenerator";
+import { getGameConfig } from "../../../data/gameConfig";
+import { formatearHora } from "../../../utils/dateUtils";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
+
+import '@styles/FormularioDatos.css';
+
+const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+const formatearFechaCorta = (fechaStr) => {
+    if (!fechaStr) return '';
+    const [year, month, day] = fechaStr.split('-').map(Number);
+    const fecha = new Date(year, month - 1, day);
+    return `${DIAS_CORTOS[fecha.getDay()]} ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+};
+
+export const FormularioEquipo = ({ onBack, eventoId, juegosSeleccionados = [] }) => {
     const { user, isLoading } = useAuth();
+    const { setBackHandler } = useBackHandler();
 
-    // Usar el hook useEventoSeleccionado
-    const {
-        eventoSeleccionado,
-        loadingEvento,
-        errorMessage: eventoErrorMessage
-    } = useEventoSeleccionado(eventoId);
+    useEffect(() => {
+        setBackHandler(() => onBack);
+        return () => setBackHandler(null);
+    }, [onBack]);
 
-    // Usar el hook useEventGames
-    const {
-        eventGames,
-        loading: loadingGames,
-        error: errorGames
-    } = useEventGames(
-        eventoSeleccionado ? [eventoSeleccionado.id] : []
-    );
+    const { eventoSeleccionado, loadingEvento } = useEventoSeleccionado(eventoId);
 
-    // Filtrar juegos de equipo
-    const juegosEquipo = eventoSeleccionado?.id ?
-        (eventGames[eventoSeleccionado.id] || []).filter(game => game.team_option) :
-        [];
-
-    // Usar el hook useFormularioEquipo
     const {
         formValues,
         setFormValues,
         fieldErrors,
         setFieldErrors,
         jugadores,
-        setJugadores,
         jugadoresErrors,
         setJugadoresErrors,
         selectedGame,
@@ -61,31 +59,58 @@ export const FormularioEquipo = ({ onBack, eventoId }) => {
         setFormSubmitted,
         handleInputChange,
         handleJugadorChange,
-        handleGameChange,
         addJugador,
         removeJugador,
         validateForm,
-        resetForm
+        resetForm,
     } = useFormularioEquipo();
 
-    const localidadesOptions = localidadesBuenosAires.map((localidad) => ({
-        value: localidad,
-        label: localidad,
-    }));
+    // Campos extra (UI only)
+    const [emailRepetir, setEmailRepetir] = useState('');
+    const [emailRepetirError, setEmailRepetirError] = useState('');
+    const [aceptaTerminos, setAceptaTerminos] = useState(false);
+    const [terminosError, setTerminosError] = useState(false);
 
-    // Manejar estado de carga
+    const localidadesOptions = localidadesBuenosAires.map(l => ({ value: l, label: l }));
+
+    // Pre-seleccionar el juego desde P3
     useEffect(() => {
-        if (isLoading) {
-            setShowLoading(true);
-        } else {
-            setShowLoading(false); // Si hay usuario, ocultar el loading.
+        if (juegosSeleccionados.length > 0 && !selectedGame) {
+            setSelectedGame(juegosSeleccionados[0].id);
         }
+    }, [juegosSeleccionados]);
+
+    // Pre-llenar localidad con la del evento
+    useEffect(() => {
+        if (eventoSeleccionado?.localidad && !formValues.localidad) {
+            setFormValues(prev => ({ ...prev, localidad: eventoSeleccionado.localidad }));
+        }
+    }, [eventoSeleccionado]);
+
+    useEffect(() => {
+        if (isLoading) setShowLoading(true);
+        else setShowLoading(false);
     }, [isLoading, setShowLoading]);
+
+    // Cálculo de pasos
+    const needsSteam = juegosSeleccionados.some(g => getGameConfig(g.game_name).verifyType === 'steam');
+    const needsRiot  = juegosSeleccionados.some(g => getGameConfig(g.game_name).verifyType === 'riot');
+    const totalPasos = 3 + (needsSteam ? 1 : 0) + (needsRiot ? 1 : 0) + 1;
+    const pasoActual = 3;
+    const progreso   = Math.round((pasoActual / totalPasos) * 100);
+
+    const stepBadges = [
+        ...Array.from({ length: pasoActual - 1 }, (_, i) => i + 1),
+        ...(totalPasos > pasoActual ? [totalPasos] : []),
+    ];
+
+    const fechaCorta = formatearFechaCorta(eventoSeleccionado?.fecha_inicio);
+    const hora       = formatearHora(eventoSeleccionado?.hora_inicio);
 
     const handleModalAccept = () => {
         setSuccessMessage("");
         window.location.assign("https://www.instagram.com/lcesports/");
-    }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -93,33 +118,37 @@ export const FormularioEquipo = ({ onBack, eventoId }) => {
         setFormSubmitted(true);
         setErrorMessage("");
 
-        if (!eventoSeleccionado || !eventoSeleccionado.id) {
+        if (!eventoSeleccionado?.id) {
             setErrorMessage("No se ha seleccionado ningún evento válido.");
             setIsSaving(false);
             return;
         }
 
-        // Validar el formulario
+        // Validar emailRepetir y términos
+        let repError = '';
+        if (!emailRepetir) repError = 'Repetir email es requerido';
+        else if (emailRepetir !== formValues.email) repError = 'Los emails no coinciden';
+        setEmailRepetirError(repError);
+
+        const noTerminos = !aceptaTerminos;
+        setTerminosError(noTerminos);
+
         const isValid = validateForm();
 
-        if (!isValid) {
-            setErrorMessage("Por favor, completa todos los campos obligatorios.");
-            // Hacer scroll al primer error
-            const firstErrorElement = document.querySelector('.error-field');
-            if (firstErrorElement) {
-                firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-            setIsSaving(false)
+        if (!isValid || repError || noTerminos) {
+            setErrorMessage("Por favor, completá todos los campos obligatorios.");
+            const firstError = document.querySelector('.fd-input--error, .fd-select--error');
+            if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setIsSaving(false);
             return;
         }
 
         try {
-            // Normalizar los datos del capitán
             const normalizedFormValues = {
                 ...formValues,
-                nombre: capitalizeText(formValues.nombre),
+                nombre:   capitalizeText(formValues.nombre),
                 apellido: capitalizeText(formValues.apellido),
-                email: normalizeEmail(formValues.email),
+                email:    normalizeEmail(formValues.email),
             };
 
             // 1. Inscribir al capitán
@@ -129,147 +158,83 @@ export const FormularioEquipo = ({ onBack, eventoId }) => {
                     ...(user ? { user_id: user.id } : {}),
                     ...normalizedFormValues,
                     id_evento: eventoSeleccionado.id,
-                    team_name: normalizedFormValues.team_name
+                    team_name: normalizedFormValues.team_name,
                 })
                 .select()
                 .single();
 
-            if (capitanError) {
-                throw capitanError;
-            }
+            if (capitanError) throw capitanError;
 
-            // Asegurarse de que capitanData tenga el id_evento para el QR
-            const capitanDataCompleto = {
-                ...capitanData,
-                id_evento: eventoSeleccionado.id // Aseguramos que tenga el id_evento
-            };
+            const qrStringCapitan = generateQRString({ ...capitanData, id_evento: eventoSeleccionado.id });
 
-            // Generar código QR único para el capitán con datos completos
-            const qrStringCapitan = generateQRString(capitanDataCompleto);
-
-            // Actualizar la inscripción del capitán con el código QR
-            const { error: qrCapitanUpdateError } = await supabase
+            await supabase
                 .from("inscriptions")
-                .update({
-                    qr_code: qrStringCapitan,
-                    asistencia: false
-                })
+                .update({ qr_code: qrStringCapitan, asistencia: false })
                 .eq("id", capitanData.id);
 
-            if (qrCapitanUpdateError) {
-                console.error("Error al guardar código QR del capitán:", qrCapitanUpdateError);
-                // No detenemos el flujo si falla la actualización del QR
-            }
-
-            // 2. Crear la inscripción del juego para el capitán
-            const { error: gameInsertCapitanError } = await supabase
+            await supabase
                 .from("games_inscriptions")
-                .insert({
-                    id_inscription: capitanData.id,
-                    id_game: selectedGame,
-                });
+                .insert({ id_inscription: capitanData.id, id_game: selectedGame });
 
-            if (gameInsertCapitanError) {
-                throw gameInsertCapitanError;
-            }
-
-            // Actualizar capitanData con el QR generado y el id_evento para uso posterior en el email
             capitanData.qr_code = qrStringCapitan;
-            capitanData.id_evento = eventoSeleccionado.id; // Aseguramos que tenga el id_evento
+            capitanData.id_evento = eventoSeleccionado.id;
 
-            // Array para almacenar los datos de todos los jugadores con sus QRs
+            // 2. Inscribir jugadores adicionales
             const jugadoresConQR = [];
 
-            // 3. Inscribir a cada jugador adicional
             for (let i = 0; i < jugadores.length; i++) {
                 const jugador = jugadores[i];
-
-                // Normalizar datos del jugador
-                const jugadorNormalizado = {
+                const jugadorNorm = {
                     ...jugador,
-                    nombre: capitalizeText(jugador.nombre),
+                    nombre:   capitalizeText(jugador.nombre),
                     apellido: capitalizeText(jugador.apellido),
-                    email: jugador.email ? normalizeEmail(jugador.email) : null,
+                    email:    jugador.email ? normalizeEmail(jugador.email) : null,
                 };
 
-                // Crear inscripción para el jugador
                 const { data: jugadorData, error: jugadorError } = await supabase
                     .from("inscriptions")
                     .insert({
                         ...(user ? { user_id: user.id } : {}),
-                        nombre: jugadorNormalizado.nombre,
-                        apellido: jugadorNormalizado.apellido,
-                        edad: jugadorNormalizado.edad || null,
-                        email: jugadorNormalizado.email || null,
-                        celular: jugadorNormalizado.celular,
-                        localidad: normalizedFormValues.localidad, // Misma localidad que el capitán
+                        nombre:    jugadorNorm.nombre,
+                        apellido:  jugadorNorm.apellido,
+                        edad:      jugadorNorm.edad || null,
+                        email:     jugadorNorm.email || null,
+                        celular:   jugadorNorm.celular,
+                        localidad: normalizedFormValues.localidad,
                         id_evento: eventoSeleccionado.id,
-                        team_name: normalizedFormValues.team_name // Mismo nombre de equipo
+                        team_name: normalizedFormValues.team_name,
                     })
                     .select()
                     .single();
 
-                if (jugadorError) {
-                    throw jugadorError;
-                }
+                if (jugadorError) throw jugadorError;
 
-                // Asegurarse de que jugadorData tenga el id_evento para el QR
-                const jugadorDataCompleto = {
-                    ...jugadorData,
-                    id_evento: eventoSeleccionado.id
-                };
+                const qrStringJugador = generateQRString({ ...jugadorData, id_evento: eventoSeleccionado.id });
 
-                // Generar código QR único para este jugador con datos completos
-                const qrStringJugador = generateQRString(jugadorDataCompleto);
-
-                // Actualizar la inscripción del jugador con el código QR
-                const { error: qrJugadorUpdateError } = await supabase
+                await supabase
                     .from("inscriptions")
-                    .update({
-                        qr_code: qrStringJugador,
-                        asistencia: false
-                    })
+                    .update({ qr_code: qrStringJugador, asistencia: false })
                     .eq("id", jugadorData.id);
 
-                if (qrJugadorUpdateError) {
-                    console.error(`Error al guardar código QR del jugador ${i + 1}:`, qrJugadorUpdateError);
-                }
-
-                // Crear inscripción del juego para este jugador
-                const { error: gameInsertJugadorError } = await supabase
+                await supabase
                     .from("games_inscriptions")
-                    .insert({
-                        id_inscription: jugadorData.id,
-                        id_game: selectedGame,
-                    });
+                    .insert({ id_inscription: jugadorData.id, id_game: selectedGame });
 
-                if (gameInsertJugadorError) {
-                    throw gameInsertJugadorError;
-                }
-
-                // Guardar jugador con su QR para uso posterior
-                jugadoresConQR.push({
-                    ...jugadorNormalizado,
-                    id: jugadorData.id,
-                    id_evento: eventoSeleccionado.id,
-                    qr_code: qrStringJugador
-                });
+                jugadoresConQR.push({ ...jugadorNorm, id: jugadorData.id, id_evento: eventoSeleccionado.id, qr_code: qrStringJugador });
             }
 
-            const juegoSeleccionado = juegosEquipo.find(game => game.id === selectedGame);
-
-            // Si el capitán tiene email, enviar confirmación
             if (normalizedFormValues.email) {
                 try {
+                    const juegoSeleccionado = juegosSeleccionados.find(g => g.id === selectedGame);
                     await enviarConfirmacionEquipo(
-                        capitanData, // datos del capitán con QR
-                        jugadoresConQR,  // datos de los jugadores con QRs
+                        capitanData,
+                        jugadoresConQR,
                         {
-                            nombre: eventoSeleccionado.nombre,
-                            fecha_inicio: eventoSeleccionado.fecha_inicio,
-                            hora_inicio: eventoSeleccionado.hora_inicio,
-                            localidad: eventoSeleccionado.localidad,
-                            direccion: eventoSeleccionado.direccion,
+                            nombre:        eventoSeleccionado.nombre,
+                            fecha_inicio:  eventoSeleccionado.fecha_inicio,
+                            hora_inicio:   eventoSeleccionado.hora_inicio,
+                            localidad:     eventoSeleccionado.localidad,
+                            direccion:     eventoSeleccionado.direccion,
                         },
                         juegoSeleccionado,
                         normalizedFormValues.team_name
@@ -279,341 +244,294 @@ export const FormularioEquipo = ({ onBack, eventoId }) => {
                 }
             }
 
-            // Limpiar el formulario y mostrar mensaje de éxito
             setSuccessMessage("Inscripción de equipo realizada con éxito.");
-            resetForm(); // Utilizamos la función del hook para resetear el formulario
+            resetForm();
+            setEmailRepetir('');
+            setAceptaTerminos(false);
 
         } catch (err) {
-            setErrorMessage("Hubo un error al procesar tu solicitud. Intenta nuevamente.");
+            setErrorMessage("Hubo un error al procesar tu solicitud. Intentá nuevamente.");
             console.error("Error:", err);
         }
         setIsSaving(false);
     };
 
-    // Estilos CSS adicionales para los campos con error
-    const errorStyle = {
-        border: '1px solid red',
-    };
-
-    // Contenido para indicar que el campo es requerido
-    const requiredFieldIndicator = (isError) => (
-        <span className={`required-field ${isError ? 'error-text' : ''}`}>*</span>
-    );
+    if (showLoading) return <LogoNeon onClose={() => setShowLoading(false)} />;
 
     return (
-        <>
-            {showLoading ? (
-                <LogoNeon onClose={() => setShowLoading(false)} />
-            ) : (
-                <main>
-                    <div className="form-container">
-                        <h3>Formulario Inscripción de Equipo al Torneo</h3>
+        <main className="fd-page">
+            {/* Barra de info del evento */}
+            <div className="fd-event-bar">
+                <p className="fd-event-text">
+                    {eventoSeleccionado?.localidad}
+                    {fechaCorta && <> · {fechaCorta}</>}
+                    {hora && <> · {hora}</>}
+                </p>
+                <button className="fd-event-link" onClick={onBack} type="button">
+                    <FontAwesomeIcon icon={faCalendarAlt} />
+                    {' '}Ver detalles &gt;
+                </button>
+            </div>
 
-                        {onBack && (
-                            <button
-                                onClick={onBack}
-                                className="export-button"
-                            >
-                                ← Volver
-                            </button>
-                        )}
-
-                        <EventoInfo evento={eventoSeleccionado} loading={loadingEvento} />
-
-                        <form onSubmit={handleSubmit} className="inscription-form">
-                            {/* Selección de juego para todo el equipo */}
-                            <div className="form-group game-selection">
-                                <label>
-                                    Juego al que se inscribirá el equipo:{requiredFieldIndicator(fieldErrors.selectedGame)}
-                                </label>
-                                {loadingGames && <p>Cargando juegos...</p>}
-                                {errorGames && <p>Error al cargar juegos: {errorGames}</p>}
-
-                                <select
-                                    value={selectedGame}
-                                    onChange={handleGameChange}
-                                    className={`game-select ${fieldErrors.selectedGame ? 'error-field' : ''}`}
-                                    style={fieldErrors.selectedGame ? errorStyle : {}}
-                                >
-                                    <option value="">Selecciona un juego</option>
-                                    {juegosEquipo.map((game) => (
-                                        <option key={game.id} value={game.id}>
-                                            {game.game_name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {fieldErrors.selectedGame && (
-                                    <p className="error-text">Debes seleccionar un juego</p>
-                                )}
-                            </div>
-
-                            <div className="form-group">
-                                <label>
-                                    Nombre del Equipo:{requiredFieldIndicator(fieldErrors.team_name)}
-                                    <input
-                                        type="text"
-                                        name="team_name"
-                                        value={formValues.team_name}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.team_name ? 'error-field' : ''}
-                                        style={fieldErrors.team_name ? errorStyle : {}}
-                                    />
-                                </label>
-                                {fieldErrors.team_name && (
-                                    <p className="error-text">Nombre del equipo es requerido</p>
-                                )}
-                            </div>
-
-                            <h4>Datos del Capitán</h4>
-                            <div className="form-group">
-                                <label>
-                                    Nombre:{requiredFieldIndicator(fieldErrors.nombre)}
-                                    <input
-                                        type="text"
-                                        name="nombre"
-                                        value={formValues.nombre}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.nombre ? 'error-field' : ''}
-                                        style={fieldErrors.nombre ? errorStyle : {}}
-                                    />
-                                </label>
-                                {fieldErrors.nombre && (
-                                    <p className="error-text">Nombre es requerido</p>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Apellido:{requiredFieldIndicator(fieldErrors.apellido)}
-                                    <input
-                                        type="text"
-                                        name="apellido"
-                                        value={formValues.apellido}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.apellido ? 'error-field' : ''}
-                                        style={fieldErrors.apellido ? errorStyle : {}}
-                                    />
-                                </label>
-                                {fieldErrors.apellido && (
-                                    <p className="error-text">Apellido es requerido</p>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Edad:{requiredFieldIndicator(fieldErrors.edad)}
-                                    <input
-                                        type="text"
-                                        name="edad"
-                                        value={formValues.edad}
-                                        onChange={handleInputChange}
-                                    />
-                                </label>
-                                {fieldErrors.edad && (
-                                    <p className="error-text">Edad es requerido</p>
-                                )}
-                                {fieldErrors.edadFormat && (
-                                    <p className="error-text">La edad debe ser un número entero positivo</p>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Email:{requiredFieldIndicator(fieldErrors.email)}
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formValues.email}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.email ? 'error-field' : ''}
-                                        style={fieldErrors.email ? errorStyle : {}}
-                                    />
-                                </label>
-                                {fieldErrors.email && (
-                                    <p className="error-text">Email es requerido</p>
-                                )}
-                                {fieldErrors.emailFormat && (
-                                    <p className="error-text">Formato de email inválido</p>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Celular:{requiredFieldIndicator(fieldErrors.celular)}
-                                    <input
-                                        type="tel"
-                                        name="celular"
-                                        value={formValues.celular}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.celular ? 'error-field' : ''}
-                                        style={fieldErrors.celular ? errorStyle : {}}
-                                    />
-                                </label>
-                                {fieldErrors.celular && (
-                                    <p className="error-text">Celular es requerido</p>
-                                )}
-                                {fieldErrors.celularFormat && (
-                                    <p className="error-text">El celular debe tener entre 8 y 15 dígitos</p>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Localidad:{requiredFieldIndicator(fieldErrors.localidad)}
-                                    <select
-                                        name="localidad"
-                                        value={formValues.localidad}
-                                        onChange={handleInputChange}
-                                        className={fieldErrors.localidad ? 'error-field' : ''}
-                                        style={fieldErrors.localidad ? errorStyle : {}}
-                                    >
-                                        <option value="">Selecciona una localidad</option>
-                                        {localidadesOptions.map((localidad, index) => (
-                                            <option key={index} value={localidad.value}>
-                                                {localidad.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                                {fieldErrors.localidad && (
-                                    <p className="error-text">Localidad es requerida</p>
-                                )}
-                            </div>
-
-                            <h4>Miembros del Equipo</h4>
-
-                            {jugadores.map((jugador, index) => (
-                                <div key={index} className="jugador-container">
-                                    <h5>Jugador {index + 1}</h5>
-                                    <div className="form-group">
-                                        <label>
-                                            Nombre:{requiredFieldIndicator(jugadoresErrors[index]?.nombre)}
-                                            <input
-                                                type="text"
-                                                value={jugador.nombre}
-                                                onChange={(e) => handleJugadorChange(index, "nombre", e.target.value)}
-                                                className={jugadoresErrors[index]?.nombre ? 'error-field' : ''}
-                                                style={jugadoresErrors[index]?.nombre ? errorStyle : {}}
-                                            />
-                                        </label>
-                                        {jugadoresErrors[index]?.nombre && (
-                                            <p className="error-text">Nombre es requerido</p>
-                                        )}
-                                    </div>
-                                    <div className="form-group">
-                                        <label>
-                                            Apellido:{requiredFieldIndicator(jugadoresErrors[index]?.apellido)}
-                                            <input
-                                                type="text"
-                                                value={jugador.apellido}
-                                                onChange={(e) => handleJugadorChange(index, "apellido", e.target.value)}
-                                                className={jugadoresErrors[index]?.apellido ? 'error-field' : ''}
-                                                style={jugadoresErrors[index]?.apellido ? errorStyle : {}}
-                                            />
-                                        </label>
-                                        {jugadoresErrors[index]?.apellido && (
-                                            <p className="error-text">Apellido es requerido</p>
-                                        )}
-                                    </div>
-                                    <div className="form-group">
-                                        <label>
-                                            Edad:{requiredFieldIndicator(jugadoresErrors[index]?.edad)}
-                                            <input
-                                                type="text"
-                                                value={jugador.edad}
-                                                onChange={(e) => handleJugadorChange(index, "edad", e.target.value)}
-                                                className={jugadoresErrors[index]?.edad || jugadoresErrors[index]?.edadFormat ? 'error-field' : ''}
-                                                style={(jugadoresErrors[index]?.edad || jugadoresErrors[index]?.edadFormat) ? errorStyle : {}}
-                                            />
-                                        </label>
-                                        {jugadoresErrors[index]?.edad && (
-                                            <p className="error-text">Edad es requerido</p>
-                                        )}
-                                        {jugadoresErrors[index]?.edadFormat && (
-                                            <p className="error-text">La edad debe ser un número entero positivo</p>
-                                        )}
-                                    </div>
-                                    <div className="form-group">
-                                        <label>
-                                            Email:{requiredFieldIndicator(jugadoresErrors[index]?.email)}
-                                            <input
-                                                type="email"
-                                                value={jugador.email}
-                                                onChange={(e) => handleJugadorChange(index, "email", e.target.value)}
-                                                className={jugadoresErrors[index]?.email || jugadoresErrors[index]?.emailFormat ? 'error-field' : ''}
-                                                style={(jugadoresErrors[index]?.email || jugadoresErrors[index]?.emailFormat) ? errorStyle : {}}
-                                            />
-                                        </label>
-                                        {jugadoresErrors[index]?.email && (
-                                            <p className="error-text">Email es requerido</p>
-                                        )}
-                                        {jugadoresErrors[index]?.emailFormat && (
-                                            <p className="error-text">Formato de email inválido</p>
-                                        )}
-                                    </div>
-                                    <div className="form-group">
-                                        <label>
-                                            Celular:{requiredFieldIndicator(jugadoresErrors[index]?.celular)}
-                                            <input
-                                                type="tel"
-                                                value={jugador.celular}
-                                                onChange={(e) => handleJugadorChange(index, "celular", e.target.value)}
-                                                className={jugadoresErrors[index]?.celular || jugadoresErrors[index]?.celularFormat ? 'error-field' : ''}
-                                                style={(jugadoresErrors[index]?.celular || jugadoresErrors[index]?.celularFormat) ? errorStyle : {}}
-                                            />
-                                        </label>
-                                        {jugadoresErrors[index]?.celular && (
-                                            <p className="error-text">Celular es requerido</p>
-                                        )}
-                                        {jugadoresErrors[index]?.celularFormat && (
-                                            <p className="error-text">El celular debe tener entre 8 y 15 dígitos</p>
-                                        )}
-                                    </div>
-
-                                    {jugadores.length > 1 && (
-                                        <button
-                                            type="button"
-                                            className="remove-button"
-                                            onClick={() => removeJugador(index)}
-                                        >
-                                            Eliminar Jugador
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-
-                            <button
-                                type="button"
-                                className="export-button"
-                                onClick={addJugador}
-                            >
-                                + Agregar Jugador
-                            </button>
-
-                            {errorMessage && (
-                                <p className="error-message">{errorMessage}</p>
-                            )}
-
-                            {successMessage && (
-                                <div className="modal-insc-overlay">
-                                    <div className="modal-insc-content">
-                                        <h3>¡Registro exitoso!</h3>
-                                        <p>Se registró correctamente al torneo</p>
-                                        <p>A la brevedad te llegará mail de confirmación. Revisa spam por las dudas</p>
-                                        <p>¡Nos vemos en el torneo!</p>
-
-                                        <button onClick={handleModalAccept}>Aceptar</button>
-                                    </div>
-                                </div>
-                            )}
-
-                            <button
-                                type="submit"
-                                className="main-button"
-                                disabled={isSaving}
-                            >
-                                {isSaving ? 'Guardando...' : 'Inscribir Equipo'}
-                            </button>
-                        </form>
+            {/* Barra de progreso */}
+            <div className="fd-progress-wrap">
+                <div className="fd-progress-header">
+                    <span className="fd-paso-text">Paso {pasoActual} de {totalPasos}</span>
+                    <div className="fd-step-badges">
+                        {stepBadges.map(n => (
+                            <span key={n} className={`fd-step-badge${n < pasoActual ? ' fd-step-badge--done' : ''}`}>
+                                {n}
+                            </span>
+                        ))}
                     </div>
-                </main>
+                </div>
+                <div className="fd-progress-bar">
+                    <div className="fd-progress-fill" style={{ width: `${progreso}%` }} />
+                </div>
+            </div>
+
+            {/* Badges de juegos */}
+            {juegosSeleccionados.length > 0 && (
+                <div className="fd-juegos-badges">
+                    {juegosSeleccionados.map(j => (
+                        <span key={j.id} className="fd-juego-badge">{j.game_name}</span>
+                    ))}
+                </div>
             )}
 
-        </>
+            {/* Título */}
+            <h2 className="fd-titulo">Tus datos</h2>
+
+            <form className="fd-form" onSubmit={handleSubmit} noValidate>
+
+                {/* Nombre del equipo */}
+                <div className="fd-group">
+                    <label className="fd-label">
+                        Nombre del equipo<span className="fd-required">*</span>
+                    </label>
+                    <input
+                        className={`fd-input${fieldErrors.team_name ? ' fd-input--error' : ''}`}
+                        type="text"
+                        name="team_name"
+                        value={formValues.team_name}
+                        onChange={handleInputChange}
+                        placeholder="Ej: Los Campeones"
+                    />
+                    {fieldErrors.team_name && <span className="fd-error-text">Requerido</span>}
+                </div>
+
+                {/* ── Capitán ── */}
+                <p className="fd-section-title">Datos del capitán</p>
+
+                <div className="fd-row-2">
+                    <div className="fd-group">
+                        <label className="fd-label">Nombre<span className="fd-required">*</span></label>
+                        <input
+                            className={`fd-input${fieldErrors.nombre ? ' fd-input--error' : ''}`}
+                            type="text" name="nombre"
+                            value={formValues.nombre} onChange={handleInputChange}
+                            placeholder="Tomás"
+                        />
+                        {fieldErrors.nombre && <span className="fd-error-text">Requerido</span>}
+                    </div>
+                    <div className="fd-group">
+                        <label className="fd-label">Apellido<span className="fd-required">*</span></label>
+                        <input
+                            className={`fd-input${fieldErrors.apellido ? ' fd-input--error' : ''}`}
+                            type="text" name="apellido"
+                            value={formValues.apellido} onChange={handleInputChange}
+                            placeholder="Pérez"
+                        />
+                        {fieldErrors.apellido && <span className="fd-error-text">Requerido</span>}
+                    </div>
+                </div>
+
+                <div className="fd-group">
+                    <label className="fd-label">Edad<span className="fd-required">*</span></label>
+                    <input
+                        className={`fd-input${fieldErrors.edad || fieldErrors.edadFormat ? ' fd-input--error' : ''}`}
+                        type="text" inputMode="numeric" name="edad"
+                        value={formValues.edad} onChange={handleInputChange}
+                        placeholder="18"
+                    />
+                    {fieldErrors.edad && <span className="fd-error-text">Requerido</span>}
+                    {fieldErrors.edadFormat && <span className="fd-error-text">Solo números</span>}
+                </div>
+
+                <div className="fd-group">
+                    <label className="fd-label">Email<span className="fd-required">*</span></label>
+                    <input
+                        className={`fd-input${fieldErrors.email || fieldErrors.emailFormat ? ' fd-input--error' : ''}`}
+                        type="email" name="email"
+                        value={formValues.email} onChange={handleInputChange}
+                        placeholder="tomas@gmail.com"
+                    />
+                    {fieldErrors.email && <span className="fd-error-text">Requerido</span>}
+                    {fieldErrors.emailFormat && <span className="fd-error-text">Email inválido</span>}
+                </div>
+
+                <div className="fd-group">
+                    <label className="fd-label">Repetir email<span className="fd-required">*</span></label>
+                    <input
+                        className={`fd-input${emailRepetirError ? ' fd-input--error' : ''}`}
+                        type="email"
+                        value={emailRepetir}
+                        onChange={e => setEmailRepetir(e.target.value)}
+                        placeholder="tomas@gmail.com"
+                    />
+                    {emailRepetirError
+                        ? <span className="fd-error-text">{emailRepetirError}</span>
+                        : <span className="fd-helper">Te enviaremos la confirmación a este email.</span>
+                    }
+                </div>
+
+                <div className="fd-group">
+                    <label className="fd-label">Celular<span className="fd-required">*</span></label>
+                    <div className={`fd-celular-wrap${fieldErrors.celular || fieldErrors.celularFormat ? ' fd-celular-wrap--error' : ''}`}>
+                        <span className="fd-celular-prefix">🇦🇷 +54 9</span>
+                        <input
+                            className="fd-celular-input"
+                            type="tel" name="celular"
+                            value={formValues.celular} onChange={handleInputChange}
+                            placeholder="11 2456 7890"
+                        />
+                    </div>
+                    {fieldErrors.celular && <span className="fd-error-text">Requerido</span>}
+                    {fieldErrors.celularFormat && <span className="fd-error-text">Debe tener entre 8 y 15 dígitos</span>}
+                </div>
+
+                <div className="fd-group">
+                    <label className="fd-label">Localidad<span className="fd-required">*</span></label>
+                    <div className="fd-select-wrap">
+                        <select
+                            className={`fd-select${fieldErrors.localidad ? ' fd-select--error' : ''}`}
+                            name="localidad"
+                            value={formValues.localidad} onChange={handleInputChange}
+                        >
+                            <option value="">Seleccioná una localidad</option>
+                            {localidadesOptions.map((l, i) => (
+                                <option key={i} value={l.value}>{l.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                    {fieldErrors.localidad && <span className="fd-error-text">Requerido</span>}
+                </div>
+
+                {/* ── Jugadores ── */}
+                <p className="fd-section-title">Miembros del equipo</p>
+
+                {jugadores.map((jugador, index) => (
+                    <div key={index} className="fd-jugador-card">
+                        <div className="fd-jugador-header">
+                            <span className="fd-jugador-title">Jugador {index + 1}</span>
+                            {jugadores.length > 1 && (
+                                <button type="button" className="fd-remove-btn" onClick={() => removeJugador(index)}>
+                                    Eliminar
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="fd-row-2">
+                            <div className="fd-group">
+                                <label className="fd-label">Nombre<span className="fd-required">*</span></label>
+                                <input
+                                    className={`fd-input${jugadoresErrors[index]?.nombre ? ' fd-input--error' : ''}`}
+                                    type="text"
+                                    value={jugador.nombre}
+                                    onChange={e => handleJugadorChange(index, 'nombre', e.target.value)}
+                                    placeholder="Nombre"
+                                />
+                                {jugadoresErrors[index]?.nombre && <span className="fd-error-text">Requerido</span>}
+                            </div>
+                            <div className="fd-group">
+                                <label className="fd-label">Apellido<span className="fd-required">*</span></label>
+                                <input
+                                    className={`fd-input${jugadoresErrors[index]?.apellido ? ' fd-input--error' : ''}`}
+                                    type="text"
+                                    value={jugador.apellido}
+                                    onChange={e => handleJugadorChange(index, 'apellido', e.target.value)}
+                                    placeholder="Apellido"
+                                />
+                                {jugadoresErrors[index]?.apellido && <span className="fd-error-text">Requerido</span>}
+                            </div>
+                        </div>
+
+                        <div className="fd-group">
+                            <label className="fd-label">Edad<span className="fd-required">*</span></label>
+                            <input
+                                className={`fd-input${jugadoresErrors[index]?.edad || jugadoresErrors[index]?.edadFormat ? ' fd-input--error' : ''}`}
+                                type="text" inputMode="numeric"
+                                value={jugador.edad}
+                                onChange={e => handleJugadorChange(index, 'edad', e.target.value)}
+                                placeholder="18"
+                            />
+                            {jugadoresErrors[index]?.edad && <span className="fd-error-text">Requerido</span>}
+                            {jugadoresErrors[index]?.edadFormat && <span className="fd-error-text">Solo números</span>}
+                        </div>
+
+                        <div className="fd-group">
+                            <label className="fd-label">Email</label>
+                            <input
+                                className={`fd-input${jugadoresErrors[index]?.emailFormat ? ' fd-input--error' : ''}`}
+                                type="email"
+                                value={jugador.email}
+                                onChange={e => handleJugadorChange(index, 'email', e.target.value)}
+                                placeholder="jugador@gmail.com"
+                            />
+                            {jugadoresErrors[index]?.emailFormat && <span className="fd-error-text">Email inválido</span>}
+                        </div>
+
+                        <div className="fd-group">
+                            <label className="fd-label">Celular<span className="fd-required">*</span></label>
+                            <div className={`fd-celular-wrap${jugadoresErrors[index]?.celular || jugadoresErrors[index]?.celularFormat ? ' fd-celular-wrap--error' : ''}`}>
+                                <span className="fd-celular-prefix">🇦🇷 +54 9</span>
+                                <input
+                                    className="fd-celular-input"
+                                    type="tel"
+                                    value={jugador.celular}
+                                    onChange={e => handleJugadorChange(index, 'celular', e.target.value)}
+                                    placeholder="11 2456 7890"
+                                />
+                            </div>
+                            {jugadoresErrors[index]?.celular && <span className="fd-error-text">Requerido</span>}
+                            {jugadoresErrors[index]?.celularFormat && <span className="fd-error-text">Debe tener entre 8 y 15 dígitos</span>}
+                        </div>
+                    </div>
+                ))}
+
+                <button type="button" className="fd-add-btn" onClick={addJugador}>
+                    + Agregar jugador
+                </button>
+
+                {/* Términos */}
+                <label className="fd-checkbox-group">
+                    <input type="checkbox" checked={aceptaTerminos} onChange={e => setAceptaTerminos(e.target.checked)} />
+                    <span className="fd-checkbox-label">
+                        Acepto <a href="#" onClick={e => e.preventDefault()}>términos y condiciones</a>
+                        <span className="fd-required"> *</span>
+                    </span>
+                </label>
+                {terminosError && <span className="fd-error-text">Debés aceptar los términos</span>}
+
+                {errorMessage && <div className="fd-error-message">{errorMessage}</div>}
+
+                {successMessage && (
+                    <div className="modal-insc-overlay">
+                        <div className="modal-insc-content">
+                            <h3>¡Registro exitoso!</h3>
+                            <p>El equipo se registró correctamente al torneo.</p>
+                            <p>A la brevedad te llegará mail de confirmación. Revisá spam por las dudas.</p>
+                            <p>¡Nos vemos en el torneo!</p>
+                            <button type="button" onClick={handleModalAccept}>Aceptar</button>
+                        </div>
+                    </div>
+                )}
+
+                <button type="submit" className="main-button fd-submit-btn" disabled={isSaving}>
+                    {isSaving ? 'Guardando...' : 'Inscribir equipo'}
+                </button>
+
+            </form>
+        </main>
     );
 };

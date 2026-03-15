@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useBackHandler } from "../../../context/BackHandlerContext";
 import { faCalendarAlt, faCheck } from "@fortawesome/free-solid-svg-icons";
 
 import { formatearHora } from "../../../utils/dateUtils";
@@ -84,6 +85,12 @@ const GameCard = ({ game, isSelected, onToggle }) => {
 };
 
 export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) => {
+    const { setBackHandler } = useBackHandler();
+    useEffect(() => {
+        setBackHandler(() => onBack);
+        return () => setBackHandler(null);
+    }, [onBack]);
+
     // Selección múltiple — array de objetos game
     const [selectedGames, setSelectedGames] = useState([]);
 
