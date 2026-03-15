@@ -16,6 +16,11 @@ export const EventsList = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [localEventGames, setLocalEventGames] = useState({});
 
+    useEffect(() => {
+        document.body.style.overflow = showModal ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
+    }, [showModal]);
+
     const eventIds = eventsData?.map(event => event.id) || [];
     const { eventGames, loading: loadingEventGames, error: errorEventGames } = useEventGames(eventIds);
     const { games, loading: loadingGames, error: errorGames } = useGames();
@@ -277,7 +282,13 @@ export const EventsList = () => {
                 <div className="modal-torneo">
                     <div className="modal-content">
                         <button className="cancel-button" onClick={() => setShowModal(false)}>Cerrar</button>
-                        <AddTournamentForm />
+                        <AddTournamentForm
+                            onSuccess={() => {
+                                setShowModal(false);
+                                setMessage({ type: 'success', text: 'Torneo creado con éxito.' });
+                                setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+                            }}
+                        />
                     </div>
                 </div>
             )}

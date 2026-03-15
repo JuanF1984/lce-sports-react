@@ -13,7 +13,6 @@ export const FilterSystem = ({ inscriptions, events, games, onFilter, onFiltersC
     // useEffect para detectar cuando cambian los initialFilters
     useEffect(() => {
         if (initialFilters) {
-            console.log("Actualizando filtros con initialFilters:", initialFilters);
             setFilters(initialFilters);
             // No aplicamos los filtros aquí, porque el cambio de evento ya será manejado por el componente padre
         }
@@ -21,12 +20,7 @@ export const FilterSystem = ({ inscriptions, events, games, onFilter, onFiltersC
 
     // Función centralizada de filtrado
     const applyFilters = useCallback((currentFilters = filters) => {
-        console.log("Aplicando filtros en FilterSystem:", currentFilters);
-        console.log("Total de inscripciones a filtrar:", inscriptions.length);
-
-        // Si no hay inscripciones, no hay nada que filtrar
         if (inscriptions.length === 0) {
-            console.log("No hay inscripciones para filtrar");
             onFilter([]);
             return;
         }
@@ -39,25 +33,13 @@ export const FilterSystem = ({ inscriptions, events, games, onFilter, onFiltersC
             // Ya no filtramos por eventId aquí, porque ya cargamos solo las del evento seleccionado
             startDate: (inscription) => {
                 if (!currentFilters.startDate) return true;
-
-                // Verificamos que tenemos una fecha válida
-                if (!inscription.created_at) {
-                    console.warn("Inscripción sin fecha de creación:", inscription);
-                    return false;
-                }
-
+                if (!inscription.created_at) return false;
                 const inscriptionDate = new Date(inscription.created_at).toISOString().split('T')[0];
                 return inscriptionDate >= currentFilters.startDate;
             },
             endDate: (inscription) => {
                 if (!currentFilters.endDate) return true;
-
-                // Verificamos que tenemos una fecha válida
-                if (!inscription.created_at) {
-                    console.warn("Inscripción sin fecha de creación:", inscription);
-                    return false;
-                }
-
+                if (!inscription.created_at) return false;
                 const inscriptionDate = new Date(inscription.created_at).toISOString().split('T')[0];
                 return inscriptionDate <= currentFilters.endDate;
             },
@@ -75,25 +57,15 @@ export const FilterSystem = ({ inscriptions, events, games, onFilter, onFiltersC
             }
         };
 
-        // Aplicar cada filtro por separado para poder diagnosticar
         Object.keys(filterRules).forEach(filterKey => {
-            const countBefore = filtered.length;
             filtered = filtered.filter(filterRules[filterKey]);
-            const countAfter = filtered.length;
-
-            // Solo loguear si el filtro está activo y elimina registros
-            if (currentFilters[filterKey] && countBefore !== countAfter) {
-                console.log(`Filtro ${filterKey} eliminó ${countBefore - countAfter} inscripciones. Quedan ${countAfter}`);
-            }
         });
 
-        console.log("Total de inscripciones después de filtrar:", filtered.length);
         onFilter(filtered);
     }, [inscriptions, onFilter]);
 
     // Cuando cambia el evento, notificamos al componente padre
     const handleEventChange = (eventId) => {
-        console.log(`Evento seleccionado cambiado a: ${eventId}`);
         const newFilters = {
             ...filters,
             eventId

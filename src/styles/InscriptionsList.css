@@ -251,6 +251,7 @@ aside .export-button:active {
     position: fixed;
     width: 600px;
     max-width: 90vw;
+    max-height: 80vh;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -261,6 +262,7 @@ aside .export-button:active {
     box-shadow: 0 8px 32px rgba(26, 39, 68, 0.25);
     z-index: 1000000;
     border: 1px solid #d0d9ea;
+    overflow-y: auto;
 }
 
 .success-message-admin {
@@ -345,6 +347,41 @@ aside .export-button:active {
 
 .game-checkbox input[type="checkbox"] {
     cursor: pointer;
+}
+
+/* Grid de checkboxes para el formulario Nuevo Torneo */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px 16px;
+    padding: 10px 0;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #1a2744;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #d0d9ea;
+    background: #ffffff;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.checkbox-label:hover {
+    background: #f0f4fa;
+    border-color: #3b6cb4;
+}
+
+.checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #1a2744;
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
 }
 
 .inscriptions-header {

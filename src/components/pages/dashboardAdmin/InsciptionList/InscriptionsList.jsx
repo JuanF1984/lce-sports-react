@@ -11,6 +11,18 @@ import { useProximoEvento } from '../../../../hooks/useProximoEvento';
 
 import '../../../../styles/InscriptionsList.css';
 
+const toArgentinaDate = (isoStr) => {
+  if (!isoStr) return '';
+  const date = new Date(isoStr);
+  const parts = new Intl.DateTimeFormat('es-AR', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(date);
+  const get = (type) => parts.find(p => p.type === type)?.value ?? '';
+  return `${get('day')}/${get('month')}/${get('year')} ${get('hour')}:${get('minute')}`;
+};
+
 const InscriptionsList = () => {
   const [inscriptions, setInscriptions] = useState([]);
   const [filteredInscriptions, setFilteredInscriptions] = useState([]);
@@ -29,6 +41,7 @@ const InscriptionsList = () => {
   });
 
   const headerTable = [
+    'Fecha de inscripción',
     'Nombre',
     'Apellido',
     'Edad',
@@ -36,8 +49,6 @@ const InscriptionsList = () => {
     'Email',
     'Localidad',
     'Juegos',
-    'Evento',
-    'Equipo'
   ];
 
   // Nueva función para cargar inscripciones de un evento específico
@@ -65,7 +76,7 @@ const InscriptionsList = () => {
           )
         `)
         .eq('id_evento', eventId) // Solo cargamos las inscripciones del evento seleccionado
-        .order('team_name', { ascending: false }) // Ordenar por team_name (NULL primero)
+        .order('created_at', { ascending: true })
 
       if (inscriptionsError) {
         console.error("Error al cargar inscripciones:", inscriptionsError);
@@ -292,7 +303,7 @@ const InscriptionsList = () => {
             <ExportToExcelButton
               data={[]}
               getEventDetails={getEventDetails}
-              headerTable={headerTable}
+              selectedEvent={eventsData?.find(e => e.id === activeFilters.eventId) ?? null}
             />
 
             <div className="table-wrapper">
@@ -354,7 +365,7 @@ const InscriptionsList = () => {
       <ExportToExcelButton
         data={filteredInscriptions}
         getEventDetails={getEventDetails}
-        headerTable={headerTable}
+        selectedEvent={eventsData?.find(e => e.id === activeFilters.eventId) ?? null}
       />
 
       <div className="table-wrapper">
@@ -370,6 +381,7 @@ const InscriptionsList = () => {
             {filteredInscriptions.length > 0 ? (
               filteredInscriptions.map((inscription, index) => (
                 <tr key={`${inscription.id || index}-${inscription.email}-${inscription.juegos}`}>
+                  <td>{toArgentinaDate(inscription.created_at)}</td>
                   <td>{inscription.nombre}</td>
                   <td>{inscription.apellido}</td>
                   <td>{inscription.edad}</td>
@@ -377,8 +389,6 @@ const InscriptionsList = () => {
                   <td>{inscription.email}</td>
                   <td>{inscription.localidad}</td>
                   <td>{inscription.juegos}</td>
-                  <td>{getEventDetails(inscription.id_evento)}</td>
-                  <td>{inscription.team_name}</td>
                 </tr>
               ))
             ) : (
