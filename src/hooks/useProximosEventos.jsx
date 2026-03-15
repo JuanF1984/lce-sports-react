@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import supabase from '../utils/supabase';
 
 // Hook base que obtiene múltiples eventos
-export const useProximosEventos = (cantidad = 2) => {
+export const useProximosEventos = (cantidad) => {
     const [proximosEventos, setProximosEventos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -14,12 +14,15 @@ export const useProximosEventos = (cantidad = 2) => {
                 ayer.setDate(ayer.getDate() - 1);
                 const ayerFormatoYYYYMMDD = ayer.toISOString().split('T')[0];
 
-                const { data, error } = await supabase
+                let query = supabase
                     .from('events')
                     .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, slug, imagen_url')
                     .gte('fecha_inicio', ayerFormatoYYYYMMDD)
-                    .order('fecha_inicio', { ascending: true })
-                    .limit(cantidad);
+                    .order('fecha_inicio', { ascending: true });
+
+                if (cantidad) query = query.limit(cantidad);
+
+                const { data, error } = await query;
 
                 if (error) {
                     setError(error);

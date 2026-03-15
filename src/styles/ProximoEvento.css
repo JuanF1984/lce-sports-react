@@ -157,6 +157,91 @@
     font-size: 0.85rem;
 }
 
+/* ── Modal de confirmación ─────────────────────────────── */
+.pe-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 15, 40, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.pe-confirm-modal {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 1.5rem 1.25rem 1.25rem;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(26, 39, 68, 0.22);
+}
+
+.pe-confirm-titulo {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #1a2744;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.pe-confirm-detalle {
+    background: #f0f4fa;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.pe-confirm-localidad {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #1a2744;
+    line-height: 1.2;
+}
+
+.pe-confirm-fecha {
+    font-size: 0.88rem;
+    color: #6b7280;
+}
+
+.pe-confirm-dir {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.pe-confirm-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.pe-confirm-btn-ok {
+    width: 100%;
+    font-size: 0.95rem !important;
+}
+
+.pe-confirm-btn-cancel {
+    width: 100%;
+    padding: 0.65rem 1rem;
+    border-radius: 50px;
+    border: 1.5px solid #d1d5db;
+    background: transparent;
+    color: #6b7280;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+
+.pe-confirm-btn-cancel:hover {
+    background: #f0f4fa;
+    color: #1a2744;
+}
+
 /* ── Responsive ≥ 480px ────────────────────────────────── */
 @media (min-width: 480px) {
     .proximo-evento {

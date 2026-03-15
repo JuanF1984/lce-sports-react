@@ -108,24 +108,17 @@ export const AddTournamentForm = ({ onSuccess }) => {
 
             const slug = generateSlug(localidad, fecha_inicio);
 
-            // ── DIAGNÓSTICO: comparar objeto insert con/sin imagen ──
-            const insertPayload = {
-                fecha_inicio,
-                fecha_fin,
-                localidad,
-                hora_inicio: hora_inicio || null,
-                direccion: direccion || null,
-                slug,
-                imagen_url,
-            };
-            const { data: { session } } = await supabase.auth.getSession();
-            console.log('[AddTournamentForm] insertPayload:', insertPayload);
-            console.log('[AddTournamentForm] session activa:', session ? `uid=${session.user.id}` : 'null — SIN SESIÓN');
-            // ────────────────────────────────────────────────────────
-
             const { data: eventData, error: eventError } = await supabase
                 .from('events')
-                .insert(insertPayload)
+                .insert({
+                    fecha_inicio,
+                    fecha_fin,
+                    localidad,
+                    hora_inicio: hora_inicio || null,
+                    direccion: direccion || null,
+                    slug,
+                    imagen_url,
+                })
                 .select()
                 .single();
 

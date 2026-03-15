@@ -31,14 +31,133 @@ const calcularCountdown = (fechaFin) => {
     return { days, hours };
 };
 
-export const ProximoEvento = ({ onLoadComplete }) => {
+const EventoCard = ({ evento, juegos }) => {
     const navigate = useNavigate();
-    const { proximosEventos, loading } = useProximosEventos(1);
-    const evento = proximosEventos?.[0] ?? null;
-    const { eventGames } = useEventGames(evento ? [evento.id] : []);
-    const juegos = evento ? (eventGames[evento.id] ?? []) : [];
+    const [countdown, setCountdown] = useState(() => calcularCountdown(evento.fecha_fin));
+    const [showConfirm, setShowConfirm] = useState(false);
 
-    const [countdown, setCountdown] = useState(null);
+    useEffect(() => {
+        setCountdown(calcularCountdown(evento.fecha_fin));
+        const timer = setInterval(() => {
+            setCountdown(calcularCountdown(evento.fecha_fin));
+        }, 60_000);
+        return () => clearInterval(timer);
+    }, [evento.fecha_fin]);
+
+    return (
+        <>
+        <div className="pe-card">
+            {/* Imagen banner + logo overlay */}
+            <div className="pe-imagen-wrap">
+                <img
+                    src={evento.imagen_url || heroImg}
+                    alt="Evento LC e-SPORTS"
+                    className="pe-imagen"
+                />
+                <img
+                    src={logo}
+                    alt="LC e-SPORTS"
+                    className="pe-logo-overlay"
+                />
+            </div>
+
+            {/* Datos del evento */}
+            <div className="pe-info">
+                <p className="pe-localidad">{evento.localidad}</p>
+                <p className="pe-fecha">
+                    {formatearFechaCorta(evento.fecha_inicio)}
+                    {evento.hora_inicio && (
+                        <> · {formatearHora(evento.hora_inicio)}</>
+                    )}
+                </p>
+                {evento.direccion && (
+                    <p className="pe-direccion">{evento.direccion}</p>
+                )}
+
+                {/* Tags de juegos */}
+                {juegos.length > 0 && (
+                    <div className="pe-tags">
+                        {juegos.map((j) => (
+                            <span key={j.id} className="pe-tag">
+                                {j.game_name}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                {/* Cupos + countdown */}
+                <div className="pe-cupos-row">
+                    <span className="pe-cupos-badge">Cupos por juego</span>
+                    {countdown && (
+                        <span className="pe-countdown">
+                            Faltan{' '}
+                            <strong>
+                                {countdown.days} días{' '}
+                                {String(countdown.hours).padStart(2, '0')} h
+                            </strong>
+                        </span>
+                    )}
+                </div>
+
+                {/* Botón inscripción */}
+                <button
+                    className="main-button pe-btn"
+                    onClick={() => setShowConfirm(true)}
+                >
+                    INSCRIBITE &gt;
+                </button>
+            </div>
+        </div>
+
+        {/* Modal de confirmación */}
+        {showConfirm && (
+            <div className="pe-confirm-overlay" onClick={() => setShowConfirm(false)}>
+                <div className="pe-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                    <p className="pe-confirm-titulo">¿Confirmás tu inscripción?</p>
+                    <div className="pe-confirm-detalle">
+                        <p className="pe-confirm-localidad">{evento.localidad}</p>
+                        <p className="pe-confirm-fecha">
+                            {formatearFechaCorta(evento.fecha_inicio)}
+                            {evento.hora_inicio && (
+                                <> · {formatearHora(evento.hora_inicio)}</>
+                            )}
+                        </p>
+                        {evento.direccion && (
+                            <p className="pe-confirm-dir">{evento.direccion}</p>
+                        )}
+                        {juegos.length > 0 && (
+                            <div className="pe-tags" style={{ marginTop: '0.5rem' }}>
+                                {juegos.map((j) => (
+                                    <span key={j.id} className="pe-tag">{j.game_name}</span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div className="pe-confirm-actions">
+                        <button
+                            className="main-button pe-confirm-btn-ok"
+                            onClick={() => navigate(`/formulario/${evento.slug}`)}
+                        >
+                            Sí, inscribirme
+                        </button>
+                        <button
+                            className="pe-confirm-btn-cancel"
+                            onClick={() => setShowConfirm(false)}
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
+    );
+};
+
+export const ProximoEvento = ({ onLoadComplete }) => {
+    const { proximosEventos, loading } = useProximosEventos();
+    const eventIds = proximosEventos.map(e => e.id);
+    const { eventGames } = useEventGames(eventIds);
 
     useEffect(() => {
         const img = new Image();
@@ -46,27 +165,18 @@ export const ProximoEvento = ({ onLoadComplete }) => {
         img.onload = () => onLoadComplete?.();
     }, [onLoadComplete]);
 
-    useEffect(() => {
-        if (!evento) return;
-        setCountdown(calcularCountdown(evento.fecha_fin));
-        const timer = setInterval(() => {
-            setCountdown(calcularCountdown(evento.fecha_fin));
-        }, 60_000);
-        return () => clearInterval(timer);
-    }, [evento]);
-
     if (loading) {
         return (
             <section className="proximo-evento">
-                <p className="pe-loading">Cargando evento...</p>
+                <p className="pe-loading">Cargando eventos...</p>
             </section>
         );
     }
 
-    if (!evento) {
+    if (!proximosEventos.length) {
         return (
             <section className="proximo-evento">
-                <h2 className="pe-titulo">Próximo evento</h2>
+                <h2 className="pe-titulo">Próximos eventos</h2>
                 <div className="pe-card">
                     <div className="pe-imagen-wrap">
                         <img
@@ -91,70 +201,15 @@ export const ProximoEvento = ({ onLoadComplete }) => {
 
     return (
         <section className="proximo-evento">
-            <h2 className="pe-titulo">Próximo evento</h2>
+            <h2 className="pe-titulo">Próximos eventos</h2>
 
-            <div className="pe-card">
-                {/* Imagen banner + logo overlay */}
-                <div className="pe-imagen-wrap">
-                    <img
-                        src={evento.imagen_url || heroImg}
-                        alt="Evento LC e-SPORTS"
-                        className="pe-imagen"
-                    />
-                    <img
-                        src={logo}
-                        alt="LC e-SPORTS"
-                        className="pe-logo-overlay"
-                    />
-                </div>
-
-                {/* Datos del evento */}
-                <div className="pe-info">
-                    <p className="pe-localidad">{evento.localidad}</p>
-                    <p className="pe-fecha">
-                        {formatearFechaCorta(evento.fecha_inicio)}
-                        {evento.hora_inicio && (
-                            <> · {formatearHora(evento.hora_inicio)}</>
-                        )}
-                    </p>
-                    {evento.direccion && (
-                        <p className="pe-direccion">{evento.direccion}</p>
-                    )}
-
-                    {/* Tags de juegos */}
-                    {juegos.length > 0 && (
-                        <div className="pe-tags">
-                            {juegos.map((j) => (
-                                <span key={j.id} className="pe-tag">
-                                    {j.game_name}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Cupos + countdown */}
-                    <div className="pe-cupos-row">
-                        <span className="pe-cupos-badge">Cupos por juego</span>
-                        {countdown && (
-                            <span className="pe-countdown">
-                                Faltan{' '}
-                                <strong>
-                                    {countdown.days} días{' '}
-                                    {String(countdown.hours).padStart(2, '0')} h
-                                </strong>
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Botón inscripción */}
-                    <button
-                        className="main-button pe-btn"
-                        onClick={() => navigate(`/formulario/${evento.slug}`)}
-                    >
-                        INSCRIBITE &gt;
-                    </button>
-                </div>
-            </div>
+            {proximosEventos.map((evento) => (
+                <EventoCard
+                    key={evento.id}
+                    evento={evento}
+                    juegos={eventGames[evento.id] ?? []}
+                />
+            ))}
         </section>
     );
 };
