@@ -1,18 +1,14 @@
 import { useState, useEffect } from "react";
 import { useBackHandler } from "../../../context/BackHandlerContext";
 
-import { EventoInfo } from "./common/EventoInfo";
 import { useEventoSeleccionado } from "./hooks/useEventoSeleccionado";
 
 import { useFormulario } from "../../../hooks/useFormulario";
-import { capitalizeText, normalizeEmail, validateEmail, validatePhone, validateAge } from "../../../utils/validations";
+import { validateEmail, validatePhone, validateAge } from "../../../utils/validations";
 
-import supabase from "../../../utils/supabase";
 import { LogoNeon } from '../../common/LogoNeon';
 import { useAuth } from "../../../context/UseAuth";
 import { localidadesBuenosAires } from "../../../data/localidades";
-import { enviarConfirmacionIndividual } from "../../../utils/emailService";
-import { generateQRString } from "../../../utils/qrCodeGenerator";
 import { getGameConfig } from "../../../data/gameConfig";
 import { formatearHora } from "../../../utils/dateUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -29,8 +25,8 @@ const formatearFechaCorta = (fechaStr) => {
     return `${DIAS_CORTOS[fecha.getDay()]} ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
 };
 
-export const Formulario = ({ onBack, eventoId, juegosSeleccionados = [] }) => {
-    const { user, isLoading } = useAuth();
+export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] }) => {
+    const { isLoading } = useAuth();
     const { setBackHandler } = useBackHandler();
     useEffect(() => {
         setBackHandler(() => onBack);
@@ -49,21 +45,12 @@ export const Formulario = ({ onBack, eventoId, juegosSeleccionados = [] }) => {
         setFieldErrors,
         errorMessage,
         setErrorMessage,
-        successMessage,
-        setSuccessMessage,
         showLoading,
         setShowLoading,
-        isSaving,
-        setIsSaving,
         formSubmitted,
         setFormSubmitted,
         handleInputChange,
     } = useFormulario();
-
-    // Pre-seleccionar los juegos que vienen de P3
-    const [selectedGames] = useState(
-        juegosSeleccionados?.length > 0 ? juegosSeleccionados.map(j => j.id) : []
-    );
 
     // Campos extra (UI only)
     const [emailRepetir, setEmailRepetir] = useState('');
@@ -97,11 +84,6 @@ export const Formulario = ({ onBack, eventoId, juegosSeleccionados = [] }) => {
         else setShowLoading(false);
     }, [isLoading, setShowLoading]);
 
-    const handleModalAccept = () => {
-        setSuccessMessage("");
-        window.location.assign("https://www.instagram.com/lcesports/");
-    };
-
     const validateFormNuevo = () => {
         const { nombre, apellido, celular, localidad, email, edad } = formValues;
 
@@ -131,15 +113,13 @@ export const Formulario = ({ onBack, eventoId, juegosSeleccionados = [] }) => {
         return !hasErrors;
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setIsSaving(true);
         setFormSubmitted(true);
         setErrorMessage("");
 
         if (!eventoSeleccionado) {
             setErrorMessage("No se ha seleccionado ningún evento válido.");
-            setIsSaving(false);
             return;
         }
 
@@ -149,82 +129,10 @@ export const Formulario = ({ onBack, eventoId, juegosSeleccionados = [] }) => {
             setErrorMessage("Por favor, completá todos los campos obligatorios.");
             const firstError = document.querySelector('.fd-input--error, .fd-select--error');
             if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setIsSaving(false);
             return;
         }
 
-        try {
-            const normalizedFormValues = {
-                ...formValues,
-                nombre:   capitalizeText(formValues.nombre),
-                apellido: capitalizeText(formValues.apellido),
-                email:    normalizeEmail(formValues.email),
-            };
-
-            const dataToInsert = {
-                ...normalizedFormValues,
-                id_evento: eventoSeleccionado.id,
-            };
-
-            if (user?.id) dataToInsert.user_id = user.id;
-
-            const { data: inscriptionData, error: insertError } = await supabase
-                .from("inscriptions")
-                .insert(dataToInsert)
-                .select()
-                .single();
-
-            if (insertError) throw insertError;
-            if (!inscriptionData) throw new Error("No se recibieron datos de la inscripción.");
-
-            const qrString = generateQRString(inscriptionData);
-
-            await supabase
-                .from("inscriptions")
-                .update({ qr_code: qrString, asistencia: false })
-                .eq("id", inscriptionData.id);
-
-            if (selectedGames.length > 0) {
-                const gameInscriptions = selectedGames.map(gameId => ({
-                    id_inscription: inscriptionData.id,
-                    id_game: gameId,
-                }));
-                const { error: gameInsertError } = await supabase
-                    .from("games_inscriptions")
-                    .insert(gameInscriptions);
-                if (gameInsertError) throw gameInsertError;
-            }
-
-            if (formValues.email) {
-                try {
-                    const juegosNombres = juegosSeleccionados.map(j => j.game_name);
-                    await enviarConfirmacionIndividual(
-                        { ...inscriptionData, qr_code: qrString },
-                        {
-                            localidad:     eventoSeleccionado.localidad,
-                            fecha_inicio:  eventoSeleccionado.fecha_inicio,
-                            hora_inicio:   eventoSeleccionado.hora_inicio,
-                            direccion:     eventoSeleccionado.direccion,
-                        },
-                        juegosNombres
-                    );
-                } catch (emailError) {
-                    console.error("Error al enviar confirmación por email:", emailError);
-                }
-            }
-
-            setSuccessMessage("Inscripción realizada con éxito.");
-            setFormValues({ nombre: "", apellido: "", edad: "", email: "", celular: "", localidad: "" });
-            setEmailRepetir('');
-            setAceptaTerminos(false);
-            setFormSubmitted(false);
-            setFieldErrors({ nombre: false, apellido: false, email: false, emailFormat: false, celular: false, celularFormat: false, localidad: false, selectedGames: false, edad: false, edadFormat: false });
-
-        } catch (err) {
-            setErrorMessage("Hubo un error al procesar tu solicitud. Intentá nuevamente.");
-            console.error("Error:", err);
-        }
-        setIsSaving(false);
+        onNext(formValues);
     };
 
     const fechaCorta = formatearFechaCorta(eventoSeleccionado?.fecha_inicio);
@@ -428,26 +336,12 @@ export const Formulario = ({ onBack, eventoId, juegosSeleccionados = [] }) => {
                     <div className="fd-error-message">{errorMessage}</div>
                 )}
 
-                {/* Modal de éxito */}
-                {successMessage && (
-                    <div className="modal-insc-overlay">
-                        <div className="modal-insc-content">
-                            <h3>¡Registro exitoso!</h3>
-                            <p>Te registraste correctamente al torneo.</p>
-                            <p>A la brevedad te llegará mail de confirmación. Revisá spam por las dudas.</p>
-                            <p>¡Nos vemos en el torneo!</p>
-                            <button type="button" onClick={handleModalAccept}>Aceptar</button>
-                        </div>
-                    </div>
-                )}
-
                 {/* Botón */}
                 <button
                     type="submit"
                     className="main-button fd-submit-btn"
-                    disabled={isSaving}
                 >
-                    {isSaving ? 'Guardando...' : btnLabel}
+                    {btnLabel}
                 </button>
 
             </form>

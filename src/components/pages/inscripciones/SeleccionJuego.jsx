@@ -102,10 +102,11 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
         );
     };
 
-    // Paso 3 siempre. Total: 5 si algún juego seleccionado requiere verificación, 4 si no.
-    const pasoActual = 3;
-    const requiresVerify = selectedGames.some(g => getGameConfig(g.game_name).requiresVerify);
-    const totalPasos = requiresVerify ? 5 : 4;
+    // Paso 2 siempre. Total dinámico: 4 base + 1 si Steam + 1 si Riot.
+    const pasoActual = 2;
+    const needsSteam = selectedGames.some(g => getGameConfig(g.game_name).verifyType === 'steam');
+    const needsRiot  = selectedGames.some(g => getGameConfig(g.game_name).verifyType === 'riot');
+    const totalPasos = 4 + (needsSteam ? 1 : 0) + (needsRiot ? 1 : 0);
     const progreso = Math.round((pasoActual / totalPasos) * 100);
 
     // Badges: pasos completados (1..pasoActual-1) + último paso

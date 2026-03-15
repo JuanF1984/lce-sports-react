@@ -6,6 +6,10 @@ import { faUser, faUsers, faCalendarAlt } from "@fortawesome/free-solid-svg-icon
 import { Formulario } from "./Formulario";
 import { FormularioEquipo } from "./FormularioEquipo";
 import { SeleccionJuego } from "./SeleccionJuego";
+import { VerificacionSteam } from "./VerificacionSteam";
+import { VerificacionRiot } from "./VerificacionRiot";
+import { Confirmacion } from "./Confirmacion";
+import { getGameConfig } from "../../../data/gameConfig";
 import { useEventGames } from "../../../hooks/useEventGames";
 import { LogoNeon } from "../../common/LogoNeon";
 import supabase from "../../../utils/supabase";
@@ -25,8 +29,11 @@ const formatearFechaCorta = (fechaStr) => {
 export const SeleccionInscripcion = () => {
     const { eventoSlug } = useParams();
     const [tipoInscripcion, setTipoInscripcion] = useState(null); // "individual" | "equipo"
-    const [paso, setPaso] = useState('tipo'); // 'tipo' | 'juego' | 'datos'
+    const [paso, setPaso] = useState('tipo'); // 'tipo' | 'juego' | 'datos' | 'steam' | 'riot' | 'confirmacion'
     const [juegosSeleccionados, setJuegosSeleccionados] = useState([]);
+    const [formData, setFormData] = useState(null);
+    const [steamUsername, setSteamUsername] = useState('');
+    const [riotId, setRiotId] = useState('');
     const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
@@ -73,6 +80,20 @@ export const SeleccionInscripcion = () => {
         return <LogoNeon />;
     }
 
+    // Helper: calcula el siguiente paso tras el formulario de datos
+    const siguientePasoTrasDatos = (juegos) => {
+        const needsSteam = juegos.some(g => getGameConfig(g.game_name).verifyType === 'steam');
+        const needsRiot  = juegos.some(g => getGameConfig(g.game_name).verifyType === 'riot');
+        if (needsSteam) return 'steam';
+        if (needsRiot)  return 'riot';
+        return 'confirmacion';
+    };
+
+    const siguientePasoTrasSteam = (juegos) => {
+        const needsRiot = juegos.some(g => getGameConfig(g.game_name).verifyType === 'riot');
+        return needsRiot ? 'riot' : 'confirmacion';
+    };
+
     // ── Paso: selección de juego ────────────────────────
     if (paso === 'juego') {
         return (
@@ -91,6 +112,10 @@ export const SeleccionInscripcion = () => {
             return (
                 <Formulario
                     onBack={() => setPaso('juego')}
+                    onNext={(data) => {
+                        setFormData(data);
+                        setPaso(siguientePasoTrasDatos(juegosSeleccionados));
+                    }}
                     eventoId={eventoSeleccionado.id}
                     juegosSeleccionados={juegosSeleccionados}
                 />
@@ -105,6 +130,51 @@ export const SeleccionInscripcion = () => {
                 />
             );
         }
+    }
+
+    // ── Paso: verificación Steam ────────────────────────
+    if (paso === 'steam') {
+        return (
+            <VerificacionSteam
+                onBack={() => setPaso('datos')}
+                onNext={(username) => {
+                    setSteamUsername(username);
+                    setPaso(siguientePasoTrasSteam(juegosSeleccionados));
+                }}
+                eventoId={eventoSeleccionado.id}
+                juegosSeleccionados={juegosSeleccionados}
+            />
+        );
+    }
+
+    // ── Paso: verificación Riot ─────────────────────────
+    if (paso === 'riot') {
+        const needsSteam = juegosSeleccionados.some(g => getGameConfig(g.game_name).verifyType === 'steam');
+        return (
+            <VerificacionRiot
+                onBack={() => setPaso(needsSteam ? 'steam' : 'datos')}
+                onNext={(riot) => {
+                    setRiotId(riot);
+                    setPaso('confirmacion');
+                }}
+                eventoId={eventoSeleccionado.id}
+                juegosSeleccionados={juegosSeleccionados}
+            />
+        );
+    }
+
+    // ── Paso: confirmación ──────────────────────────────
+    if (paso === 'confirmacion') {
+        return (
+            <Confirmacion
+                eventoId={eventoSeleccionado.id}
+                eventoSeleccionado={eventoSeleccionado}
+                formData={formData}
+                juegosSeleccionados={juegosSeleccionados}
+                steamUsername={steamUsername}
+                riotId={riotId}
+            />
+        );
     }
 
     // ── Paso: tipo de inscripción (default) ─────────────

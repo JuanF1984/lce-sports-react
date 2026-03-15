@@ -66,8 +66,8 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegos) 
         evento_direccion: evento.direccion || '',
         evento_hora: horarioAUsar || '',
         juegos_lista_texto: juegosTexto,
-        faqs_html: faqsHtml, // Añadir las FAQs como HTML
-        qr_code_html: ''  // HTML vacío para el QR
+        faqs_html: faqsHtml,
+        qr_code_html: ''
     };
 
     // 6. Enviar el email usando EmailJS

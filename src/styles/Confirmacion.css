@@ -1,0 +1,191 @@
+/* ── Pantalla 7 — Confirmación: ¡Estás adentro! ── */
+.conf-page {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at center, #1a1f3c 0%, #0a0e1a 70%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Fondo de estrellas con CSS puro */
+.conf-page::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(1px 1px at 15% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 30% 55%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 45% 15%, rgba(255,255,255,0.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 75% 35%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 85% 80%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 55% 45%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 25% 88%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 5%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 40% 95%, rgba(255,255,255,0.3) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+/* ── Contenido ───────────────────────────────────────── */
+.conf-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 380px;
+}
+
+/* Logo */
+.conf-logo {
+    width: 140px;
+    height: auto;
+    margin-bottom: 0.75rem;
+    filter: drop-shadow(0 4px 24px rgba(74, 127, 212, 0.5));
+}
+
+/* Megaevento gamer */
+.conf-brand {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0;
+}
+
+/* EL GAMING NOS UNE con líneas */
+.conf-slogan {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #8b9dc3;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1.25rem;
+}
+
+.conf-slogan::before,
+.conf-slogan::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(139, 157, 195, 0.4);
+}
+
+/* Título principal */
+.conf-titulo {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.02em;
+}
+
+/* Texto de confirmación */
+.conf-texto {
+    font-size: 0.98rem;
+    color: #a8b8d8;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+/* ── Card de compartir ───────────────────────────────── */
+.conf-share-card {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    backdrop-filter: blur(8px);
+}
+
+.conf-share-label {
+    font-size: 0.9rem;
+    color: #8b9dc3;
+    font-weight: 500;
+}
+
+/* Botón Instagram */
+.conf-instagram-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(135deg, #f9a825 0%, #e1306c 50%, #833ab4 100%);
+    color: #fff;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    box-shadow: 0 4px 20px rgba(225, 48, 108, 0.4);
+    transition: opacity 0.15s;
+}
+
+.conf-instagram-btn:hover {
+    opacity: 0.9;
+}
+
+/* Ícono Instagram SVG */
+.conf-ig-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+}
+
+.conf-handle {
+    font-size: 0.82rem;
+    color: #6b7f9e;
+}
+
+/* ── Loading / error states ──────────────────────────── */
+.conf-loading {
+    min-height: 100vh;
+    background: #0a0e1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #a8b8d8;
+    font-family: -apple-system, sans-serif;
+    font-size: 1rem;
+}
+
+.conf-error-msg {
+    font-size: 0.88rem;
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    width: 100%;
+}
+
+/* ── Responsive ≥ 480px ───────────────────────────────── */
+@media (min-width: 480px) {
+    .conf-titulo {
+        font-size: 3rem;
+    }
+}
