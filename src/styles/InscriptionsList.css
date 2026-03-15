@@ -2,7 +2,37 @@ aside {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 1.5em;
+    padding: 1rem 1.5rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: #ffffff;
+    border-bottom: 1px solid #d0d9ea;
+}
+
+/* Ocultar línea neon en el panel admin */
+aside + .neon-line {
+    display: none;
+}
+
+/* Botones de navegación del panel (sobreescriben el teal global) */
+aside .export-button {
+    background: linear-gradient(135deg, #4a7fd4, #1a2744);
+    border-radius: 50px;
+    padding: 0.5rem 1.3rem;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 6px rgba(26, 39, 68, 0.15);
+}
+
+aside .export-button:hover {
+    background: #3b6cb4;
+    box-shadow: 0 4px 12px rgba(26, 39, 68, 0.25);
+    transform: translateY(-1px);
+}
+
+aside .export-button:active {
+    background: #1a2744;
+    transform: scale(0.97);
 }
 
 .table-wrapper {
@@ -14,52 +44,54 @@ aside {
 .inscriptions-container {
     padding: 20px;
     font-family: 'Avenir', sans-serif;
-    color: white;
+    color: #1a2744;
+    background-color: #f0f4fa;
+    min-height: calc(100vh - 64px);
 }
 
 .titulos-admin {
     text-align: center;
     font-size: 2rem;
     padding: 15px;
+    color: #1a2744;
+    font-weight: 700;
 }
 
 .inscriptions-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: #34495e;
-    /* Fondo de la tabla */
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(26, 39, 68, 0.10);
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 .inscriptions-table th,
 .inscriptions-table td {
     padding: 12px 15px;
     text-align: left;
-    border-bottom: 1px solid #ecf0f1;
-    /* Líneas separadoras suaves */
+    border-bottom: 1px solid #d0d9ea;
 }
 
 .inscriptions-table th {
-    background-color: #16a085;
-    /* Color de fondo de los encabezados */
-    color: white;
-    font-size: 1.1rem;
+    background-color: #1a2744;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .inscriptions-table tr:nth-child(even) {
-    background-color: #2c3e50;
-    /* Fondo para filas pares */
+    background-color: #f0f4fa;
 }
 
 .inscriptions-table tr:hover {
-    background-color: #16a085;
-    /* Fondo cuando el ratón pasa sobre una fila */
+    background-color: #dce7f5;
     cursor: pointer;
 }
 
 .inscriptions-table td {
-    color: #ecf0f1;
-    /* Color de texto de las celdas */
+    color: #1a2744;
 }
 
 .welcome-container {
@@ -68,15 +100,31 @@ aside {
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    height: 30dvh;
+    height: 40dvh;
+    color: #1a2744;
+}
+
+.welcome-container h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a2744;
+    margin: 0 0 0.3rem;
+}
+
+.welcome-container h3 {
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: #3b6cb4;
+    margin: 0;
 }
 
 /* Contenedor general de filtros */
 .filters-container {
-    background-color: #2c3e50;
+    background-color: #ffffff;
+    border: 1px solid #d0d9ea;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(26, 39, 68, 0.08);
     margin-bottom: 20px;
     max-width: 600px;
     margin-left: auto;
@@ -92,8 +140,9 @@ aside {
 .filter-label {
     display: block;
     font-size: 1rem;
-    color: #ecf0f1;
+    color: #1a2744;
     margin-bottom: 5px;
+    font-weight: 500;
 }
 
 /* Estilos generales para selects */
@@ -101,16 +150,17 @@ aside {
     width: 100%;
     padding: 10px;
     font-size: 1rem;
-    border: 1px solid #16a085;
+    border: 1px solid #3b6cb4;
     border-radius: 5px;
-    background-color: #34495e;
-    color: #ecf0f1;
+    background-color: #ffffff;
+    color: #1a2744;
     transition: all 0.3s ease;
 }
 
 .filter-select:focus {
     outline: none;
-    border-color: #1abc9c;
+    border-color: #4a7fd4;
+    box-shadow: 0 0 0 2px rgba(74, 127, 212, 0.15);
 }
 
 /* Estilos para el contenedor de fechas */
@@ -130,16 +180,17 @@ aside {
     flex: 1;
     padding: 10px;
     font-size: 1rem;
-    border: 1px solid #16a085;
+    border: 1px solid #3b6cb4;
     border-radius: 5px;
-    background-color: #34495e;
-    color: #ecf0f1;
+    background-color: #ffffff;
+    color: #1a2744;
     transition: all 0.3s ease;
 }
 
 .filter-date:focus {
     outline: none;
-    border-color: #1abc9c;
+    border-color: #4a7fd4;
+    box-shadow: 0 0 0 2px rgba(74, 127, 212, 0.15);
 }
 
 /* Botón de exportar */
@@ -150,24 +201,22 @@ aside {
     font-size: 1rem;
     font-weight: bold;
     color: white;
-    background-color: #16a085;
+    background-color: #1a2744;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.3s ease;
     margin: 15px auto;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: 0px 2px 6px rgba(26, 39, 68, 0.2);
 }
 
-
-
 .export-button:hover {
-    background-color: #1abc9c;
-    box-shadow: 0px 6px 10px rgba(0, 0, 0, 0.3);
+    background-color: #3b6cb4;
+    box-shadow: 0px 4px 10px rgba(26, 39, 68, 0.3);
 }
 
 .export-button:active {
-    background-color: #14977c;
+    background-color: #0f1a33;
     transform: scale(0.98);
 }
 
@@ -205,11 +254,13 @@ aside {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: #2c3e50;
+    background: #ffffff;
+    color: #1a2744;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 32px rgba(26, 39, 68, 0.25);
     z-index: 1000000;
+    border: 1px solid #d0d9ea;
 }
 
 .success-message-admin {
@@ -304,17 +355,17 @@ aside {
 }
 
 .inscriptions-count {
-    background-color: #2c3e50;
+    background-color: #ffffff;
     padding: 8px 15px;
     border-radius: 5px;
     font-size: 1rem;
-    color: #ecf0f1;
-    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
-    border-left: 4px solid #16a085;
+    color: #1a2744;
+    box-shadow: 0 1px 4px rgba(26, 39, 68, 0.1);
+    border-left: 4px solid #3b6cb4;
 }
 
 .inscriptions-count strong {
-    color: #1abc9c;
+    color: #3b6cb4;
     font-weight: bold;
 }
 
@@ -363,29 +414,31 @@ aside {
 }
 
 .email-masivo-editor {
-    background-color: #2c3e50;
+    background-color: #ffffff;
+    border: 1px solid #d0d9ea;
     padding: 24px;
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(26, 39, 68, 0.08);
     margin-bottom: 24px;
 }
 
 .email-masivo-section-title {
-    color: #1abc9c;
+    color: #3b6cb4;
     font-size: 1.2rem;
     margin: 0 0 16px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #34495e;
+    border-bottom: 1px solid #d0d9ea;
+    font-weight: 600;
 }
 
 .email-masivo-textarea {
     width: 100%;
     padding: 10px;
     font-size: 1rem;
-    border: 1px solid #16a085;
+    border: 1px solid #3b6cb4;
     border-radius: 5px;
-    background-color: #34495e;
-    color: #ecf0f1;
+    background-color: #ffffff;
+    color: #1a2744;
     resize: vertical;
     font-family: 'Avenir', sans-serif;
     box-sizing: border-box;
@@ -394,7 +447,8 @@ aside {
 
 .email-masivo-textarea:focus {
     outline: none;
-    border-color: #1abc9c;
+    border-color: #4a7fd4;
+    box-shadow: 0 0 0 2px rgba(74, 127, 212, 0.15);
 }
 
 .email-masivo-imagen-opciones {
@@ -411,7 +465,7 @@ aside {
 }
 
 .email-masivo-imagen-label {
-    color: #95a5a6;
+    color: #3b6cb4;
     font-size: 0.85rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -419,7 +473,7 @@ aside {
 }
 
 .email-masivo-imagen-separador {
-    color: #95a5a6;
+    color: #7a90b0;
     font-size: 0.9rem;
     align-self: center;
     padding-top: 22px;
@@ -427,13 +481,13 @@ aside {
 }
 
 .email-masivo-file-input {
-    color: #ecf0f1;
+    color: #1a2744;
     font-size: 0.9rem;
     padding: 6px 0;
 }
 
 .email-masivo-file-input::file-selector-button {
-    background-color: #16a085;
+    background-color: #1a2744;
     color: white;
     border: none;
     padding: 6px 12px;
@@ -445,7 +499,7 @@ aside {
 }
 
 .email-masivo-file-input::file-selector-button:hover {
-    background-color: #1abc9c;
+    background-color: #3b6cb4;
 }
 
 .email-masivo-imagen-preview {
@@ -465,16 +519,17 @@ aside {
 
 /* Panel de progreso */
 .email-masivo-progreso {
-    background-color: #2c3e50;
+    background-color: #ffffff;
+    border: 1px solid #d0d9ea;
     padding: 24px;
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(26, 39, 68, 0.08);
     margin-bottom: 24px;
 }
 
 .email-masivo-barra-wrapper {
     width: 100%;
-    background-color: #34495e;
+    background-color: #d0d9ea;
     border-radius: 100px;
     height: 12px;
     overflow: hidden;
@@ -483,7 +538,7 @@ aside {
 
 .email-masivo-barra-fill {
     height: 100%;
-    background: linear-gradient(90deg, #16a085, #1abc9c);
+    background: linear-gradient(90deg, #4a7fd4, #1a2744);
     border-radius: 100px;
     transition: width 0.4s ease;
 }
@@ -522,17 +577,17 @@ aside {
     margin-left: auto;
 }
 
-/* Editor Quill — tema oscuro */
+/* Editor Quill — tema claro */
 .email-masivo-quill-wrapper .ql-toolbar {
-    background-color: #2c3e50;
-    border: 1px solid #16a085;
-    border-bottom: 1px solid #16a085;
+    background-color: #f0f4fa;
+    border: 1px solid #3b6cb4;
+    border-bottom: 1px solid #d0d9ea;
     border-radius: 5px 5px 0 0;
 }
 
 .email-masivo-quill-wrapper .ql-container {
-    background-color: #34495e;
-    border: 1px solid #16a085;
+    background-color: #ffffff;
+    border: 1px solid #3b6cb4;
     border-top: none;
     border-radius: 0 0 5px 5px;
     font-family: 'Avenir', sans-serif;
@@ -541,7 +596,7 @@ aside {
 }
 
 .email-masivo-quill-wrapper .ql-editor {
-    color: #ecf0f1;
+    color: #1a2744;
     min-height: 150px;
     font-family: 'Segoe UI', Arial, sans-serif;
 }
@@ -555,36 +610,36 @@ aside {
 }
 
 .email-masivo-quill-wrapper .ql-editor.ql-blank::before {
-    color: #95a5a6;
+    color: #7a90b0;
     font-style: italic;
 }
 
 /* Iconos de la toolbar */
 .email-masivo-quill-wrapper .ql-toolbar .ql-stroke {
-    stroke: #ecf0f1;
+    stroke: #1a2744;
 }
 
 .email-masivo-quill-wrapper .ql-toolbar .ql-fill {
-    fill: #ecf0f1;
+    fill: #1a2744;
 }
 
 .email-masivo-quill-wrapper .ql-toolbar .ql-picker-label {
-    color: #ecf0f1;
+    color: #1a2744;
 }
 
 .email-masivo-quill-wrapper .ql-toolbar button:hover .ql-stroke,
 .email-masivo-quill-wrapper .ql-toolbar button.ql-active .ql-stroke {
-    stroke: #1abc9c;
+    stroke: #4a7fd4;
 }
 
 .email-masivo-quill-wrapper .ql-toolbar button:hover .ql-fill,
 .email-masivo-quill-wrapper .ql-toolbar button.ql-active .ql-fill {
-    fill: #1abc9c;
+    fill: #4a7fd4;
 }
 
 .email-masivo-quill-wrapper .ql-toolbar .ql-picker-label:hover,
 .email-masivo-quill-wrapper .ql-toolbar .ql-picker-label.ql-active {
-    color: #1abc9c;
+    color: #4a7fd4;
 }
 
 /* Labels del selector de tamaño */
@@ -611,17 +666,18 @@ aside {
 
 /* Dropdown del selector de tamaño y color */
 .email-masivo-quill-wrapper .ql-toolbar .ql-picker-options {
-    background-color: #2c3e50;
-    border: 1px solid #16a085;
+    background-color: #ffffff;
+    border: 1px solid #3b6cb4;
     border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(26, 39, 68, 0.15);
 }
 
 .email-masivo-quill-wrapper .ql-toolbar .ql-picker-item {
-    color: #ecf0f1;
+    color: #1a2744;
 }
 
 .email-masivo-quill-wrapper .ql-toolbar .ql-picker-item:hover {
-    color: #1abc9c;
+    color: #4a7fd4;
 }
 
 /* Formulario de contacto manual */
@@ -734,4 +790,50 @@ aside {
    .date-filters label{
     display: none;
    } */
+}
+
+/* ══════════════════════════════════════════════════════════
+   Override de inline styles del tema oscuro (Email Masivo)
+   Necesario porque los colores están hardcodeados en el JSX.
+   Se usa !important para ganar sobre los estilos inline.
+   ══════════════════════════════════════════════════════════ */
+
+/* "Cargando eventos..." dentro de filter-group */
+.filter-group > p {
+    color: #1a2744 !important;
+}
+
+/* "Cargando inscriptos..." — párrafo directo en inscriptions-container */
+.inscriptions-container > p {
+    color: #7a90b0 !important;
+}
+
+/* Span "Destinatarios — X de X seleccionados" */
+.email-masivo-destinatarios-header > span {
+    color: #1a2744 !important;
+}
+
+/* Número de seleccionados (strong dentro del span) */
+.email-masivo-destinatarios-header strong {
+    color: #3b6cb4 !important;
+}
+
+/* "(X del evento · Y manuales)" — sub-span de detalle */
+.email-masivo-destinatarios-header > span > span {
+    color: #7a90b0 !important;
+}
+
+/* "Subiendo imagen..." — span de estado dentro de imagen-opcion */
+.email-masivo-imagen-opcion > span:not(.email-masivo-imagen-label) {
+    color: #3b6cb4 !important;
+}
+
+/* "✓ Subida a Supabase — se eliminará automáticamente..." */
+.email-masivo-imagen-preview > span {
+    color: #3b6cb4 !important;
+}
+
+/* "X / Y enviados" en el panel de progreso */
+.email-masivo-progreso > p {
+    color: #1a2744 !important;
 }

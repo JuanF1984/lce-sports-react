@@ -47,16 +47,49 @@ header {
 
 .auth-section button {
     font-family: 'Avenir', sans-serif;
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 1.5em;
+    font-size: 0.875rem;
+    font-weight: 600;
     cursor: pointer;
+    padding: 0.45rem 1.1rem;
+    border-radius: 50px;
+    letter-spacing: 0.02em;
+    transition: all 0.2s ease;
 }
 
-.auth-section button:hover {
-    transform: scale(1.3);
-    filter: drop-shadow(10px 10px 5px rgba(255, 255, 255, 0.5));
+.login-button {
+    background: linear-gradient(135deg, #4a7fd4, #1a2744);
+    color: #ffffff;
+    border: none;
+}
+
+.login-button:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 39, 68, 0.25);
+}
+
+.admin-button {
+    background: #1a2744;
+    color: #ffffff;
+    border: none;
+}
+
+.admin-button:hover {
+    background: #3b6cb4;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 39, 68, 0.25);
+}
+
+.logout-button {
+    background: none;
+    color: #1a2744;
+    border: 1.5px solid #1a2744;
+}
+
+.logout-button:hover {
+    background: #1a2744;
+    color: #ffffff;
+    transform: translateY(-1px);
 }
 
 .auth-buttons {
@@ -142,4 +175,33 @@ header {
     .auth-section {
         display: none;
     }
+}
+
+/* Botones dentro del overlay móvil (fondo oscuro #00055B) */
+.menu .auth-section {
+    display: flex;
+    margin-top: 1.5rem;
+}
+
+.menu .login-button,
+.menu .admin-button {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.45);
+}
+
+.menu .login-button:hover,
+.menu .admin-button:hover {
+    background: rgba(255, 255, 255, 0.28);
+    box-shadow: none;
+}
+
+.menu .logout-button {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+.menu .logout-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
 }
