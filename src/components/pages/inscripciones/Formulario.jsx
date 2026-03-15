@@ -15,7 +15,7 @@ import { enviarConfirmacionIndividual } from "../../../utils/emailService";
 import { generateQRString } from "../../../utils/qrCodeGenerator";
 import '../../../styles/Formulario.css';
 
-export const Formulario = ({ onBack, eventoId }) => {
+export const Formulario = ({ onBack, eventoId, juegosSeleccionados }) => {
     const { user, isLoading } = useAuth();
 
     // Cargar datos del evento seleccionado usando custom hook useEventoSeleccionado
@@ -32,7 +32,9 @@ export const Formulario = ({ onBack, eventoId }) => {
 
     const games = eventoSeleccionado?.id ? eventGames[eventoSeleccionado.id] || [] : [];
 
-    const [selectedGames, setSelectedGames] = useState([]);
+    const [selectedGames, setSelectedGames] = useState(
+        juegosSeleccionados?.length > 0 ? juegosSeleccionados.map(j => j.id) : []
+    );
 
     // Usar el hook useFormulario
     const {
@@ -367,6 +369,7 @@ export const Formulario = ({ onBack, eventoId }) => {
                                     <p className="error-text">El celular debe contener entre 8 y 15 dígitos numéricos</p>
                                 )}
                             </div>
+                            {!(juegosSeleccionados?.length > 0) && (
                             <div className="form-group">
                                 <label>Juegos:{requiredFieldIndicator(fieldErrors.selectedGames)}</label>
 
@@ -395,6 +398,7 @@ export const Formulario = ({ onBack, eventoId }) => {
                                     <p className="error-text">Debes seleccionar al menos un juego</p>
                                 )}
                             </div>
+                            )}
                             <div className="form-group">
                                 <label>
                                     Localidad:{requiredFieldIndicator(fieldErrors.localidad)}

@@ -1,0 +1,177 @@
+/* ── Sección ───────────────────────────────────────────── */
+.proximo-evento {
+    padding: 1.25rem 1rem 2rem;
+    max-width: 480px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ── Título ────────────────────────────────────────────── */
+.pe-titulo {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #1a2744;
+    margin-bottom: 0.9rem;
+    letter-spacing: -0.01em;
+    font-family: 'Avenir', -apple-system, sans-serif;
+}
+
+/* ── Card ──────────────────────────────────────────────── */
+.pe-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 2px 20px rgba(26, 39, 68, 0.10);
+    overflow: hidden;
+}
+
+/* ── Imagen banner ─────────────────────────────────────── */
+.pe-imagen-wrap {
+    position: relative;
+}
+
+.pe-imagen {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+}
+
+.pe-logo-overlay {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.7rem;
+    height: 2.8rem;
+    width: auto;
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.55));
+}
+
+/* ── Info del evento ───────────────────────────────────── */
+.pe-info {
+    padding: 1rem 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.pe-localidad {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #1a2744;
+    line-height: 1.2;
+    margin-bottom: 0.1rem;
+}
+
+.pe-fecha {
+    font-size: 0.88rem;
+    color: #6b7280;
+}
+
+.pe-direccion {
+    font-size: 0.88rem;
+    color: #6b7280;
+}
+
+/* ── Tags de juegos ────────────────────────────────────── */
+.pe-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+}
+
+.pe-tag {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #374151;
+    border: 1.5px solid #d1d5db;
+    border-radius: 20px;
+    padding: 0.2rem 0.6rem;
+    background: transparent;
+    white-space: nowrap;
+}
+
+/* ── Cupos + countdown ─────────────────────────────────── */
+.pe-cupos-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.pe-cupos-badge {
+    font-size: 0.8rem;
+    color: #374151;
+    border: 1.5px solid #d1d5db;
+    border-radius: 20px;
+    padding: 0.22rem 0.7rem;
+    white-space: nowrap;
+}
+
+.pe-countdown {
+    font-size: 0.88rem;
+    color: #374151;
+}
+
+.pe-countdown strong {
+    color: #3b6cb4;
+    font-weight: 700;
+}
+
+/* ── Botón ─────────────────────────────────────────────── */
+.pe-btn {
+    width: 100%;
+    margin-top: 0.85rem;
+    font-size: 1rem !important;
+}
+
+/* ── Loading ───────────────────────────────────────────── */
+.pe-loading {
+    color: #6b7280;
+    text-align: center;
+    padding: 3rem 0;
+    font-size: 0.95rem;
+}
+
+/* ── Estado vacío (sin eventos próximos) ───────────────── */
+.pe-vacio-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(10, 15, 40, 0.82));
+    padding: 2rem 1.25rem 1.25rem;
+    text-align: center;
+}
+
+.pe-vacio-titulo {
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.pe-vacio-sub {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.85rem;
+}
+
+/* ── Responsive ≥ 480px ────────────────────────────────── */
+@media (min-width: 480px) {
+    .proximo-evento {
+        padding: 1.5rem 1.25rem 2.5rem;
+    }
+
+    .pe-titulo {
+        font-size: 1.75rem;
+    }
+
+    .pe-localidad {
+        font-size: 1.5rem;
+    }
+
+    .pe-logo-overlay {
+        height: 3.2rem;
+    }
+}

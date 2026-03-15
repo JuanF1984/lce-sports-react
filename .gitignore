@@ -14,6 +14,9 @@ dist-ssr
 /build
 
 screenshots/
+scripts/
+
+INSTRUCCIONES_REDISEÑO_LCE.md
 
 # Editor directories and files
 .vscode/*

@@ -1,24 +1,38 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUser, faUsers, faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
+
 import { Formulario } from "./Formulario";
 import { FormularioEquipo } from "./FormularioEquipo";
+import { SeleccionJuego } from "./SeleccionJuego";
 import { useEventGames } from "../../../hooks/useEventGames";
 import { LogoNeon } from "../../common/LogoNeon";
 import supabase from "../../../utils/supabase";
-import { formatearFecha, formatearHora } from "../../../utils/dateUtils";
+import { formatearHora } from "../../../utils/dateUtils";
+
+import "@styles/SeleccionInscripcion.css";
+
+const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+const formatearFechaCorta = (fechaStr) => {
+    if (!fechaStr) return '';
+    const [year, month, day] = fechaStr.split('-').map(Number);
+    const fecha = new Date(year, month - 1, day);
+    return `${DIAS_CORTOS[fecha.getDay()]} ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+};
 
 export const SeleccionInscripcion = () => {
     const { eventoSlug } = useParams();
-    const [tipoInscripcion, setTipoInscripcion] = useState(null);
+    const [tipoInscripcion, setTipoInscripcion] = useState(null); // "individual" | "equipo"
+    const [paso, setPaso] = useState('tipo'); // 'tipo' | 'juego' | 'datos'
+    const [juegosSeleccionados, setJuegosSeleccionados] = useState([]);
     const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
     const [loading, setLoading] = useState(true);
-    const location = useLocation();
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchEventoSeleccionado = async () => {
-
-
             if (eventoSlug) {
                 try {
                     const { data, error } = await supabase
@@ -28,18 +42,14 @@ export const SeleccionInscripcion = () => {
                         .single();
 
                     if (error || !data) {
-
                         navigate('/');
                         return;
                     }
 
-
                     setEventoSeleccionado(data);
                 } catch (err) {
-
                     navigate('/');
                 } finally {
-
                     setLoading(false);
                 }
                 return;
@@ -51,73 +61,102 @@ export const SeleccionInscripcion = () => {
         fetchEventoSeleccionado();
     }, [eventoSlug, navigate]);
 
-    // Cargar los juegos del evento seleccionado
     const { eventGames, loading: loadingGames } = useEventGames(
         eventoSeleccionado ? [eventoSeleccionado.id] : []
     );
 
-    // Verificar si hay juegos que permiten equipos
-    const hayJuegosEquipo = eventoSeleccionado?.id
-        ? (eventGames[eventoSeleccionado.id] || []).some(game => game.team_option)
-        : false;
+    const games = eventoSeleccionado?.id ? (eventGames[eventoSeleccionado.id] || []) : [];
+
+    const hayJuegosEquipo = games.some(game => game.team_option);
 
     if (loading || loadingGames) {
         return <LogoNeon />;
     }
 
-    if (tipoInscripcion === "individual") {
-        // Pasar el ID del evento al formulario individual
-        return <Formulario
-            onBack={() => setTipoInscripcion(null)}
-            eventoId={eventoSeleccionado.id}
-        />;
+    // ── Paso: selección de juego ────────────────────────
+    if (paso === 'juego') {
+        return (
+            <SeleccionJuego
+                onBack={() => { setPaso('tipo'); setTipoInscripcion(null); }}
+                onNext={(games) => { setJuegosSeleccionados(games); setPaso('datos'); }}
+                eventoSeleccionado={eventoSeleccionado}
+                games={games}
+            />
+        );
     }
 
-
-
-    if (tipoInscripcion === "equipo") {
-        // Pasar el ID del evento al formulario de equipo
-        return <FormularioEquipo
-            onBack={() => setTipoInscripcion(null)}
-            eventoId={eventoSeleccionado.id}
-        />;
+    // ── Paso: formulario de datos ───────────────────────
+    if (paso === 'datos') {
+        if (tipoInscripcion === 'individual') {
+            return (
+                <Formulario
+                    onBack={() => setPaso('juego')}
+                    eventoId={eventoSeleccionado.id}
+                    juegosSeleccionados={juegosSeleccionados}
+                />
+            );
+        }
+        if (tipoInscripcion === 'equipo') {
+            return (
+                <FormularioEquipo
+                    onBack={() => setPaso('juego')}
+                    eventoId={eventoSeleccionado.id}
+                    juegosSeleccionados={juegosSeleccionados}
+                />
+            );
+        }
     }
 
+    // ── Paso: tipo de inscripción (default) ─────────────
+    const fechaCorta = formatearFechaCorta(eventoSeleccionado.fecha_inicio);
+    const hora = formatearHora(eventoSeleccionado.hora_inicio);
 
     return (
-        <main>
-            <div className="form-container">
-                <h3>Inscripción al Torneo</h3>
-                <div className="info-text">
-                    <h4>{eventoSeleccionado.localidad}</h4>
-                    <p>Dirección: {eventoSeleccionado.direccion}</p>
-                    <p>
-                        Fecha: {formatearFecha(eventoSeleccionado.fecha_inicio)}
-                        {eventoSeleccionado.fecha_fin && eventoSeleccionado.fecha_fin !== eventoSeleccionado.fecha_inicio && (
-                            <> y {formatearFecha(eventoSeleccionado.fecha_fin)}</>
-                        )}
-                    </p>
-                    {eventoSeleccionado.hora_inicio && (
-                        <p>Hora: {formatearHora(eventoSeleccionado.hora_inicio)}</p>
-                    )}
-                </div>
-                <div className="info-text">
-                    <p>Selecciona el tipo de inscripción que deseas realizar:</p>
-                </div>
+        <main className="si-page">
+            {/* Barra de info del evento */}
+            <div className="si-event-bar">
+                <p className="si-event-text">
+                    {eventoSeleccionado.localidad}
+                    {fechaCorta && <> · {fechaCorta}</>}
+                    {hora && <> · {hora}</>}
+                </p>
                 <button
-                    className='main-button'
-                    onClick={() => setTipoInscripcion("individual")}
+                    className="si-event-link"
+                    onClick={() => navigate('/')}
                 >
-                    Individual
+                    <FontAwesomeIcon icon={faCalendarAlt} />
+                    {' '}Ver detalles &gt;
+                </button>
+            </div>
+
+            {/* Título */}
+            <h2 className="si-titulo">¿Cómo te anotás?</h2>
+
+            {/* Grid de cards */}
+            <div className="si-cards-grid">
+                <button
+                    className="si-card"
+                    onClick={() => { setTipoInscripcion('individual'); setPaso('juego'); }}
+                >
+                    <div className="si-card-icon">
+                        <FontAwesomeIcon icon={faUser} />
+                    </div>
+                    <p className="si-card-title">Individual</p>
+                    <p className="si-card-sub">Para inscribirte solo</p>
+                    <span className="si-card-arrow">›</span>
                 </button>
 
-                {/* Mostrar el botón de equipo solo si hay juegos de equipo */}
                 {hayJuegosEquipo && (
                     <button
-                        className='main-button'
-                        onClick={() => setTipoInscripcion("equipo")}
+                        className="si-card"
+                        onClick={() => { setTipoInscripcion('equipo'); setPaso('juego'); }}
                     >
-                        Equipo
+                        <div className="si-card-icon">
+                            <FontAwesomeIcon icon={faUsers} />
+                        </div>
+                        <p className="si-card-title">Equipo</p>
+                        <p className="si-card-sub">Para inscribir a tu equipo</p>
+                        <span className="si-card-arrow">›</span>
                     </button>
                 )}
             </div>

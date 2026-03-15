@@ -1,44 +1,38 @@
 main {
-    background: linear-gradient(45deg, rgba(13, 13, 13, 0.9), rgba(255, 0, 255, 0.1)), url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="500" viewBox="0 0 200 500"><defs><linearGradient id="grad1" x1="0%%" y1="0%%" x2="100%%" y2="100%%"><stop offset="0%%" style="stop-color:%23ff00ff;stop-opacity:1" /><stop offset="100%%" style="stop-color:%23ff00ff;stop-opacity:1" /><stop offset="100%25" style="stop-color:%23000000;stop-opacity:0" /></linearGradient><filter id="shadow"><feGaussianBlur stdDeviation="3" result="blur"/><feFlood flood-color="%23ff00ff" flood-opacity="0.5"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 100 0 L 100 150 L 50 200 L 150 300 L 50 400 L 100 500" stroke="url(%23grad1)" stroke-width="5" fill="none" filter="url(%23shadow)"/></svg>') no-repeat center center;
-    background-size: cover;
-    border-radius: 0;
-    color: #fff;
+    background:
+        radial-gradient(ellipse 320px 260px at 0% 100%, rgba(59, 108, 180, 0.14), transparent),
+        radial-gradient(ellipse 260px 200px at 100% 100%, rgba(100, 160, 220, 0.10), transparent),
+        #f0f4fa;
+    color: #1a2744;
     min-height: 100vh;
-    box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.5);
     margin: 0;
 }
 
 .main-button {
     font-family: 'Avenir', sans-serif;
-    font-size: 1.5em;
-    margin: 0.5em;
-    padding: 0.75em 2.5em;
+    font-size: 1rem;
+    padding: 0.9rem 2rem;
     border: none;
-    background-color: #FFAA00;
-    color: #1D1D1B;
+    background: linear-gradient(135deg, #4a7fd4 0%, #1a2744 100%);
+    color: #ffffff;
     cursor: pointer;
-    border-radius: 8px;
-    letter-spacing: 0.05em;
+    border-radius: 50px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
+    font-weight: 700;
+    box-shadow: 0 4px 16px rgba(26, 39, 68, 0.35);
+    transition: opacity 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .main-button:hover {
-    background-color: #FFD700;
-    color: #1D1D1B;
-    transition: 0.5s;
-    transform: scale(1.05);
-}
-
-@media screen and (max-width: 768px) {
-    main {
-        background-repeat: repeat-y;
-        background-size: auto;
-    }
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px rgba(26, 39, 68, 0.45);
 }
 
 @media (max-width: 480px) {
     .main-button {
-        font-size: 1.2em;
+        font-size: 0.95rem;
         width: 100%;
     }
 }

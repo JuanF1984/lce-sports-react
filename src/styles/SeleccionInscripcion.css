@@ -1,0 +1,148 @@
+/* ── Página Pantalla 2 ─────────────────────────────────── */
+.si-page {
+    min-height: calc(100vh - 64px);
+    padding: 1.25rem 1rem 3rem;
+    max-width: 480px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: transparent;
+}
+
+/* ── Barra del evento ──────────────────────────────────── */
+.si-event-bar {
+    background: #f3f4f6;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.si-event-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1a2744;
+    margin: 0;
+}
+
+.si-event-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.85rem;
+    color: #3b6cb4;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: inherit;
+}
+
+.si-event-link:hover {
+    text-decoration: underline;
+}
+
+/* ── Título ────────────────────────────────────────────── */
+.si-titulo {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #1a2744;
+    margin-bottom: 1.25rem;
+    letter-spacing: -0.01em;
+    font-family: 'Avenir', -apple-system, sans-serif;
+}
+
+/* ── Grid de cards ─────────────────────────────────────── */
+.si-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.875rem;
+}
+
+/* ── Card individual ───────────────────────────────────── */
+.si-card {
+    position: relative;
+    background: #ffffff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 1.25rem 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(26, 39, 68, 0.07);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    font-family: inherit;
+}
+
+.si-card:hover {
+    box-shadow: 0 4px 20px rgba(26, 39, 68, 0.13);
+    border-color: #3b6cb4;
+    transform: translateY(-2px);
+}
+
+.si-card:active {
+    transform: translateY(0);
+}
+
+/* Ícono circular */
+.si-card-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4a7fd4, #1a2744);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: #ffffff;
+    margin-bottom: 0.25rem;
+    box-shadow: 0 3px 10px rgba(59, 108, 180, 0.35);
+}
+
+.si-card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a2744;
+    margin: 0;
+}
+
+.si-card-sub {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.si-card-arrow {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.875rem;
+    font-size: 1.2rem;
+    color: #3b6cb4;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* ── Responsive ≥ 480px ────────────────────────────────── */
+@media (min-width: 480px) {
+    .si-page {
+        padding: 1.5rem 1.25rem 3rem;
+    }
+
+    .si-titulo {
+        font-size: 1.75rem;
+    }
+
+    .si-cards-grid {
+        gap: 1rem;
+    }
+
+    .si-card {
+        padding: 1.5rem 1.25rem 1.25rem;
+    }
+}

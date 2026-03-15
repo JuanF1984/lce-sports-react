@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from "react-route
 
 import './styles/App.css'
 
-import { LineaNeon } from './components/common/LineaNeon.jsx'
 import { LogoNeon } from './components/common/LogoNeon.jsx'
 
 import { Header } from './components/layout/header/Header.jsx'
@@ -11,8 +10,6 @@ import { Main } from './components/layout/main/Main.jsx'
 import { Footer } from './components/layout/footer/Footer.jsx'
 
 import { SeleccionInscripcion } from './components/pages/inscripciones/SeleccionInscripcion.jsx'
-// Importación del botón de WhatssApp
-import WhatsAppButton from './components/common/WhatsAppButton.jsx'
 
 import { DashboardAdmin } from './components/pages/dashboardAdmin/DashboardAdmin.jsx'
 
@@ -61,10 +58,7 @@ const App = () => {
 
       {/* Mostrar header y neon line solo si no estamos en la página de verificación */}
       {!isVerifyAttendancePath && (
-        <>
-          <Header onLoadComplete={handleHeaderLoad} />
-          <LineaNeon />
-        </>
+        <Header onLoadComplete={handleHeaderLoad} />
       )}
 
       <Routes>
@@ -82,13 +76,7 @@ const App = () => {
         <Route path="*" element={<Main />} />
       </Routes>
 
-      {/* Mostrar WhatsApp button y footer solo si no estamos en la página de verificación */}
-      {!isVerifyAttendancePath ? (
-        <>
-          <WhatsAppButton />
-          <Footer />
-        </>
-      ) : null}
+      {!isVerifyAttendancePath && <Footer />}
     </>
   );
 };

@@ -2,18 +2,14 @@
 import { useState, useEffect, useCallback } from 'react'
 
 
-// Importación del componente Hero
-import { Hero } from './Hero'
+// Importación del componente Próximo Evento
+import { ProximoEvento } from './ProximoEvento'
 // Importación de Redes Sociales
 import { RedesSociales } from './redes-sociales/RedesSociales'
-// Importación de Reloj
-import { RelojRegresivo } from './reloj-regresivo/RelojRegresivo'
 // Importación de FAQ
 import { FAQ } from './FAQ'
 // Importación de hook para controlar carga de imagenes
 import { useImageLoading } from '../../../hooks/useImageLoading'
-// Importación para carrusel de imagenes
-import { CarruselImages } from '../../common/carrusel/carruselImages/CarruselImages'
 // Importación para carrusel de imagenes y texto
 import { CarruselTextAndImage } from '../../common/carrusel/carruselTextAndImages/CarruselTextAndImage'
 
@@ -30,7 +26,6 @@ import sanAndresDeGilesImg from '@img/torneos/sanAndresDeGiles.webp';
 // Componente Main
 export const Main = ({ onLoadComplete }) => {
   const [heroLoaded, setHeroLoaded] = useState(false)
-  const [hayEvento, setHayEvento] = useState(true);
 
   // Para el CarouselCommon
   const [images, setImages] = useState([]);
@@ -84,29 +79,9 @@ export const Main = ({ onLoadComplete }) => {
     }
   }, [heroLoaded, carouselLoading, onLoadComplete])
 
-  const handleScroll = () => {
-    const searchElement = document.getElementById('reloj');
-    if (searchElement) {
-      searchElement.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const handleEventoStatusChange = (status) => {
-    setHayEvento(status);
-  };
-
-
   return (
     <main>
-      <Hero onLoadComplete={handleHeroLoad} onNavigateToBuscate={handleScroll} />
-
-      <RelojRegresivo onEventoStatusChange={handleEventoStatusChange} />
-
-      {/* <CarruselImages
-        images={images}
-        title="Buscate"
-        onImageLoad={handleImageLoad}
-      /> */}
+      <ProximoEvento onLoadComplete={handleHeroLoad} />
 
       <FAQ />
       <CarruselTextAndImage

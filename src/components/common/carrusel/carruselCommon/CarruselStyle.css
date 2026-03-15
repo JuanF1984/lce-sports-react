@@ -3,7 +3,7 @@
     font-size: 2.5rem;
     margin-left: 1em;
     margin-right: 1em;
-    color: #DADADA;
+    color: #1a2744;
     padding: 0;
 }
 
@@ -21,20 +21,20 @@
     object-fit: 'cover';
 } */
 
-.imgTxtContainer h4{
+.imgTxtContainer h4 {
     font-family: 'Avenir', sans-serif;
     font-size: 1.2em;
+    color: #1a2744;
 }
 
-.imgTxtContainer{
+.imgTxtContainer {
     font-size: 1em;
-}
-
-.imgTxtContainer{
+    color: #4b5563;
     display: flex;
     flex-direction: column;
     gap: 8px;
     padding: 0.5em;
+    padding-bottom: 0.25em;
 }
 
 .imgTxtContainer img {
@@ -129,6 +129,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    padding-bottom: 2.25rem !important;
+}
+
+/* Dots de paginación por debajo del contenido del slide */
+.swiper-pagination {
+    bottom: 0.4rem !important;
+}
+
+.swiper-pagination-bullet {
+    background: #3b6cb4 !important;
+    opacity: 0.35;
+}
+
+.swiper-pagination-bullet-active {
+    opacity: 1 !important;
 }
 
 .swiper-slide {

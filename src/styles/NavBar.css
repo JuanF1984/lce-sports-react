@@ -13,7 +13,7 @@ nav ul li {
 
 .menu a {
     text-decoration: none;
-    color: #ffffff;
+    color: #1a2744;
 }
 
 .menu li:hover {
@@ -35,7 +35,7 @@ nav ul li {
 /* Estilo del símbolo ☰ */
 .hamburger-icon {
     font-size: 1.3em;
-    color: #ffffff;
+    color: #1a2744;
 }
 
 /* Estilo de la cruz */
@@ -53,6 +53,11 @@ nav ul li {
 
 /* Menú en pantallas pequeñas */
 @media (max-width: 768px) {
+    /* Links blancos sobre el overlay azul oscuro */
+    .menu a {
+        color: #ffffff;
+    }
+
     .menu {
         display: none; /* Oculta el menú por defecto */
         flex-direction: column;

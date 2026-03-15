@@ -1,11 +1,11 @@
 header {
-    display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    justify-content: space-between;
+    display: flex;
     align-items: center;
-    background: linear-gradient(45deg, rgba(13, 13, 13, 0.9), rgba(255, 0, 255, 0.1));
-    padding: 0.5em;
-    height: auto;
+    justify-content: space-between;
+    background: #ffffff;
+    box-shadow: 0 1px 8px rgba(26, 39, 68, 0.10);
+    padding: 0 1rem;
+    height: 64px;
     position: sticky;
     top: 0;
     width: 100%;
@@ -14,9 +14,27 @@ header {
 
 
 
-.header-superior img {
-    height: 6em;
-    padding: 1em;
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.header-superior img,
+.header-brand img {
+    height: 2.75rem;
+    width: auto;
+    display: block;
+}
+
+.header-brand-name {
+    font-family: 'Avenir', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a2744;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
 }
 
 .auth-section {
@@ -85,47 +103,43 @@ header {
     background-color: #001080;
 }
 
-@media (max-width: 960px) {
-    header {
-        font-size: 12px;
-    }
+/* ── Header páginas internas (flecha + logo centrado) ──── */
+.header--inner {
+    justify-content: space-between;
+}
 
+.header-back {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    color: #1a2744;
+    cursor: pointer;
+    padding: 0.4rem 0.6rem;
+    display: flex;
+    align-items: center;
+    min-width: 2.5rem;
+    flex-shrink: 0;
+}
+
+.header-back:hover {
+    color: #3b6cb4;
+}
+
+.header-brand--center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+@media (max-width: 960px) {
     .auth-buttons {
         flex-direction: column;
         gap: 0.3em;
     }
-
-    .auth-section span {
-        top: -1.3em;
-    }
 }
 
-
 @media (max-width: 768px) {
-    header {
-        grid-template-columns: 1fr 1fr;
-        justify-content: space-evenly;
-    }
-
-
-
-    .auth-buttons {
-        gap: 1em;
-        align-items: flex-start;
-    }
-
     .auth-section {
-        display: flex;
-        align-items: column;
-        justify-content: center;
-        align-items: center;
-        gap: 1em;
-    }
-
-    .auth-section span {
-        position: static;
-        order: 1;
-        bottom: 0;
-        transform: translateX(0);
+        display: none;
     }
 }

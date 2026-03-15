@@ -2,17 +2,18 @@
 
 .faq {
     padding: 3rem clamp(1rem, 5vw, 3rem);
-    min-height: 20em;
     max-width: 800px;
     margin: 0 auto;
-    color: #fff;
+    color: #1a2744;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .faq h2 {
     margin-bottom: 1em;
+    color: #1a2744;
 }
 
-/* Estilos para las categorías */
+/* ── Categorías ────────────────────────────────────────── */
 .faq-categories {
     display: flex;
     flex-wrap: wrap;
@@ -21,44 +22,48 @@
 }
 
 .category-button {
-    background: none;
-    border: 1px solid #fff;
+    background: #ffffff;
+    border: 1.5px solid #d1d5db;
     border-radius: 20px;
-    padding: 0.5rem 1rem;
+    padding: 0.45rem 1rem;
     cursor: pointer;
     font-weight: 500;
-    font-size: 0.9rem;
-    color: #fff;
-    transition: all 0.3s ease;
+    font-size: 0.85rem;
+    color: #374151;
+    transition: all 0.2s ease;
 }
 
 .category-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #3b6cb4;
+    color: #3b6cb4;
+    background: #f0f5ff;
 }
 
 .category-button.active {
-    background-color: #007BFF;
-    border-color: #007BFF;
-    color: white;
+    background: #3b6cb4;
+    border-color: #3b6cb4;
+    color: #ffffff;
+    font-weight: 600;
 }
 
+/* ── Título de categoría activa ────────────────────────── */
 .category-title {
     margin-bottom: 1rem;
-    color: #007BFF;
-    font-size: 1.2rem;
+    color: #3b6cb4;
+    font-size: 1.1rem;
+    font-weight: 700;
 }
 
-/* Lista de FAQs */
+/* ── Lista de FAQs ─────────────────────────────────────── */
 .faq-list {
     list-style: none;
     padding: 0;
-    font-family: 'Avenir', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .faq-item {
-    margin-bottom: 10px;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 10px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .faq-question {
@@ -66,48 +71,56 @@
     text-align: left;
     background: none;
     border: none;
-    font-size: 1em;
-    font-weight: bold;
-    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a2744;
     cursor: pointer;
-    padding: 10px 0;
-    transition: color 0.3s;
+    padding: 0.875rem 0;
+    transition: color 0.2s;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.75rem;
 }
 
 .faq-question:hover {
-    color: #007BFF;
+    color: #3b6cb4;
+}
+
+.faq-question.active {
+    color: #3b6cb4;
 }
 
 .faq-icon {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     min-width: 20px;
     text-align: center;
+    color: #3b6cb4;
+    flex-shrink: 0;
 }
 
 .faq-answer {
-    margin-top: 5px;
-    padding: 10px;
-    background: rgba(255, 0, 255, 0.05);
-    border-left: 4px solid #ff00ff;
-    font-size: 14px;
-    color: #DADADA;
+    margin-top: 0;
+    padding: 0.5rem 0 1rem;
+    border-left: 3px solid #3b6cb4;
+    padding-left: 0.875rem;
+    font-size: 0.9rem;
+    color: #4b5563;
+    line-height: 1.6;
 }
 
-/* Responsive */
+/* ── Responsive ────────────────────────────────────────── */
 @media (max-width: 768px) {
     .faq {
-        padding: 1em 1.5em;
+        padding: 2rem 1rem;
     }
 
     .faq-question {
-        font-size: 14px;
+        font-size: 0.9rem;
     }
 
     .faq-answer {
-        font-size: 13px;
+        font-size: 0.875rem;
     }
 }
 
@@ -118,6 +131,6 @@
     }
 
     .category-button {
-        margin-bottom: 0.5rem;
+        text-align: center;
     }
 }
