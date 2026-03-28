@@ -46,16 +46,6 @@ export const SeleccionInscripcion = () => {
         window.scrollTo({ top: 0, behavior: 'instant' });
     }, [paso]);
 
-    // Precarga de imágenes de juegos en cuanto se conocen
-    useEffect(() => {
-        if (games.length === 0) return;
-        games.forEach(game => {
-            const config = getGameConfig(game.game_name);
-            const img = new window.Image();
-            img.src = `/assets/img/games/${config.slug}-card.webp`;
-        });
-    }, [games]);
-
     useEffect(() => {
         const fetchEventoSeleccionado = async () => {
             if (eventoSlug) {
@@ -93,6 +83,16 @@ export const SeleccionInscripcion = () => {
     const games = eventoSeleccionado?.id ? (eventGames[eventoSeleccionado.id] || []) : [];
 
     const hayJuegosEquipo = games.some(game => game.team_option);
+
+    // Precarga de imágenes de juegos en cuanto se conocen
+    useEffect(() => {
+        if (games.length === 0) return;
+        games.forEach(game => {
+            const config = getGameConfig(game.game_name);
+            const img = new window.Image();
+            img.src = `/assets/img/games/${config.slug}-card.webp`;
+        });
+    }, [games]);
 
     if (loading || loadingGames) {
         return <LogoNeon />;
