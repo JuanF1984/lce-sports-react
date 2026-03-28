@@ -108,7 +108,7 @@ export const useFormularioEquipo = (initialValues = {}) => {
                     const newErrors = [...prev];
                     newErrors[index] = {
                         ...newErrors[index],
-                        [field]: value.trim() === "",
+                        email: false,
                         emailFormat: value.trim() !== "" && !validateEmail(value)
                     };
                     return newErrors;
@@ -118,7 +118,7 @@ export const useFormularioEquipo = (initialValues = {}) => {
                     const newErrors = [...prev];
                     newErrors[index] = {
                         ...newErrors[index],
-                        [field]: value.trim() === "",
+                        celular: false,
                         celularFormat: value.trim() !== "" && !validatePhone(value)
                     };
                     return newErrors;
@@ -206,10 +206,10 @@ export const useFormularioEquipo = (initialValues = {}) => {
         const newJugadoresErrors = jugadores.map(jugador => ({
             nombre: !jugador.nombre,
             apellido: !jugador.apellido,
-            celular: !jugador.celular,
-            celularFormat: jugador.celular && !validatePhone(jugador.celular),
-            email: !jugador.email,
-            emailFormat: jugador.email && !validateEmail(jugador.email),
+            celular: false,
+            celularFormat: jugador.celular ? !validatePhone(jugador.celular) : false,
+            email: false,
+            emailFormat: jugador.email ? !validateEmail(jugador.email) : false,
             edad: !jugador.edad,
             edadFormat: jugador.edad && !validateAge(jugador.edad)
         }));

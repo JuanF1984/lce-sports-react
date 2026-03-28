@@ -4,12 +4,9 @@ import { useEventoSeleccionado } from "./hooks/useEventoSeleccionado";
 import { useFormularioEquipo } from "../../../hooks/useFormularioEquipo";
 import { capitalizeText, normalizeEmail } from "../../../utils/validations";
 
-import supabase from "../../../utils/supabase";
 import { LogoNeon } from '../../common/LogoNeon';
 import { useAuth } from "../../../context/UseAuth";
 import { localidadesBuenosAires } from "../../../data/localidades";
-import { enviarConfirmacionEquipo } from "../../../utils/emailService";
-import { generateQRString } from "../../../utils/qrCodeGenerator";
 import { getGameConfig } from "../../../data/gameConfig";
 import { formatearHora } from "../../../utils/dateUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -26,8 +23,8 @@ const formatearFechaCorta = (fechaStr) => {
     return `${DIAS_CORTOS[fecha.getDay()]} ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
 };
 
-export const FormularioEquipo = ({ onBack, eventoId, juegosSeleccionados = [] }) => {
-    const { user, isLoading } = useAuth();
+export const FormularioEquipo = ({ onBack, onNext, eventoId, juegosSeleccionados = [] }) => {
+    const { isLoading } = useAuth();
     const { setBackHandler } = useBackHandler();
 
     useEffect(() => {
@@ -49,12 +46,8 @@ export const FormularioEquipo = ({ onBack, eventoId, juegosSeleccionados = [] })
         setSelectedGame,
         errorMessage,
         setErrorMessage,
-        successMessage,
-        setSuccessMessage,
         showLoading,
         setShowLoading,
-        isSaving,
-        setIsSaving,
         formSubmitted,
         setFormSubmitted,
         handleInputChange,
@@ -70,6 +63,7 @@ export const FormularioEquipo = ({ onBack, eventoId, juegosSeleccionados = [] })
     const [emailRepetirError, setEmailRepetirError] = useState('');
     const [aceptaTerminos, setAceptaTerminos] = useState(false);
     const [terminosError, setTerminosError] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
     const localidadesOptions = localidadesBuenosAires.map(l => ({ value: l, label: l }));
 
@@ -107,20 +101,14 @@ export const FormularioEquipo = ({ onBack, eventoId, juegosSeleccionados = [] })
     const fechaCorta = formatearFechaCorta(eventoSeleccionado?.fecha_inicio);
     const hora       = formatearHora(eventoSeleccionado?.hora_inicio);
 
-    const handleModalAccept = () => {
-        setSuccessMessage("");
-        window.location.assign("https://www.instagram.com/lcesports/");
-    };
-
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setIsSaving(true);
+        if (submitting) return;
         setFormSubmitted(true);
         setErrorMessage("");
 
         if (!eventoSeleccionado?.id) {
             setErrorMessage("No se ha seleccionado ningún evento válido.");
-            setIsSaving(false);
             return;
         }
 
@@ -139,121 +127,18 @@ export const FormularioEquipo = ({ onBack, eventoId, juegosSeleccionados = [] })
             setErrorMessage("Por favor, completá todos los campos obligatorios.");
             const firstError = document.querySelector('.fd-input--error, .fd-select--error');
             if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setIsSaving(false);
             return;
         }
 
-        try {
-            const normalizedFormValues = {
-                ...formValues,
-                nombre:   capitalizeText(formValues.nombre),
-                apellido: capitalizeText(formValues.apellido),
-                email:    normalizeEmail(formValues.email),
-            };
+        const normalizedFormValues = {
+            ...formValues,
+            nombre:   capitalizeText(formValues.nombre),
+            apellido: capitalizeText(formValues.apellido),
+            email:    normalizeEmail(formValues.email),
+        };
 
-            // 1. Inscribir al capitán
-            const { data: capitanData, error: capitanError } = await supabase
-                .from("inscriptions")
-                .insert({
-                    ...(user ? { user_id: user.id } : {}),
-                    ...normalizedFormValues,
-                    id_evento: eventoSeleccionado.id,
-                    team_name: normalizedFormValues.team_name,
-                })
-                .select()
-                .single();
-
-            if (capitanError) throw capitanError;
-
-            const qrStringCapitan = generateQRString({ ...capitanData, id_evento: eventoSeleccionado.id });
-
-            await supabase
-                .from("inscriptions")
-                .update({ qr_code: qrStringCapitan, asistencia: false })
-                .eq("id", capitanData.id);
-
-            await supabase
-                .from("games_inscriptions")
-                .insert({ id_inscription: capitanData.id, id_game: selectedGame });
-
-            capitanData.qr_code = qrStringCapitan;
-            capitanData.id_evento = eventoSeleccionado.id;
-
-            // 2. Inscribir jugadores adicionales
-            const jugadoresConQR = [];
-
-            for (let i = 0; i < jugadores.length; i++) {
-                const jugador = jugadores[i];
-                const jugadorNorm = {
-                    ...jugador,
-                    nombre:   capitalizeText(jugador.nombre),
-                    apellido: capitalizeText(jugador.apellido),
-                    email:    jugador.email ? normalizeEmail(jugador.email) : null,
-                };
-
-                const { data: jugadorData, error: jugadorError } = await supabase
-                    .from("inscriptions")
-                    .insert({
-                        ...(user ? { user_id: user.id } : {}),
-                        nombre:    jugadorNorm.nombre,
-                        apellido:  jugadorNorm.apellido,
-                        edad:      jugadorNorm.edad || null,
-                        email:     jugadorNorm.email || null,
-                        celular:   jugadorNorm.celular,
-                        localidad: normalizedFormValues.localidad,
-                        id_evento: eventoSeleccionado.id,
-                        team_name: normalizedFormValues.team_name,
-                    })
-                    .select()
-                    .single();
-
-                if (jugadorError) throw jugadorError;
-
-                const qrStringJugador = generateQRString({ ...jugadorData, id_evento: eventoSeleccionado.id });
-
-                await supabase
-                    .from("inscriptions")
-                    .update({ qr_code: qrStringJugador, asistencia: false })
-                    .eq("id", jugadorData.id);
-
-                await supabase
-                    .from("games_inscriptions")
-                    .insert({ id_inscription: jugadorData.id, id_game: selectedGame });
-
-                jugadoresConQR.push({ ...jugadorNorm, id: jugadorData.id, id_evento: eventoSeleccionado.id, qr_code: qrStringJugador });
-            }
-
-            if (normalizedFormValues.email) {
-                try {
-                    const juegoSeleccionado = juegosSeleccionados.find(g => g.id === selectedGame);
-                    await enviarConfirmacionEquipo(
-                        capitanData,
-                        jugadoresConQR,
-                        {
-                            nombre:        eventoSeleccionado.nombre,
-                            fecha_inicio:  eventoSeleccionado.fecha_inicio,
-                            hora_inicio:   eventoSeleccionado.hora_inicio,
-                            localidad:     eventoSeleccionado.localidad,
-                            direccion:     eventoSeleccionado.direccion,
-                        },
-                        juegoSeleccionado,
-                        normalizedFormValues.team_name
-                    );
-                } catch (emailError) {
-                    console.error("Error al enviar confirmación por email:", emailError);
-                }
-            }
-
-            setSuccessMessage("Inscripción de equipo realizada con éxito.");
-            resetForm();
-            setEmailRepetir('');
-            setAceptaTerminos(false);
-
-        } catch (err) {
-            setErrorMessage("Hubo un error al procesar tu solicitud. Intentá nuevamente.");
-            console.error("Error:", err);
-        }
-        setIsSaving(false);
+        setSubmitting(true);
+        onNext({ formValues: normalizedFormValues, jugadores, selectedGame });
     };
 
     if (showLoading) return <LogoNeon onClose={() => setShowLoading(false)} />;
@@ -482,7 +367,7 @@ export const FormularioEquipo = ({ onBack, eventoId, juegosSeleccionados = [] })
                         </div>
 
                         <div className="fd-group">
-                            <label className="fd-label">Celular<span className="fd-required">*</span></label>
+                            <label className="fd-label">Celular</label>
                             <div className={`fd-celular-wrap${jugadoresErrors[index]?.celular || jugadoresErrors[index]?.celularFormat ? ' fd-celular-wrap--error' : ''}`}>
                                 <span className="fd-celular-prefix">🇦🇷 +54 9</span>
                                 <input
@@ -515,20 +400,8 @@ export const FormularioEquipo = ({ onBack, eventoId, juegosSeleccionados = [] })
 
                 {errorMessage && <div className="fd-error-message">{errorMessage}</div>}
 
-                {successMessage && (
-                    <div className="modal-insc-overlay">
-                        <div className="modal-insc-content">
-                            <h3>¡Registro exitoso!</h3>
-                            <p>El equipo se registró correctamente al torneo.</p>
-                            <p>A la brevedad te llegará mail de confirmación. Revisá spam por las dudas.</p>
-                            <p>¡Nos vemos en el torneo!</p>
-                            <button type="button" onClick={handleModalAccept}>Aceptar</button>
-                        </div>
-                    </div>
-                )}
-
-                <button type="submit" className="main-button fd-submit-btn" disabled={isSaving}>
-                    {isSaving ? 'Guardando...' : 'Inscribir equipo'}
+                <button type="submit" className="main-button fd-submit-btn" disabled={submitting}>
+                    {submitting ? 'Procesando...' : 'Siguiente'}
                 </button>
 
             </form>

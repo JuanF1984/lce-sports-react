@@ -9,6 +9,7 @@ import { SeleccionJuego } from "./SeleccionJuego";
 import { VerificacionSteam } from "./VerificacionSteam";
 import { VerificacionRiot } from "./VerificacionRiot";
 import { Confirmacion } from "./Confirmacion";
+import { ConfirmacionEquipo } from "./ConfirmacionEquipo";
 import { getGameConfig } from "../../../data/gameConfig";
 import { useEventGames } from "../../../hooks/useEventGames";
 import { LogoNeon } from "../../common/LogoNeon";
@@ -32,6 +33,7 @@ export const SeleccionInscripcion = () => {
     const [paso, setPaso] = useState('tipo'); // 'tipo' | 'juego' | 'datos' | 'steam' | 'riot' | 'confirmacion'
     const [juegosSeleccionados, setJuegosSeleccionados] = useState([]);
     const [formData, setFormData] = useState(null);
+    const [equipoFormData, setEquipoFormData] = useState(null);
     const [steamUsername, setSteamUsername] = useState('');
     const [riotId, setRiotId] = useState('');
     const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
@@ -96,12 +98,15 @@ export const SeleccionInscripcion = () => {
 
     // ── Paso: selección de juego ────────────────────────
     if (paso === 'juego') {
+        const gamesDisponibles = tipoInscripcion === 'equipo'
+            ? games.filter(g => g.team_option)
+            : games;
         return (
             <SeleccionJuego
                 onBack={() => { setPaso('tipo'); setTipoInscripcion(null); }}
                 onNext={(games) => { setJuegosSeleccionados(games); setPaso('datos'); }}
                 eventoSeleccionado={eventoSeleccionado}
-                games={games}
+                games={gamesDisponibles}
             />
         );
     }
@@ -125,6 +130,10 @@ export const SeleccionInscripcion = () => {
             return (
                 <FormularioEquipo
                     onBack={() => setPaso('juego')}
+                    onNext={(data) => {
+                        setEquipoFormData(data);
+                        setPaso(siguientePasoTrasDatos(juegosSeleccionados));
+                    }}
                     eventoId={eventoSeleccionado.id}
                     juegosSeleccionados={juegosSeleccionados}
                 />
@@ -165,6 +174,18 @@ export const SeleccionInscripcion = () => {
 
     // ── Paso: confirmación ──────────────────────────────
     if (paso === 'confirmacion') {
+        if (tipoInscripcion === 'equipo') {
+            return (
+                <ConfirmacionEquipo
+                    eventoId={eventoSeleccionado.id}
+                    eventoSeleccionado={eventoSeleccionado}
+                    equipoFormData={equipoFormData}
+                    juegosSeleccionados={juegosSeleccionados}
+                    steamUsername={steamUsername}
+                    riotId={riotId}
+                />
+            );
+        }
         return (
             <Confirmacion
                 eventoId={eventoSeleccionado.id}
