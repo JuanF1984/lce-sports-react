@@ -33,7 +33,7 @@ const GameCard = ({ game, isSelected, onToggle }) => {
             <div className="sj-card-img">
                 {!imgError ? (
                     <img
-                        src={`/assets/img/games/${config.slug}-card.jpg`}
+                        src={`/assets/img/games/${config.slug}-card.webp`}
                         alt={game.game_name}
                         onError={() => setImgError(true)}
                     />

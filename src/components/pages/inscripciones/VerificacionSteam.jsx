@@ -91,8 +91,8 @@ export const VerificacionSteam = ({ onBack, onNext, eventoId, juegosSeleccionado
             <div className="vc-banner">
                 {!imgError ? (
                     <img
-                        src="/assets/img/games/cs2-banner.jpg"
-                        alt="CS2"
+                        src="/assets/img/games/steam-card.webp"
+                        alt="Steam"
                         onError={() => setImgError(true)}
                     />
                 ) : (

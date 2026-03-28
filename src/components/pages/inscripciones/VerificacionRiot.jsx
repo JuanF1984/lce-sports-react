@@ -113,8 +113,8 @@ export const VerificacionRiot = ({ onBack, onNext, eventoId, juegosSeleccionados
             <div className="vc-banner">
                 {!imgError ? (
                     <img
-                        src={`/assets/img/games/${bannerSlug}-banner.jpg`}
-                        alt={bannerSlug === 'lol' ? 'League of Legends' : 'Valorant'}
+                        src="/assets/img/games/riot-card.webp"
+                        alt="Riot"
                         onError={() => setImgError(true)}
                     />
                 ) : (
