@@ -61,8 +61,6 @@ export const FormularioEquipo = ({ onBack, onNext, eventoId, juegosSeleccionados
     // Campos extra (UI only)
     const [emailRepetir, setEmailRepetir] = useState('');
     const [emailRepetirError, setEmailRepetirError] = useState('');
-    const [aceptaTerminos, setAceptaTerminos] = useState(false);
-    const [terminosError, setTerminosError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     const localidadesOptions = localidadesBuenosAires.map(l => ({ value: l, label: l }));
@@ -118,12 +116,9 @@ export const FormularioEquipo = ({ onBack, onNext, eventoId, juegosSeleccionados
         else if (emailRepetir !== formValues.email) repError = 'Los emails no coinciden';
         setEmailRepetirError(repError);
 
-        const noTerminos = !aceptaTerminos;
-        setTerminosError(noTerminos);
-
         const isValid = validateForm();
 
-        if (!isValid || repError || noTerminos) {
+        if (!isValid || repError) {
             setErrorMessage("Por favor, completá todos los campos obligatorios.");
             const firstError = document.querySelector('.fd-input--error, .fd-select--error');
             if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -387,16 +382,6 @@ export const FormularioEquipo = ({ onBack, onNext, eventoId, juegosSeleccionados
                 <button type="button" className="fd-add-btn" onClick={addJugador}>
                     + Agregar jugador
                 </button>
-
-                {/* Términos */}
-                <label className="fd-checkbox-group">
-                    <input type="checkbox" checked={aceptaTerminos} onChange={e => setAceptaTerminos(e.target.checked)} />
-                    <span className="fd-checkbox-label">
-                        Acepto <a href="#" onClick={e => e.preventDefault()}>términos y condiciones</a>
-                        <span className="fd-required"> *</span>
-                    </span>
-                </label>
-                {terminosError && <span className="fd-error-text">Debés aceptar los términos</span>}
 
                 {errorMessage && <div className="fd-error-message">{errorMessage}</div>}
 

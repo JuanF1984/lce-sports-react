@@ -55,8 +55,6 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
     // Campos extra (UI only)
     const [emailRepetir, setEmailRepetir] = useState('');
     const [emailRepetirError, setEmailRepetirError] = useState('');
-    const [aceptaTerminos, setAceptaTerminos] = useState(false);
-    const [terminosError, setTerminosError] = useState(false);
 
     const localidadesOptions = localidadesBuenosAires.map((l) => ({ value: l, label: l }));
 
@@ -92,9 +90,6 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
         else if (emailRepetir !== email) repError = 'Los emails no coinciden';
         setEmailRepetirError(repError);
 
-        const noTerminos = !aceptaTerminos;
-        setTerminosError(noTerminos);
-
         const newErrors = {
             nombre:        !nombre.trim(),
             apellido:      !apellido.trim(),
@@ -109,7 +104,7 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
         };
         setFieldErrors(newErrors);
 
-        const hasErrors = Object.values(newErrors).some(Boolean) || repError || noTerminos;
+        const hasErrors = Object.values(newErrors).some(Boolean) || repError;
         return !hasErrors;
     };
 
@@ -316,20 +311,6 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
                     </div>
                     {fieldErrors.localidad && <span className="fd-error-text">Requerido</span>}
                 </div>
-
-                {/* Términos y condiciones */}
-                <label className="fd-checkbox-group">
-                    <input
-                        type="checkbox"
-                        checked={aceptaTerminos}
-                        onChange={e => setAceptaTerminos(e.target.checked)}
-                    />
-                    <span className="fd-checkbox-label">
-                        Acepto <a href="#" onClick={e => e.preventDefault()}>términos y condiciones</a>
-                        <span className="fd-required"> *</span>
-                    </span>
-                </label>
-                {terminosError && <span className="fd-error-text">Debés aceptar los términos</span>}
 
                 {/* Error general */}
                 {errorMessage && (
