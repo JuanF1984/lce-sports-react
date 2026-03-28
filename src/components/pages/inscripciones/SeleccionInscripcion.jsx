@@ -43,6 +43,10 @@ export const SeleccionInscripcion = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }, [paso]);
+
+    useEffect(() => {
         const fetchEventoSeleccionado = async () => {
             if (eventoSlug) {
                 try {
