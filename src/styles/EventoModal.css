@@ -1,0 +1,109 @@
+.em-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 1000;
+    padding: 0;
+}
+
+.em-card {
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-width: 480px;
+    padding: 28px 24px 32px;
+    position: relative;
+    animation: em-slide-up 0.25s ease;
+}
+
+@keyframes em-slide-up {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
+.em-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: #f0f4fa;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    color: #1a2744;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.em-titulo {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a2744;
+    margin: 0 0 20px;
+}
+
+.em-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.em-lista li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.em-icon {
+    color: #3b6cb4;
+    font-size: 16px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.em-icon--muted {
+    color: #a0aec0;
+}
+
+.em-lista li > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.em-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #718096;
+}
+
+.em-valor {
+    font-size: 15px;
+    color: #1a2744;
+    font-weight: 500;
+}
+
+.em-gratuito {
+    font-size: 13px;
+    color: #3b6cb4;
+    font-weight: 600;
+    margin: 0 0 20px;
+    padding: 10px 14px;
+    background: #f0f4fa;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.em-btn-cerrar {
+    width: 100%;
+}

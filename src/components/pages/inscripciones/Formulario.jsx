@@ -13,6 +13,7 @@ import { getGameConfig } from "../../../data/gameConfig";
 import { formatearHora } from "../../../utils/dateUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
+import { EventoModal } from "./common/EventoModal";
 
 import '@styles/FormularioDatos.css';
 
@@ -55,6 +56,7 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
     // Campos extra (UI only)
     const [emailRepetir, setEmailRepetir] = useState('');
     const [emailRepetirError, setEmailRepetirError] = useState('');
+    const [showModal, setShowModal] = useState(false);
 
     const localidadesOptions = localidadesBuenosAires.map((l) => ({ value: l, label: l }));
 
@@ -139,6 +141,8 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
 
     return (
         <main className="fd-page">
+            {showModal && <EventoModal evento={eventoSeleccionado} onClose={() => setShowModal(false)} />}
+
             {/* Barra de info del evento */}
             <div className="fd-event-bar">
                 <p className="fd-event-text">
@@ -146,7 +150,7 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
                     {fechaCorta && <> · {fechaCorta}</>}
                     {hora && <> · {hora}</>}
                 </p>
-                <button className="fd-event-link" onClick={onBack} type="button">
+                <button className="fd-event-link" onClick={() => setShowModal(true)} type="button">
                     <FontAwesomeIcon icon={faCalendarAlt} />
                     {' '}Ver detalles &gt;
                 </button>

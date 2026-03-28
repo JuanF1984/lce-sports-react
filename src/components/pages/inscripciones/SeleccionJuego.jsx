@@ -5,6 +5,7 @@ import { faCalendarAlt, faCheck } from "@fortawesome/free-solid-svg-icons";
 
 import { formatearHora } from "../../../utils/dateUtils";
 import { getGameConfig } from "../../../data/gameConfig";
+import { EventoModal } from "./common/EventoModal";
 
 import "@styles/SeleccionJuego.css";
 
@@ -91,6 +92,8 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
         return () => setBackHandler(null);
     }, [onBack]);
 
+    const [showModal, setShowModal] = useState(false);
+
     // Selección múltiple — array de objetos game
     const [selectedGames, setSelectedGames] = useState([]);
 
@@ -120,6 +123,8 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
 
     return (
         <main className="sj-page">
+            {showModal && <EventoModal evento={eventoSeleccionado} onClose={() => setShowModal(false)} />}
+
             {/* Barra de info del evento */}
             <div className="sj-event-bar">
                 <p className="sj-event-text">
@@ -127,7 +132,7 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
                     {fechaCorta && <> · {fechaCorta}</>}
                     {hora && <> · {hora}</>}
                 </p>
-                <button className="sj-event-link" onClick={onBack} type="button">
+                <button className="sj-event-link" onClick={() => setShowModal(true)} type="button">
                     <FontAwesomeIcon icon={faCalendarAlt} />
                     {' '}Ver detalles &gt;
                 </button>

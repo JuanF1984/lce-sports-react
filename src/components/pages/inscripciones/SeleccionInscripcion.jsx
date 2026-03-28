@@ -10,6 +10,7 @@ import { VerificacionSteam } from "./VerificacionSteam";
 import { VerificacionRiot } from "./VerificacionRiot";
 import { Confirmacion } from "./Confirmacion";
 import { ConfirmacionEquipo } from "./ConfirmacionEquipo";
+import { EventoModal } from "./common/EventoModal";
 import { getGameConfig } from "../../../data/gameConfig";
 import { useEventGames } from "../../../hooks/useEventGames";
 import { LogoNeon } from "../../common/LogoNeon";
@@ -38,6 +39,7 @@ export const SeleccionInscripcion = () => {
     const [riotId, setRiotId] = useState('');
     const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showModalEvento, setShowModalEvento] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -204,6 +206,8 @@ export const SeleccionInscripcion = () => {
 
     return (
         <main className="si-page">
+            {showModalEvento && <EventoModal evento={eventoSeleccionado} onClose={() => setShowModalEvento(false)} />}
+
             {/* Barra de info del evento */}
             <div className="si-event-bar">
                 <p className="si-event-text">
@@ -213,7 +217,7 @@ export const SeleccionInscripcion = () => {
                 </p>
                 <button
                     className="si-event-link"
-                    onClick={() => navigate('/')}
+                    onClick={() => setShowModalEvento(true)}
                 >
                     <FontAwesomeIcon icon={faCalendarAlt} />
                     {' '}Ver detalles &gt;

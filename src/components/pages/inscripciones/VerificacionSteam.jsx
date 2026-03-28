@@ -5,6 +5,7 @@ import { getGameConfig } from "../../../data/gameConfig";
 import { formatearHora } from "../../../utils/dateUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendarAlt, faLock } from "@fortawesome/free-solid-svg-icons";
+import { EventoModal } from "./common/EventoModal";
 
 import "@styles/FormularioDatos.css";
 import "@styles/VerificacionCuenta.css";
@@ -28,6 +29,7 @@ export const VerificacionSteam = ({ onBack, onNext, eventoId, juegosSeleccionado
     const { eventoSeleccionado } = useEventoSeleccionado(eventoId);
     const [steamUsername, setSteamUsername] = useState('');
     const [imgError, setImgError] = useState(false);
+    const [showModal, setShowModal] = useState(false);
 
     const needsRiot = juegosSeleccionados.some(g => getGameConfig(g.game_name).verifyType === 'riot');
     const pasoActual = 4;
@@ -44,6 +46,8 @@ export const VerificacionSteam = ({ onBack, onNext, eventoId, juegosSeleccionado
 
     return (
         <main className="vc-page">
+            {showModal && <EventoModal evento={eventoSeleccionado} onClose={() => setShowModal(false)} />}
+
             {/* Barra del evento */}
             <div className="fd-event-bar">
                 <p className="fd-event-text">
@@ -51,7 +55,7 @@ export const VerificacionSteam = ({ onBack, onNext, eventoId, juegosSeleccionado
                     {fechaCorta && <> · {fechaCorta}</>}
                     {hora && <> · {hora}</>}
                 </p>
-                <button className="fd-event-link" onClick={onBack} type="button">
+                <button className="fd-event-link" onClick={() => setShowModal(true)} type="button">
                     <FontAwesomeIcon icon={faCalendarAlt} />
                     {' '}Ver detalles &gt;
                 </button>
