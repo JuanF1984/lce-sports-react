@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useProximosEventos } from '../../../hooks/useProximosEventos';
@@ -41,7 +41,7 @@ const calcularCountdown = (fechaFin) => {
     return { days, hours };
 };
 
-const EventoCard = ({ evento, juegos }) => {
+const EventoCard = ({ evento, juegos, onImageLoad }) => {
     const navigate = useNavigate();
     const [countdown, setCountdown] = useState(() => calcularCountdown(evento.fecha_fin));
     const [showConfirm, setShowConfirm] = useState(false);
@@ -63,6 +63,8 @@ const EventoCard = ({ evento, juegos }) => {
                     src={evento.imagen_url || heroImg}
                     alt="Evento LC e-SPORTS"
                     className="pe-imagen"
+                    onLoad={onImageLoad}
+                    onError={onImageLoad}
                 />
                 <img
                     src={logo}
@@ -179,11 +181,18 @@ export const ProximoEvento = ({ onLoadComplete }) => {
     const eventIds = proximosEventos.map(e => e.id);
     const { eventGames } = useEventGames(eventIds);
 
+    const [imagesLoaded, setImagesLoaded] = useState(0);
+    const expectedImages = loading ? 0 : (proximosEventos.length || 1);
+
+    const handleImageLoad = useCallback(() => {
+        setImagesLoaded(prev => prev + 1);
+    }, []);
+
     useEffect(() => {
-        const img = new Image();
-        img.src = heroImg;
-        img.onload = () => onLoadComplete?.();
-    }, [onLoadComplete]);
+        if (!loading && expectedImages > 0 && imagesLoaded >= expectedImages) {
+            onLoadComplete?.();
+        }
+    }, [loading, imagesLoaded, expectedImages, onLoadComplete]);
 
     if (loading) {
         return (
@@ -203,6 +212,8 @@ export const ProximoEvento = ({ onLoadComplete }) => {
                             src={heroImg}
                             alt="LC e-SPORTS"
                             className="pe-imagen"
+                            onLoad={handleImageLoad}
+                            onError={handleImageLoad}
                         />
                         <img
                             src={logo}
@@ -228,6 +239,7 @@ export const ProximoEvento = ({ onLoadComplete }) => {
                     key={evento.id}
                     evento={evento}
                     juegos={eventGames[evento.id] ?? []}
+                    onImageLoad={handleImageLoad}
                 />
             ))}
         </section>
