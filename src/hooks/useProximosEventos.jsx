@@ -16,7 +16,7 @@ export const useProximosEventos = (cantidad) => {
 
                 let query = supabase
                     .from('events')
-                    .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, slug, imagen_url')
+                    .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, ubicacion_url, slug, imagen_url')
                     .gte('fecha_inicio', ayerFormatoYYYYMMDD)
                     .order('fecha_inicio', { ascending: true });
 

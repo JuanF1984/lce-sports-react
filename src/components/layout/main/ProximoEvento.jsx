@@ -11,14 +11,24 @@ import heroImg from '@img/hero/hero_img1.jpg';
 import '@styles/ProximoEvento.css';
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-const formatearFechaCorta = (fechaStr) => {
-    if (!fechaStr) return '';
-    const [year, month, day] = fechaStr.split('-').map(Number);
-    const fecha = new Date(year, month - 1, day);
-    const dia = String(day).padStart(2, '0');
-    const mes = String(month).padStart(2, '0');
-    return `${DIAS_CORTOS[fecha.getDay()]} ${dia}/${mes}/${year}`;
+const formatearRangoFechas = (fechaInicioStr, fechaFinStr) => {
+    if (!fechaInicioStr) return '';
+    const [yi, mi, di] = fechaInicioStr.split('-').map(Number);
+    const inicio = new Date(yi, mi - 1, di);
+
+    if (!fechaFinStr || fechaFinStr === fechaInicioStr) {
+        return `${DIAS_CORTOS[inicio.getDay()]} ${String(di).padStart(2,'0')}/${String(mi).padStart(2,'0')}/${yi}`;
+    }
+
+    const [yf, mf, df] = fechaFinStr.split('-').map(Number);
+    const fin = new Date(yf, mf - 1, df);
+
+    if (mi === mf && yi === yf) {
+        return `${DIAS_CORTOS[inicio.getDay()]} ${di} y ${DIAS_CORTOS[fin.getDay()]} ${df} de ${MESES[mi - 1]}`;
+    }
+    return `${DIAS_CORTOS[inicio.getDay()]} ${String(di).padStart(2,'0')}/${String(mi).padStart(2,'0')} y ${DIAS_CORTOS[fin.getDay()]} ${String(df).padStart(2,'0')}/${String(mf).padStart(2,'0')}`;
 };
 
 const calcularCountdown = (fechaFin) => {
@@ -65,7 +75,7 @@ const EventoCard = ({ evento, juegos }) => {
             <div className="pe-info">
                 <p className="pe-localidad">{evento.localidad}</p>
                 <p className="pe-fecha">
-                    {formatearFechaCorta(evento.fecha_inicio)}
+                    {formatearRangoFechas(evento.fecha_inicio, evento.fecha_fin)}
                     {evento.hora_inicio && (
                         <> · {formatearHora(evento.hora_inicio)}</>
                     )}
@@ -127,7 +137,7 @@ const EventoCard = ({ evento, juegos }) => {
                     <div className="pe-confirm-detalle">
                         <p className="pe-confirm-localidad">{evento.localidad}</p>
                         <p className="pe-confirm-fecha">
-                            {formatearFechaCorta(evento.fecha_inicio)}
+                            {formatearRangoFechas(evento.fecha_inicio, evento.fecha_fin)}
                             {evento.hora_inicio && (
                                 <> · {formatearHora(evento.hora_inicio)}</>
                             )}
