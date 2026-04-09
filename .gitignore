@@ -29,3 +29,5 @@ prompt-verificacion.md
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
