@@ -21,6 +21,7 @@ export const AddTournamentForm = ({ onSuccess }) => {
         localidad: "",
         hora_inicio: "",
         direccion: "",
+        ubicacion_url: "",
     });
 
     const localidadesOptions = localidadesBuenosAires.map((localidad) => ({
@@ -73,7 +74,7 @@ export const AddTournamentForm = ({ onSuccess }) => {
         setErrorMessage("");
         setSuccessMessage("");
 
-        const { fecha_inicio, fecha_fin, localidad, hora_inicio, direccion } = formValues;
+        const { fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, ubicacion_url } = formValues;
 
         if (!fecha_inicio || !fecha_fin || !localidad) {
             setErrorMessage("Por favor completá todos los campos obligatorios (*).");
@@ -116,6 +117,7 @@ export const AddTournamentForm = ({ onSuccess }) => {
                     localidad,
                     hora_inicio: hora_inicio || null,
                     direccion: direccion || null,
+                    ubicacion_url: ubicacion_url || null,
                     slug,
                     imagen_url,
                 })
@@ -208,6 +210,18 @@ export const AddTournamentForm = ({ onSuccess }) => {
                         onChange={handleInputChange}
                         className="filter-select"
                         placeholder="Ej: Av. Corrientes 1234"
+                    />
+                </div>
+
+                <div className="filter-group">
+                    <label className="filter-label">Ubicación (Google Maps URL):</label>
+                    <input
+                        type="text"
+                        name="ubicacion_url"
+                        value={formValues.ubicacion_url}
+                        onChange={handleInputChange}
+                        className="filter-select"
+                        placeholder="https://maps.google.com/..."
                     />
                 </div>
 

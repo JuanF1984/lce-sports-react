@@ -73,6 +73,16 @@ const EventoCard = ({ evento, juegos }) => {
                 {evento.direccion && (
                     <p className="pe-direccion">{evento.direccion}</p>
                 )}
+                {evento.ubicacion_url && (
+                    <a
+                        href={evento.ubicacion_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="pe-ubicacion-link"
+                    >
+                        📍 Ver ubicación
+                    </a>
+                )}
 
                 {/* Tags de juegos */}
                 {juegos.length > 0 && (

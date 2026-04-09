@@ -42,7 +42,8 @@ export const EventsList = () => {
         setEditedEvent({
             fecha_inicio: event.fecha_inicio,
             fecha_fin: event.fecha_fin,
-            localidad: event.localidad
+            localidad: event.localidad,
+            ubicacion_url: event.ubicacion_url || "",
         });
         const eventGameIds = localEventGames[event.id]?.map(game => game.id) || [];
         setSelectedGames(eventGameIds);
@@ -204,6 +205,15 @@ export const EventsList = () => {
                                                 </option>
                                             ))}
                                         </select>
+                                        <input
+                                            type="text"
+                                            name="ubicacion_url"
+                                            value={editedEvent.ubicacion_url}
+                                            onChange={handleInputChange}
+                                            className="filter-select"
+                                            placeholder="https://maps.google.com/..."
+                                            style={{ marginTop: '4px' }}
+                                        />
                                     </td>
                                     <td>
                                         {loadingGames && <p>Cargando juegos...</p>}
