@@ -70,11 +70,12 @@ export const Confirmacion = ({
                 .update({ qr_code: qrString, asistencia: false })
                 .eq("id", inscriptionData.id);
 
-            // Juegos
+            // Juegos (prioridad 1 = principal, 2 = secundario)
             if (juegosSeleccionados.length > 0) {
-                const gameRows = juegosSeleccionados.map(g => ({
+                const gameRows = juegosSeleccionados.map((g, i) => ({
                     id_inscription: inscriptionData.id,
                     id_game:        g.id,
+                    priority:       i + 1,
                 }));
                 const { error: gameErr } = await supabase
                     .from("games_inscriptions")
@@ -88,10 +89,11 @@ export const Confirmacion = ({
                     await enviarConfirmacionIndividual(
                         { ...inscriptionData, qr_code: qrString },
                         {
-                            localidad:    eventoSeleccionado?.localidad,
-                            fecha_inicio: eventoSeleccionado?.fecha_inicio,
-                            hora_inicio:  eventoSeleccionado?.hora_inicio,
-                            direccion:    eventoSeleccionado?.direccion,
+                            localidad:     eventoSeleccionado?.localidad,
+                            fecha_inicio:  eventoSeleccionado?.fecha_inicio,
+                            hora_inicio:   eventoSeleccionado?.hora_inicio,
+                            direccion:     eventoSeleccionado?.direccion,
+                            ubicacion_url: eventoSeleccionado?.ubicacion_url,
                         },
                         juegosSeleccionados.map(g => g.game_name)
                     );

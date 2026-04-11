@@ -30,6 +30,19 @@ export const VerificacionSteam = ({ onBack, onNext, eventoId, juegosSeleccionado
     const [steamUsername, setSteamUsername] = useState('');
     const [imgError, setImgError] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [showSteamGuardModal, setShowSteamGuardModal] = useState(false);
+
+    const tieneCS2 = juegosSeleccionados.some(
+        g => getGameConfig(g.game_name).slug === 'cs2'
+    );
+
+    const handleSiguiente = () => {
+        if (tieneCS2) {
+            setShowSteamGuardModal(true);
+        } else {
+            onNext(steamUsername.trim());
+        }
+    };
 
     const needsRiot = juegosSeleccionados.some(g => getGameConfig(g.game_name).verifyType === 'riot');
     const pasoActual = 4;
@@ -131,12 +144,32 @@ export const VerificacionSteam = ({ onBack, onNext, eventoId, juegosSeleccionado
                 <button
                     className="main-button vc-submit-btn"
                     type="button"
-                    onClick={() => onNext(steamUsername.trim())}
+                    onClick={handleSiguiente}
                 >
                     Siguiente
                 </button>
                 <span className="vc-completar-despues">Podés completarlo después</span>
             </div>
+
+            {/* Modal Steam Guard (solo si tiene CS2) */}
+            {showSteamGuardModal && (
+                <div className="vc-modal-overlay" onClick={() => { setShowSteamGuardModal(false); onNext(steamUsername.trim()); }}>
+                    <div className="vc-modal" onClick={e => e.stopPropagation()}>
+                        <div className="vc-modal-icon">🛡️</div>
+                        <h3 className="vc-modal-titulo">Steam Guard</h3>
+                        <p className="vc-modal-texto">
+                            Llevá la app <strong>Steam Guard</strong> instalada para iniciar sesión escaneando un QR en el evento.
+                        </p>
+                        <button
+                            className="main-button vc-modal-btn"
+                            type="button"
+                            onClick={() => { setShowSteamGuardModal(false); onNext(steamUsername.trim()); }}
+                        >
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            )}
         </main>
     );
 };

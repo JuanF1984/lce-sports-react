@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useBackHandler } from "../../../context/BackHandlerContext";
-import { faCalendarAlt, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 
 import { formatearHora } from "../../../utils/dateUtils";
 import { getGameConfig } from "../../../data/gameConfig";
@@ -18,9 +18,10 @@ const formatearFechaCorta = (fechaStr) => {
     return `${DIAS_CORTOS[fecha.getDay()]} ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
 };
 
-const GameCard = ({ game, isSelected, onToggle }) => {
+const GameCard = ({ game, priority, onToggle }) => {
     const [imgError, setImgError] = useState(false);
     const config = getGameConfig(game.game_name);
+    const isSelected = priority !== null;
     const isCompleto = game.cupos === 0;
     const isUltimosCupos = game.cupos != null && game.cupos > 0 && game.cupos <= 5;
 
@@ -50,10 +51,10 @@ const GameCard = ({ game, isSelected, onToggle }) => {
                     <span className="sj-card-name">{game.game_name}</span>
                 </div>
 
-                {/* Check verde al seleccionar */}
+                {/* Badge de prioridad (1 o 2) al seleccionar */}
                 {isSelected && (
-                    <div className="sj-card-check">
-                        <FontAwesomeIcon icon={faCheck} />
+                    <div className={`sj-priority-badge sj-priority-badge--${priority}`}>
+                        {priority}
                     </div>
                 )}
 
@@ -79,7 +80,9 @@ const GameCard = ({ game, isSelected, onToggle }) => {
 
             {/* Barra "Seleccionado" */}
             {isSelected && (
-                <div className="sj-card-selected-bar">Seleccionado</div>
+                <div className={`sj-card-selected-bar sj-card-selected-bar--${priority}`}>
+                    {priority === 1 ? 'Principal' : 'Secundario'}
+                </div>
             )}
         </button>
     );
@@ -93,16 +96,25 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
     }, [onBack]);
 
     const [showModal, setShowModal] = useState(false);
+    const [showLimiteModal, setShowLimiteModal] = useState(false);
 
-    // Selección múltiple — array de objetos game
+    // Selección ordenada — máximo 2 juegos. El índice define la prioridad (0 → 1, 1 → 2).
     const [selectedGames, setSelectedGames] = useState([]);
 
     const toggleGame = (game) => {
-        setSelectedGames(prev =>
-            prev.some(g => g.id === game.id)
-                ? prev.filter(g => g.id !== game.id)
-                : [...prev, game]
-        );
+        setSelectedGames(prev => {
+            const yaEsta = prev.some(g => g.id === game.id);
+            if (yaEsta) {
+                // Deseleccionar y reordenar el resto
+                return prev.filter(g => g.id !== game.id);
+            }
+            if (prev.length >= 2) {
+                // Límite alcanzado — mostrar modal
+                setShowLimiteModal(true);
+                return prev;
+            }
+            return [...prev, game];
+        });
     };
 
     // Paso 2 siempre. Total dinámico: 4 base + 1 si Steam + 1 si Riot.
@@ -160,27 +172,44 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
 
             {/* Título */}
             <h2 className="sj-titulo">Elegí tu juego</h2>
-            <p className="sj-subtitulo">Podés anotarte en más de un juego</p>
+            <p className="sj-subtitulo">Podés inscribirte en hasta 2 juegos. El juego principal tendrá prioridad en la asignación de lugar durante el torneo.</p>
 
             {/* Grid de juegos */}
             <div className="sj-cards-grid">
-                {games.map(game => (
-                    <GameCard
-                        key={game.id}
-                        game={game}
-                        isSelected={selectedGames.some(g => g.id === game.id)}
-                        onToggle={toggleGame}
-                    />
-                ))}
+                {games.map(game => {
+                    const idx = selectedGames.findIndex(g => g.id === game.id);
+                    const priority = idx === -1 ? null : idx + 1;
+                    return (
+                        <GameCard
+                            key={game.id}
+                            game={game}
+                            priority={priority}
+                            onToggle={toggleGame}
+                        />
+                    );
+                })}
             </div>
+
+            {/* Resumen de selección */}
+            {selectedGames.length > 0 && (
+                <div className="sj-resumen">
+                    <p className="sj-resumen-item">
+                        <span className="sj-resumen-num sj-resumen-num--1">1</span>
+                        <span className="sj-resumen-label">Juego principal:</span>
+                        <strong>{selectedGames[0].game_name}</strong>
+                    </p>
+                    {selectedGames[1] && (
+                        <p className="sj-resumen-item">
+                            <span className="sj-resumen-num sj-resumen-num--2">2</span>
+                            <span className="sj-resumen-label">Juego secundario:</span>
+                            <strong>{selectedGames[1].game_name}</strong>
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Footer */}
             <div className="sj-footer">
-                {selectedGames.length > 0 && (
-                    <p className="sj-seleccionado-text">
-                        Seleccionados: <strong>{selectedGames.map(g => g.game_name).join(', ')}</strong>
-                    </p>
-                )}
                 <button
                     className="main-button sj-btn"
                     type="button"
@@ -190,6 +219,25 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
                     Siguiente
                 </button>
             </div>
+
+            {/* Modal límite de juegos */}
+            {showLimiteModal && (
+                <div className="sj-modal-overlay" onClick={() => setShowLimiteModal(false)}>
+                    <div className="sj-modal" onClick={e => e.stopPropagation()}>
+                        <h3 className="sj-modal-titulo">Límite de juegos alcanzado</h3>
+                        <p className="sj-modal-texto">
+                            Solo podés inscribirte en hasta 2 juegos por torneo. Si querés cambiar, deseleccioná uno de los juegos elegidos primero.
+                        </p>
+                        <button
+                            className="main-button sj-modal-btn"
+                            type="button"
+                            onClick={() => setShowLimiteModal(false)}
+                        >
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            )}
         </main>
     );
 };

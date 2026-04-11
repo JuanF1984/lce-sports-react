@@ -16,6 +16,8 @@ dist-ssr
 screenshots/
 scripts/
 
+claude/
+
 INSTRUCCIONES_REDISEÑO_LCE.md
 prompt-verificacion.md
 

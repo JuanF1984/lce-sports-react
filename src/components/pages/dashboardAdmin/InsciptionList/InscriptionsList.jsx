@@ -69,6 +69,7 @@ const InscriptionsList = () => {
         .select(`
           *,
           games_inscriptions (
+            priority,
             game:games (
               id,
               game_name

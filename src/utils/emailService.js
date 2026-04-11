@@ -58,6 +58,10 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegos) 
     const faqsHtml = getFAQsHtmlForEmail(juegos);
 
     // 5. Configurar parámetros para la plantilla de email (sin QR)
+    const ubicacionHtml = evento.ubicacion_url
+        ? `<a href="${evento.ubicacion_url}" target="_blank" rel="noopener noreferrer" style="color:#3b6cb4;font-weight:600;">📍 Ver ubicación en Google Maps</a>`
+        : '';
+
     const templateParams = {
         to_email: inscripcion.email || '',
         to_name: `${inscripcion.nombre || ''} ${inscripcion.apellido || ''}`,
@@ -65,6 +69,7 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegos) 
         evento_lugar: evento.localidad || '',
         evento_direccion: evento.direccion || '',
         evento_hora: horarioAUsar || '',
+        evento_ubicacion_html: ubicacionHtml,
         juegos_lista_texto: juegosTexto,
         faqs_html: faqsHtml,
         qr_code_html: ''
@@ -136,16 +141,21 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
     const infoEquipo = `Equipo: ${nombreEquipo || 'Sin nombre'}`;
 
     // 7. Crear parámetros para el template del email del capitán (sin QR)
+    const ubicacionHtmlEquipo = evento?.ubicacion_url
+        ? `<a href="${evento.ubicacion_url}" target="_blank" rel="noopener noreferrer" style="color:#3b6cb4;font-weight:600;">📍 Ver ubicación en Google Maps</a>`
+        : '';
+
     const templateParamsCapitan = {
         to_email: capitan.email || '',
         to_name: `${capitan.nombre || ''} ${capitan.apellido || ''}`,
         evento_fecha: evento?.fecha_inicio || '',
         evento_lugar: evento?.localidad || '',
-        evento_direccion: evento.direccion || '',
+        evento_direccion: evento?.direccion || '',
         evento_hora: horarioAUsar || '',
+        evento_ubicacion_html: ubicacionHtmlEquipo,
         juegos_lista_texto: `${juegoTexto} (${infoEquipo})`,
-        faqs_html: faqsHtml, // Añadir las FAQs como HTML
-        qr_code_html: '' // HTML vacío para el QR
+        faqs_html: faqsHtml,
+        qr_code_html: ''
     };
 
     // 8. Enviar correo al capitán
@@ -181,11 +191,12 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
                 to_name: `${jugador.nombre || ''} ${jugador.apellido || ''}`,
                 evento_fecha: evento?.fecha_inicio || '',
                 evento_lugar: evento?.localidad || '',
-                evento_direccion: evento.direccion || '',
+                evento_direccion: evento?.direccion || '',
                 evento_hora: horarioAUsar || '',
+                evento_ubicacion_html: ubicacionHtmlEquipo,
                 juegos_lista_texto: `${juegoTexto} (${infoEquipo} - Capitán: ${capitan.nombre || ''} ${capitan.apellido || ''})`,
-                faqs_html: faqsHtml, // Añadir las FAQs como HTML
-                qr_code_html: '' // HTML vacío para el QR
+                faqs_html: faqsHtml,
+                qr_code_html: ''
             };
 
             return emailjs.send(
