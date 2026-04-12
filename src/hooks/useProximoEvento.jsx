@@ -10,38 +10,47 @@ export const useProximoEvento = () => {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const ayer = new Date();
-                ayer.setDate(ayer.getDate() - 1);
-                const ayerFormatoYYYYMMDD = ayer.toISOString().split('T')[0];
+                // Fecha de hoy en zona horaria argentina (YYYY-MM-DD)
+                const hoy = new Date().toLocaleDateString('sv', {
+                    timeZone: 'America/Argentina/Buenos_Aires'
+                });
 
-                const { data, error } = await supabase
+                const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+                const setEvento = (evento) => {
+                    setProximoEvento(evento);
+                    if (evento?.fecha_inicio) {
+                        const [year, month, day] = evento.fecha_inicio.split('-').map(Number);
+                        setDiaSemana(diasSemana[new Date(year, month - 1, day, 12, 0, 0).getDay()]);
+                    }
+                };
+
+                // Próximo evento: arranca hoy o después
+                const { data: proximos, error } = await supabase
                     .from('events')
                     .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion')
-                    .gte('fecha_inicio', ayerFormatoYYYYMMDD)
-                    .order('fecha_inicio', { ascending: true });
+                    .gte('fecha_inicio', hoy)
+                    .order('fecha_inicio', { ascending: true })
+                    .limit(1);
 
-                if (error) {
-                    setError(error);
-                } else {
-                    setProximoEvento(data[0] || null);
-                    
-                    // Obtener el día de la semana si hay un evento próximo
-                    if (data[0]?.fecha_inicio) {
-                        // Aseguramos el formato correcto y manejamos la zona horaria adecuadamente
-                        const fechaStr = data[0].fecha_inicio;
-                        
-                        // Formato YYYY-MM-DD con hora fija para evitar problemas de zona horaria
-                        const [year, month, day] = fechaStr.split('-').map(num => parseInt(num, 10));
-                        const fechaInicio = new Date(year, month - 1, day, 12, 0, 0);
-                        
-                        const diasSemana = [
-                            'Domingo', 'Lunes', 'Martes', 'Miércoles', 
-                            'Jueves', 'Viernes', 'Sábado'
-                        ];
-                        setDiaSemana(diasSemana[fechaInicio.getDay()]);
-                        
-                    }
+                if (error) { setError(error); return; }
+
+                if (proximos && proximos.length > 0) {
+                    setEvento(proximos[0]);
+                    return;
                 }
+
+                // Sin próximo evento: usamos el último evento pasado
+                const { data: pasados, error: errorPasado } = await supabase
+                    .from('events')
+                    .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion')
+                    .lt('fecha_inicio', hoy)
+                    .order('fecha_inicio', { ascending: false })
+                    .limit(1);
+
+                if (errorPasado) { setError(errorPasado); return; }
+
+                setEvento(pasados?.[0] ?? null);
             } catch (err) {
                 setError(err);
             } finally {

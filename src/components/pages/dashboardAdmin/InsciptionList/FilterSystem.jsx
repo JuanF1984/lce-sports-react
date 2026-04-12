@@ -2,6 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 
 import { formatearFecha } from "../../../../utils/dateUtils";
 
+// Ordena eventos: próximos (asc) primero, luego pasados (desc)
+const sortEvents = (events) => {
+    const hoy = new Date().toLocaleDateString('sv', { timeZone: 'America/Argentina/Buenos_Aires' });
+    const proximos = events.filter(e => e.fecha_inicio >= hoy).sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio));
+    const pasados  = events.filter(e => e.fecha_inicio < hoy).sort((a, b) => b.fecha_inicio.localeCompare(a.fecha_inicio));
+    return [...proximos, ...pasados];
+};
+
 export const FilterSystem = ({ inscriptions, events, games, onFilter, onFiltersChange, initialFilters }) => {
     const [filters, setFilters] = useState(initialFilters || {
         eventId: "",
@@ -98,10 +106,10 @@ export const FilterSystem = ({ inscriptions, events, games, onFilter, onFiltersC
                     onChange={(e) => handleEventChange(e.target.value)}
                     className="filter-select"
                 >
-                    <option value="">Selecciona un evento</option>
-                    {events.map(event => (
+                    <option value="">Ver todos los eventos</option>
+                    {sortEvents(events).map(event => (
                         <option key={event.id} value={event.id}>
-                            {event.localidad} - {formatearFecha (event.fecha_inicio)}
+                            {event.localidad} - {formatearFecha(event.fecha_inicio)}
                         </option>
                     ))}
                 </select>

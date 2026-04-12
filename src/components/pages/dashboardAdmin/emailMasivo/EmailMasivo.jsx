@@ -29,10 +29,18 @@ const STORAGE_BUCKET = 'email-images'
 const EmailMasivo = () => {
     const { eventsData, eventsLoading } = useEvents()
 
-    // Evento (opcional)
+    // Filtros de destinatarios (mutuamente excluyentes)
     const [eventoId, setEventoId] = useState('')
+    const [localidadFiltro, setLocalidadFiltro] = useState('')
+    const [todosContactos, setTodosContactos] = useState(false)
     const [inscriptos, setInscriptos] = useState([])
     const [loadingInscriptos, setLoadingInscriptos] = useState(false)
+
+    // Localidades únicas ordenadas alfabéticamente
+    const localidades = eventsData
+        ? [...new Set(eventsData.map(e => e.localidad).filter(Boolean))].sort((a, b) =>
+            a.localeCompare(b, 'es'))
+        : []
 
     // Contactos manuales
     const [manuales, setManuales] = useState([])
@@ -66,9 +74,9 @@ const EmailMasivo = () => {
         ...manuales,
     ]
 
-    // ── Cargar inscriptos al seleccionar evento ──
+    // ── Cargar inscriptos según el filtro activo ──
     useEffect(() => {
-        if (!eventoId) {
+        if (!eventoId && !localidadFiltro && !todosContactos) {
             setInscriptos([])
             return
         }
@@ -76,16 +84,54 @@ const EmailMasivo = () => {
         const fetchInscriptos = async () => {
             setLoadingInscriptos(true)
             try {
-                const { data, error } = await supabase
-                    .from('inscriptions')
-                    .select('nombre, apellido, email')
-                    .eq('id_evento', eventoId)
+                let allData = []
 
-                if (error) throw error
+                if (todosContactos) {
+                    // Paginación por cursor — puede haber miles de registros
+                    const BATCH = 1000
+                    let cursor = null
+                    // eslint-disable-next-line no-constant-condition
+                    while (true) {
+                        let q = supabase
+                            .from('inscriptions')
+                            .select('nombre, apellido, email, created_at, id')
+                            .order('created_at', { ascending: true })
+                            .order('id', { ascending: true })
+                            .limit(BATCH)
+                        if (cursor) {
+                            q = q.or(
+                                `created_at.gt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.gt.${cursor.id})`
+                            )
+                        }
+                        const { data, error } = await q
+                        if (error) throw error
+                        if (!data || data.length === 0) break
+                        allData = allData.concat(data)
+                        if (data.length < BATCH) break
+                        cursor = { created_at: data[data.length - 1].created_at, id: data[data.length - 1].id }
+                    }
+                } else {
+                    let query = supabase.from('inscriptions').select('nombre, apellido, email')
+                    if (eventoId) {
+                        query = query.eq('id_evento', eventoId)
+                    } else {
+                        const eventIds = (eventsData || [])
+                            .filter(e => e.localidad === localidadFiltro)
+                            .map(e => e.id)
+                        if (eventIds.length === 0) {
+                            setInscriptos([])
+                            return
+                        }
+                        query = query.in('id_evento', eventIds)
+                    }
+                    const { data, error } = await query
+                    if (error) throw error
+                    allData = data || []
+                }
 
                 const emailsManuales = new Set(manuales.map(m => m.email.toLowerCase().trim()))
                 const vistos = new Set()
-                const unicos = data.filter(i => {
+                const unicos = allData.filter(i => {
                     const key = i.email?.toLowerCase().trim()
                     if (!key || vistos.has(key) || emailsManuales.has(key)) return false
                     vistos.add(key)
@@ -93,11 +139,10 @@ const EmailMasivo = () => {
                 })
 
                 setInscriptos(unicos)
-                setSeleccionados(prev => {
-                    const next = new Set(prev)
-                    unicos.forEach(i => next.add(i.email))
-                    return next
-                })
+                setSeleccionados(new Set([
+                    ...unicos.map(i => i.email),
+                    ...manuales.map(m => m.email),
+                ]))
             } catch (err) {
                 console.error('Error al cargar inscriptos:', err)
             } finally {
@@ -106,7 +151,7 @@ const EmailMasivo = () => {
         }
 
         fetchInscriptos()
-    }, [eventoId])
+    }, [eventoId, localidadFiltro, todosContactos])
 
     // ── Contactos manuales ──
     const agregarManual = () => {
@@ -297,8 +342,29 @@ const EmailMasivo = () => {
             {/* ── Panel de destinatarios ── */}
             <div className="filters-container" style={{ maxWidth: '100%' }}>
 
+                {/* ── Todos los contactos ── */}
+                <label className="email-masivo-todos-contactos">
+                    <input
+                        type="checkbox"
+                        checked={todosContactos}
+                        onChange={e => {
+                            setTodosContactos(e.target.checked)
+                            if (e.target.checked) {
+                                setEventoId('')
+                                setLocalidadFiltro('')
+                            }
+                            setProgreso(null)
+                            setResultados([])
+                        }}
+                    />
+                    <span className="email-masivo-todos-titulo">Todos los contactos de la base</span>
+                    <span className="email-masivo-todos-desc">Emails únicos de todos los eventos</span>
+                </label>
+
+                <div className="email-masivo-filtros-sep">— o filtrar por —</div>
+
                 <div className="filter-group">
-                    <label className="filter-label">Evento (opcional — carga inscriptos automáticamente):</label>
+                    <label className="filter-label">Filtrar por evento:</label>
                     {eventsLoading ? (
                         <p style={{ color: '#ecf0f1' }}>Cargando eventos...</p>
                     ) : (
@@ -307,15 +373,41 @@ const EmailMasivo = () => {
                             value={eventoId}
                             onChange={e => {
                                 setEventoId(e.target.value)
+                                setLocalidadFiltro('')
+                                setTodosContactos(false)
                                 setProgreso(null)
                                 setResultados([])
                             }}
                         >
                             <option value="">-- Sin filtro de evento --</option>
-                            {eventsData?.map(ev => (
+                            {eventsData?.slice().sort((a, b) => a.localidad.localeCompare(b.localidad, 'es')).map(ev => (
                                 <option key={ev.id} value={ev.id}>
                                     {ev.localidad} — {formatearFecha(ev.fecha_inicio)}
                                 </option>
+                            ))}
+                        </select>
+                    )}
+                </div>
+
+                <div className="filter-group">
+                    <label className="filter-label">Filtrar por localidad (todos los eventos de esa ciudad):</label>
+                    {eventsLoading ? (
+                        <p style={{ color: '#ecf0f1' }}>Cargando...</p>
+                    ) : (
+                        <select
+                            className="filter-select"
+                            value={localidadFiltro}
+                            onChange={e => {
+                                setLocalidadFiltro(e.target.value)
+                                setEventoId('')
+                                setTodosContactos(false)
+                                setProgreso(null)
+                                setResultados([])
+                            }}
+                        >
+                            <option value="">-- Sin filtro de localidad --</option>
+                            {localidades.map(loc => (
+                                <option key={loc} value={loc}>{loc}</option>
                             ))}
                         </select>
                     )}
@@ -370,7 +462,7 @@ const EmailMasivo = () => {
                                 de {todosDestinatarios.length} seleccionados
                                 {manuales.length > 0 && inscriptos.length > 0 && (
                                     <span style={{ color: '#95a5a6', fontSize: '0.85rem', marginLeft: 8 }}>
-                                        ({inscriptos.length} del evento · {manuales.length} manuales)
+                                        ({inscriptos.length} {localidadFiltro ? `de ${localidadFiltro}` : 'del evento'} · {manuales.length} manuales)
                                     </span>
                                 )}
                             </span>
