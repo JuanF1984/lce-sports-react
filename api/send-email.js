@@ -47,12 +47,11 @@ const buildEmailHtml = (params) => {
 
           <!-- Encabezado -->
           <tr>
-            <td style="background:#1a2744;padding:28px 24px;text-align:center;">
+            <td style="background:linear-gradient(135deg,#1a2744 0%,#2a4a7f 100%);padding:28px 24px;text-align:center;">
               <img
-                src="https://lcesports.com.ar/assets/img/logo.webp"
+                src="https://www.lcesports.com.ar/logo.png"
                 alt="LC e-SPORTS"
-                width="72"
-                style="border-radius:50%;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;"
+                style="max-width:120px;height:auto;display:block;margin:0 auto 12px auto;"
               />
               <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:0.02em;">
                 Confirmación de Inscripción
