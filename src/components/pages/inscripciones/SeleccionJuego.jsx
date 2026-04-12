@@ -170,8 +170,12 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
         onNext([juegoSeleccionado]);
     };
 
+    const handleSaltarPrincipal = () => {
+        setSubStep('secundario');
+    };
+
     const handleSiguienteSecundario = () => {
-        const juegos = [juegoSeleccionado];
+        const juegos = juegoSeleccionado ? [juegoSeleccionado] : [];
         if (juegoSecundario) juegos.push(juegoSecundario);
         onNext(juegos);
     };
@@ -252,6 +256,15 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
                         >
                             Siguiente
                         </button>
+                        {hayJuegosSecundarios && (
+                            <button
+                                className="sj-outline-btn sj-btn"
+                                type="button"
+                                onClick={handleSaltarPrincipal}
+                            >
+                                Ninguno de estos juegos
+                            </button>
+                        )}
                     </div>
                 </>
             )}
@@ -260,7 +273,11 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
             {subStep === 'secundario' && (
                 <>
                     <h2 className="sj-titulo">Juego secundario</h2>
-                    <p className="sj-subtitulo">Elegí un juego secundario (opcional). El juego principal tendrá prioridad en la asignación de lugar.</p>
+                    <p className="sj-subtitulo">
+                        {juegoSeleccionado
+                            ? 'Elegí un juego secundario (opcional). El juego principal tendrá prioridad en la asignación de lugar.'
+                            : 'Elegí el juego en el que querés participar.'}
+                    </p>
 
                     <div className="sj-cards-grid">
                         {juegosSecundarios.map(game => (
@@ -300,13 +317,15 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
                         >
                             Siguiente
                         </button>
-                        <button
-                            className="sj-skip-btn"
-                            type="button"
-                            onClick={() => onNext([juegoSeleccionado])}
-                        >
-                            Continuar sin juego secundario
-                        </button>
+                        {juegoSeleccionado && (
+                            <button
+                                className="sj-skip-btn"
+                                type="button"
+                                onClick={() => onNext([juegoSeleccionado])}
+                            >
+                                Continuar sin juego secundario
+                            </button>
+                        )}
                     </div>
                 </>
             )}
