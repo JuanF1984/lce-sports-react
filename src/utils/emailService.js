@@ -1,15 +1,6 @@
-import emailjs from '@emailjs/browser'
 import { getFAQsHtmlForEmail } from './faqEmail'
-import { generateQRString, generateQRAsDataURL } from './qrCodeGenerator'
+import { generateQRString } from './qrCodeGenerator'
 import supabase from './supabase'
-
-// Configurar con tus credenciales de EmailJS
-const EMAIL_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID
-const EMAIL_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
-const EMAIL_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-
-// Email de prueba — usa Resend (API propia); cualquier otro usa EmailJS
-const RESEND_TEST_EMAIL = 'juanferreyra2684@gmail.com';
 
 const enviarConResend = async (templateParams) => {
     const res = await fetch('/api/send-email', {
@@ -126,17 +117,8 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegosSe
         qr_code_html: ''
     };
 
-    // 6. Enviar — Resend si es el mail de prueba, EmailJS para el resto
-    if (inscripcion.email === RESEND_TEST_EMAIL) {
-        return enviarConResend(templateParams);
-    }
-
-    return emailjs.send(
-        EMAIL_SERVICE_ID,
-        EMAIL_TEMPLATE_ID,
-        templateParams,
-        EMAIL_PUBLIC_KEY
-    );
+    // 6. Enviar con Resend
+    return enviarConResend(templateParams);
 };
 
 /**
@@ -213,12 +195,7 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
     };
 
     // 8. Enviar correo al capitán
-    const resultadoCapitan = await emailjs.send(
-        EMAIL_SERVICE_ID,
-        EMAIL_TEMPLATE_ID,
-        templateParamsCapitan,
-        EMAIL_PUBLIC_KEY
-    );
+    const resultadoCapitan = await enviarConResend(templateParamsCapitan);
 
     // 9. Enviar correos a todos los demás miembros del equipo que tengan email
     const promesasJugadores = jugadoresArray
@@ -253,12 +230,7 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
                 qr_code_html: ''
             };
 
-            return emailjs.send(
-                EMAIL_SERVICE_ID,
-                EMAIL_TEMPLATE_ID,
-                templateParamsJugador,
-                EMAIL_PUBLIC_KEY
-            );
+            return enviarConResend(templateParamsJugador);
         });
 
     // 10. Enviar todos los correos en paralelo, pero no esperar a que terminen
