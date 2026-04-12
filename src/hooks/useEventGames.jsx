@@ -14,15 +14,18 @@ export const useEventGames = (eventIds) => {
                 setLoading(true);
                 setError(null);
 
+                // Query principal: juegos por evento
                 const { data, error: gamesError } = await supabase
                     .from("event_games")
                     .select(`
+                        id,
                         event_id,
                         game_id,
                         games (
                             id,
                             game_name,
-                            team_option
+                            team_option,
+                            principal
                         )
                     `)
                     .in("event_id", eventIds);
@@ -35,6 +38,26 @@ export const useEventGames = (eventIds) => {
                     throw new Error("No se recibieron datos");
                 }
 
+                // Query opcional: días específicos por event_game
+                // Si la tabla aún no existe o la relación no está lista, no rompe nada
+                const eventGameIds = data.map(item => item.id).filter(Boolean);
+                let daysMap = {};
+
+                if (eventGameIds.length > 0) {
+                    const { data: daysData } = await supabase
+                        .from("event_games_days")
+                        .select("event_game_id, date")
+                        .in("event_game_id", eventGameIds);
+
+                    if (daysData) {
+                        daysMap = daysData.reduce((map, d) => {
+                            if (!map[d.event_game_id]) map[d.event_game_id] = [];
+                            map[d.event_game_id].push(d.date);
+                            return map;
+                        }, {});
+                    }
+                }
+
                 // Formatear los juegos agrupados por event_id
                 const gamesByEvent = data.reduce((acc, item) => {
                     if (item.games) {
@@ -43,6 +66,8 @@ export const useEventGames = (eventIds) => {
                             id: item.game_id,
                             game_name: item.games.game_name,
                             team_option: item.games.team_option,
+                            principal: item.games.principal,
+                            dias: daysMap[item.id] ?? [],
                         });
                     }
                     return acc;

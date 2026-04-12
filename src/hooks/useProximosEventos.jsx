@@ -10,14 +10,15 @@ export const useProximosEventos = (cantidad) => {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const ayer = new Date();
-                ayer.setDate(ayer.getDate() - 1);
-                const ayerFormatoYYYYMMDD = ayer.toISOString().split('T')[0];
+                const hoy = new Date().toISOString().split('T')[0];
+                const ayer = new Date(Date.now() - 86_400_000).toISOString().split('T')[0];
 
                 let query = supabase
                     .from('events')
                     .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, ubicacion_url, slug, imagen_url')
-                    .gte('fecha_inicio', ayerFormatoYYYYMMDD)
+                    // Mostrar si aún no terminó (fecha_fin >= hoy)
+                    // o si no tiene fecha_fin y aún no empezó/es hoy (fecha_inicio >= ayer)
+                    .or(`fecha_fin.gte.${hoy},and(fecha_fin.is.null,fecha_inicio.gte.${ayer})`)
                     .order('fecha_inicio', { ascending: true });
 
                 if (cantidad) query = query.limit(cantidad);

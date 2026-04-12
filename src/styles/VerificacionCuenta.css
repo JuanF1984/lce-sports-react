@@ -146,3 +146,40 @@
         font-size: 1.75rem;
     }
 }
+
+/* ── Responsive ≥ 768px ───────────────────────────────── */
+@media (min-width: 768px) {
+    .vc-page {
+        max-width: 660px;
+        padding: 2rem 1.5rem 3.5rem;
+    }
+
+    .vc-titulo {
+        font-size: 2rem;
+    }
+
+    .vc-banner {
+        aspect-ratio: 21 / 7;
+    }
+
+    .vc-submit-btn {
+        max-width: 360px;
+        align-self: flex-start;
+    }
+
+    .vc-footer {
+        align-items: flex-start;
+    }
+}
+
+/* ── Responsive ≥ 1024px ──────────────────────────────── */
+@media (min-width: 1024px) {
+    .vc-page {
+        max-width: 780px;
+        padding: 2.5rem 2rem 4rem;
+    }
+
+    .vc-titulo {
+        font-size: 2.25rem;
+    }
+}

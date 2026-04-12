@@ -146,3 +146,74 @@
         padding: 1.5rem 1.25rem 1.25rem;
     }
 }
+
+/* ── Responsive ≥ 768px ────────────────────────────────── */
+@media (min-width: 768px) {
+    .si-page {
+        max-width: 660px;
+        padding: 2rem 1.5rem 3.5rem;
+    }
+
+    .si-titulo {
+        font-size: 2rem;
+    }
+
+    .si-event-bar {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .si-cards-grid {
+        gap: 1.25rem;
+    }
+
+    .si-card {
+        padding: 2rem 1.5rem 1.75rem;
+    }
+
+    .si-card-icon {
+        width: 4rem;
+        height: 4rem;
+        font-size: 1.6rem;
+    }
+
+    .si-card-title {
+        font-size: 1.15rem;
+    }
+
+    .si-card-sub {
+        font-size: 0.88rem;
+    }
+}
+
+/* ── Responsive ≥ 1024px ───────────────────────────────── */
+@media (min-width: 1024px) {
+    .si-page {
+        max-width: 780px;
+        padding: 2.5rem 2rem 4rem;
+    }
+
+    .si-titulo {
+        font-size: 2.25rem;
+    }
+
+    .si-cards-grid {
+        gap: 1.5rem;
+    }
+
+    .si-card {
+        padding: 2.25rem 2rem 2rem;
+    }
+
+    .si-card-icon {
+        width: 4.5rem;
+        height: 4.5rem;
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .si-card-title {
+        font-size: 1.25rem;
+    }
+}

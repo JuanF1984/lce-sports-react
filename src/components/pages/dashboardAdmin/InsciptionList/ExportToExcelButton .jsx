@@ -12,7 +12,7 @@ const toArgentinaDate = (isoStr) => {
     return `${get('day')}/${get('month')}/${get('year')} ${get('hour')}:${get('minute')}`;
 };
 
-// Columnas hoja General (con Juego Principal y Juego Secundario)
+// Columnas hoja General
 const EXPORT_COLUMNS_GENERAL = [
     { header: 'Fecha de inscripción', key: 'fecha_inscripcion' },
     { header: 'Nombre',               key: 'nombre' },
@@ -22,15 +22,13 @@ const EXPORT_COLUMNS_GENERAL = [
     { header: 'Email',                key: 'email' },
     { header: 'Localidad',            key: 'localidad' },
     { header: 'Juegos',               key: 'juegos' },
-    { header: 'Juego Principal',      key: 'juego_principal' },
-    { header: 'Juego Secundario',     key: 'juego_secundario' },
     { header: 'Evento',               key: 'evento' },
     { header: 'Equipo',               key: 'equipo' },
     { header: 'riot_id',              key: 'riot_id' },
     { header: 'steam_username',       key: 'steam_username' },
 ];
 
-// Columnas hojas por juego (con Observación de prioridad)
+// Columnas hojas por juego
 const EXPORT_COLUMNS_GAME = [
     { header: 'Fecha de inscripción', key: 'fecha_inscripcion' },
     { header: 'Nombre',               key: 'nombre' },
@@ -40,27 +38,11 @@ const EXPORT_COLUMNS_GAME = [
     { header: 'Email',                key: 'email' },
     { header: 'Localidad',            key: 'localidad' },
     { header: 'Juegos',               key: 'juegos' },
-    { header: 'Observación',          key: 'observacion' },
     { header: 'Evento',               key: 'evento' },
     { header: 'Equipo',               key: 'equipo' },
     { header: 'riot_id',              key: 'riot_id' },
     { header: 'steam_username',       key: 'steam_username' },
 ];
-
-// Devuelve el nombre del juego con priority dado (null/undefined → '')
-const getJuegoPorPrioridad = (inscription, priority) => {
-    const gi = (inscription.games_inscriptions || []).find(g => g.priority === priority);
-    return gi?.game?.game_name || '';
-};
-
-// Devuelve 'Principal', 'Secundario' o '' según priority del juego en esa inscripción
-const getObservacion = (inscription, gameName) => {
-    const gi = (inscription.games_inscriptions || []).find(g => g.game?.game_name === gameName);
-    if (!gi || gi.priority == null) return '';
-    if (gi.priority === 1) return 'Principal';
-    if (gi.priority === 2) return 'Secundario';
-    return '';
-};
 
 const buildRowGeneral = (inscription, getEventDetails) => ({
     fecha_inscripcion: toArgentinaDate(inscription.created_at),
@@ -71,15 +53,13 @@ const buildRowGeneral = (inscription, getEventDetails) => ({
     email:             inscription.email,
     localidad:         inscription.localidad,
     juegos:            inscription.juegos,
-    juego_principal:   getJuegoPorPrioridad(inscription, 1),
-    juego_secundario:  getJuegoPorPrioridad(inscription, 2),
     evento:            getEventDetails(inscription.id_evento),
     equipo:            inscription.team_name || '',
     riot_id:           inscription.riot_id || '',
     steam_username:    inscription.steam_username || '',
 });
 
-const buildRowGame = (inscription, getEventDetails, gameName) => ({
+const buildRowGame = (inscription, getEventDetails) => ({
     fecha_inscripcion: toArgentinaDate(inscription.created_at),
     nombre:            inscription.nombre,
     apellido:          inscription.apellido,
@@ -88,7 +68,6 @@ const buildRowGame = (inscription, getEventDetails, gameName) => ({
     email:             inscription.email,
     localidad:         inscription.localidad,
     juegos:            inscription.juegos,
-    observacion:       getObservacion(inscription, gameName),
     evento:            getEventDetails(inscription.id_evento),
     equipo:            inscription.team_name || '',
     riot_id:           inscription.riot_id || '',
@@ -187,9 +166,7 @@ export const ExportToExcelButton = ({ data, getEventDetails, selectedEvent }) =>
             const inscForGame = data.filter(insc =>
                 (insc.games_inscriptions || []).some(gi => gi.game?.game_name === gameName)
             );
-            addSheet(workbook, gameName, inscForGame, getEventDetails, EXPORT_COLUMNS_GAME,
-                (insc, ged) => buildRowGame(insc, ged, gameName)
-            );
+            addSheet(workbook, gameName, inscForGame, getEventDetails, EXPORT_COLUMNS_GAME, buildRowGame);
         });
 
         // ── Hoja Evolución ────────────────────────────────────────

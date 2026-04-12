@@ -189,3 +189,25 @@
         font-size: 3rem;
     }
 }
+
+/* ── Responsive ≥ 768px ───────────────────────────────── */
+@media (min-width: 768px) {
+    .conf-content {
+        max-width: 460px;
+    }
+
+    .conf-titulo {
+        font-size: 3.5rem;
+    }
+
+    .conf-logo {
+        width: 160px;
+    }
+}
+
+/* ── Responsive ≥ 1024px ──────────────────────────────── */
+@media (min-width: 1024px) {
+    .conf-titulo {
+        font-size: 4rem;
+    }
+}

@@ -213,6 +213,29 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
+/* Badge días específicos — esquina superior izquierda */
+.sj-badge-dias {
+    position: absolute;
+    top: 0.4rem;
+    left: 0.4rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.25;
+    background: #f59e0b;
+    color: #1a2744;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.sj-badge-dias-icon {
+    font-size: 0.62rem;
+    flex-shrink: 0;
+}
+
 /* Badges superpuestos */
 .sj-badge {
     position: absolute;
@@ -380,16 +403,70 @@
     font-size: 0.9rem;
     color: #4b5563;
     line-height: 1.5;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Botones del modal en columna con separación */
+.sj-modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 .sj-modal-btn {
     width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    letter-spacing: 0.03em;
+    font-size: 0.88rem;
 }
 
 /* ── Footer ────────────────────────────────────────────── */
 .sj-footer {
     margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Botón "Continuar sin juego secundario" */
+.sj-skip-btn {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    color: #6b7280;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.sj-skip-btn:hover {
+    color: #374151;
+}
+
+/* Botón secundario dentro del modal */
+.sj-modal-btn-secondary {
+    background: none;
+    border: 1.5px solid #d1d5db;
+    border-radius: 50px;
+    padding: 0.9rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #6b7280;
+    font-family: inherit;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.sj-modal-btn-secondary:hover {
+    background: #f0f4fa;
+    color: #1a2744;
+    border-color: #9ca3af;
 }
 
 .sj-seleccionado-text {
@@ -423,5 +500,93 @@
 
     .sj-cards-grid {
         gap: 1rem;
+    }
+}
+
+/* ── Responsive ≥ 768px ────────────────────────────────── */
+@media (min-width: 768px) {
+    .sj-page {
+        max-width: 720px;
+        padding: 2rem 1.5rem 3.5rem;
+    }
+
+    .sj-titulo {
+        font-size: 2rem;
+    }
+
+    .sj-event-bar {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .sj-cards-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .sj-card-name {
+        font-size: 1rem;
+    }
+
+    /* Botón Siguiente centrado */
+    .sj-btn {
+        width: auto;
+        min-width: 220px;
+        align-self: center;
+    }
+
+    .sj-skip-btn {
+        text-align: center;
+    }
+
+    /* Modal más cómodo */
+    .sj-modal {
+        max-width: 420px;
+        padding: 2rem 1.75rem 1.75rem;
+    }
+
+    .sj-modal-titulo {
+        font-size: 1.25rem;
+    }
+
+    .sj-modal-texto {
+        font-size: 0.95rem;
+    }
+
+    .sj-modal-btn {
+        font-size: 1rem;
+        letter-spacing: 0.08em;
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+/* ── Responsive ≥ 1024px ───────────────────────────────── */
+@media (min-width: 1024px) {
+    .sj-page {
+        max-width: 960px;
+        padding: 2.5rem 2rem 4rem;
+    }
+
+    .sj-titulo {
+        font-size: 2.25rem;
+    }
+
+    .sj-cards-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+    }
+
+    .sj-resumen {
+        max-width: 500px;
+    }
+
+    .sj-btn {
+        min-width: 260px;
+    }
+
+    .sj-skip-btn {
+        font-size: 0.95rem;
     }
 }
