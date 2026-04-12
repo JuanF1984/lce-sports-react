@@ -1,10 +1,4 @@
 {
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
   "builds": [
     {
       "src": "package.json",
@@ -12,6 +6,16 @@
       "config": {
         "distDir": "build"
       }
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }

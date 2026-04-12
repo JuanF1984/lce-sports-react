@@ -8,6 +8,20 @@ const EMAIL_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID
 const EMAIL_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
 const EMAIL_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
 
+// Email de prueba — usa Resend (API propia); cualquier otro usa EmailJS
+const RESEND_TEST_EMAIL = 'juanferreyra2684@gmail.com';
+
+const enviarConResend = async (templateParams) => {
+    const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(templateParams),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al enviar con Resend');
+    return data;
+};
+
 const DIAS_EMAIL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 const formatearDiasEmail = (dias) => {
@@ -112,7 +126,11 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegosSe
         qr_code_html: ''
     };
 
-    // 6. Enviar el email usando EmailJS
+    // 6. Enviar — Resend si es el mail de prueba, EmailJS para el resto
+    if (inscripcion.email === RESEND_TEST_EMAIL) {
+        return enviarConResend(templateParams);
+    }
+
     return emailjs.send(
         EMAIL_SERVICE_ID,
         EMAIL_TEMPLATE_ID,
