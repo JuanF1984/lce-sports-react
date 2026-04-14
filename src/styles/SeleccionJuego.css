@@ -116,6 +116,17 @@
     margin-bottom: 1.25rem;
 }
 
+.sj-subtitulo + .sj-secundario-counter {
+    margin-top: -0.75rem;
+}
+
+.sj-secundario-counter {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #3b6cb4;
+    margin: 0 0 1rem;
+}
+
 /* ── Grid de cards ─────────────────────────────────────── */
 .sj-cards-grid {
     display: grid;
@@ -318,6 +329,11 @@
     color: #fff;
 }
 
+.sj-priority-badge--3 {
+    background: #22c55e;
+    color: #fff;
+}
+
 /* ── Resumen de selección ──────────────────────────────── */
 .sj-resumen {
     background: #f0f4fa;
@@ -358,6 +374,11 @@
 
 .sj-resumen-num--2 {
     background: #f59e0b;
+    color: #fff;
+}
+
+.sj-resumen-num--3 {
+    background: #22c55e;
     color: #fff;
 }
 

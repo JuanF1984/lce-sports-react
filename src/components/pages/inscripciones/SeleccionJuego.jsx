@@ -32,7 +32,7 @@ const formatearBadgeDias = (dias) => {
     return `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`;
 };
 
-const GameCard = ({ game, isSelected, onToggle, isMultiDay }) => {
+const GameCard = ({ game, isSelected, onToggle, isMultiDay, selectedOrder, isMultiSelect }) => {
     const [imgError, setImgError] = useState(false);
     const config = getGameConfig(game.game_name);
     const isCompleto = game.cupos === 0;
@@ -78,6 +78,12 @@ const GameCard = ({ game, isSelected, onToggle, isMultiDay }) => {
                 {isCompleto && (
                     <div className="sj-badge sj-badge--completo">Completo</div>
                 )}
+
+                {isSelected && isMultiSelect && selectedOrder && (
+                    <div className={`sj-priority-badge sj-priority-badge--${Math.min(selectedOrder, 3)}`}>
+                        {selectedOrder}
+                    </div>
+                )}
             </div>
 
             {!isCompleto ? (
@@ -90,7 +96,7 @@ const GameCard = ({ game, isSelected, onToggle, isMultiDay }) => {
 
             {isSelected && (
                 <div className="sj-card-selected-bar sj-card-selected-bar--1">
-                    Seleccionado
+                    {isMultiSelect ? `Opción ${selectedOrder}` : 'Seleccionado'}
                 </div>
             )}
         </button>
@@ -105,7 +111,7 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
     const [showSecundarioModal, setShowSecundarioModal] = useState(false);
     const [showEventoModal, setShowEventoModal] = useState(false);
     const [juegoSeleccionado, setJuegoSeleccionado] = useState(null);
-    const [juegoSecundario, setJuegoSecundario] = useState(null);
+    const [juegosSecundarios, setJuegosSecundarios] = useState([]);
 
     useEffect(() => {
         if (subStep === 'principal') {
@@ -113,14 +119,17 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
         } else {
             setBackHandler(() => () => {
                 setSubStep('principal');
-                setJuegoSecundario(null);
+                setJuegosSecundarios([]);
             });
         }
         return () => setBackHandler(null);
     }, [subStep, onBack]);
 
     const juegosPrincipales = games.filter(g => g.principal === true);
-    const juegosSecundarios = games.filter(g => g.principal === false && g.id !== juegoSeleccionado?.id);
+    const juegosSecundariosDisponibles = games.filter(g => g.principal === false && g.id !== juegoSeleccionado?.id);
+
+    // Máximo de juegos secundarios: 1 si hay principal, 3 si no hay
+    const maxSecundarios = juegoSeleccionado ? 1 : 3;
 
     // Hay juegos secundarios disponibles en este set (ya filtrado por team_option si es equipo)
     const hayJuegosSecundarios = games.some(g => g.principal === false);
@@ -149,8 +158,14 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
     const togglePrincipal = (game) =>
         setJuegoSeleccionado(prev => prev?.id === game.id ? null : game);
 
-    const toggleSecundario = (game) =>
-        setJuegoSecundario(prev => prev?.id === game.id ? null : game);
+    const toggleSecundario = (game) => {
+        setJuegosSecundarios(prev => {
+            const idx = prev.findIndex(g => g.id === game.id);
+            if (idx !== -1) return prev.filter(g => g.id !== game.id);
+            if (prev.length < maxSecundarios) return [...prev, game];
+            return prev;
+        });
+    };
 
     const handleSiguientePrincipal = () => {
         if (hayJuegosSecundarios) {
@@ -171,12 +186,12 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
     };
 
     const handleSaltarPrincipal = () => {
+        setJuegosSecundarios([]);
         setSubStep('secundario');
     };
 
     const handleSiguienteSecundario = () => {
-        const juegos = juegoSeleccionado ? [juegoSeleccionado] : [];
-        if (juegoSecundario) juegos.push(juegoSecundario);
+        const juegos = juegoSeleccionado ? [juegoSeleccionado, ...juegosSecundarios] : [...juegosSecundarios];
         onNext(juegos);
     };
 
@@ -272,39 +287,59 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
             {/* ── Sub-pantalla: juegos secundarios ── */}
             {subStep === 'secundario' && (
                 <>
-                    <h2 className="sj-titulo">Juego secundario</h2>
+                    <h2 className="sj-titulo">
+                        {juegoSeleccionado ? 'Juego secundario' : 'Elegí tus juegos'}
+                    </h2>
                     <p className="sj-subtitulo">
                         {juegoSeleccionado
                             ? 'Elegí un juego secundario (opcional). El juego principal tendrá prioridad en la asignación de lugar.'
-                            : 'Elegí el juego en el que querés participar.'}
+                            : `Podés inscribirte en hasta 3 juegos. Seleccionalos en orden de preferencia.`}
                     </p>
 
+                    {!juegoSeleccionado && (
+                        <p className="sj-secundario-counter">
+                            {juegosSecundarios.length} / {maxSecundarios} seleccionados
+                        </p>
+                    )}
+
                     <div className="sj-cards-grid">
-                        {juegosSecundarios.map(game => (
-                            <GameCard
-                                key={game.id}
-                                game={game}
-                                isSelected={juegoSecundario?.id === game.id}
-                                onToggle={toggleSecundario}
-                                isMultiDay={isMultiDay}
-                            />
-                        ))}
+                        {juegosSecundariosDisponibles.map(game => {
+                            const orderIdx = juegosSecundarios.findIndex(g => g.id === game.id);
+                            const isSelected = orderIdx !== -1;
+                            return (
+                                <GameCard
+                                    key={game.id}
+                                    game={game}
+                                    isSelected={isSelected}
+                                    onToggle={toggleSecundario}
+                                    isMultiDay={isMultiDay}
+                                    selectedOrder={isSelected ? orderIdx + 1 : null}
+                                    isMultiSelect={maxSecundarios > 1}
+                                />
+                            );
+                        })}
                     </div>
 
-                    {juegoSeleccionado && (
+                    {(juegoSeleccionado || juegosSecundarios.length > 0) && (
                         <div className="sj-resumen">
-                            <p className="sj-resumen-item">
-                                <span className="sj-resumen-num sj-resumen-num--1">1</span>
-                                <span className="sj-resumen-label">Principal:</span>
-                                <strong>{juegoSeleccionado.game_name}</strong>
-                            </p>
-                            {juegoSecundario && (
+                            {juegoSeleccionado && (
                                 <p className="sj-resumen-item">
-                                    <span className="sj-resumen-num sj-resumen-num--2">2</span>
-                                    <span className="sj-resumen-label">Secundario:</span>
-                                    <strong>{juegoSecundario.game_name}</strong>
+                                    <span className="sj-resumen-num sj-resumen-num--1">1</span>
+                                    <span className="sj-resumen-label">Principal:</span>
+                                    <strong>{juegoSeleccionado.game_name}</strong>
                                 </p>
                             )}
+                            {juegosSecundarios.map((j, i) => (
+                                <p key={j.id} className="sj-resumen-item">
+                                    <span className={`sj-resumen-num sj-resumen-num--${juegoSeleccionado ? 2 : i + 1}`}>
+                                        {juegoSeleccionado ? 2 : i + 1}
+                                    </span>
+                                    <span className="sj-resumen-label">
+                                        {juegoSeleccionado ? 'Secundario:' : `Opción ${i + 1}:`}
+                                    </span>
+                                    <strong>{j.game_name}</strong>
+                                </p>
+                            ))}
                         </div>
                     )}
 
@@ -312,7 +347,7 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
                         <button
                             className="main-button sj-btn"
                             type="button"
-                            disabled={!juegoSecundario}
+                            disabled={juegosSecundarios.length === 0}
                             onClick={handleSiguienteSecundario}
                         >
                             Siguiente
@@ -337,7 +372,7 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
                         <h3 className="sj-modal-titulo">Selección de juegos</h3>
                         <p className="sj-modal-texto">
                             {hayJuegosSecundarios
-                                ? 'Vas a poder elegir un juego principal. Una vez elegido, tendrás la opción de sumar un juego secundario si querés participar en más de uno.'
+                                ? 'Vas a poder elegir un juego principal. Si no elegís ninguno, podrás inscribirte en hasta 3 juegos en orden de preferencia.'
                                 : 'Seleccioná el juego en el que querés participar.'}
                         </p>
                         <button
