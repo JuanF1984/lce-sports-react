@@ -44,6 +44,7 @@ export const EventsList = () => {
             fecha_fin: event.fecha_fin,
             localidad: event.localidad,
             ubicacion_url: event.ubicacion_url || "",
+            inscripciones_abiertas: event.inscripciones_abiertas ?? true,
         });
         const eventGameIds = localEventGames[event.id]?.map(game => game.id) || [];
         setSelectedGames(eventGameIds);
@@ -56,10 +57,10 @@ export const EventsList = () => {
     };
 
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, checked } = e.target;
         setEditedEvent(prev => ({
             ...prev,
-            [name]: value
+            [name]: type === 'checkbox' ? checked : value
         }));
     };
 
@@ -164,6 +165,7 @@ export const EventsList = () => {
                         <th>Fecha Inicio</th>
                         <th>Fecha Fin</th>
                         <th>Localidad</th>
+                        <th>Cupos</th>
                         <th>Juegos</th>
                         <th>Acciones</th>
                     </tr>
@@ -216,6 +218,17 @@ export const EventsList = () => {
                                         />
                                     </td>
                                     <td>
+                                        <label className="game-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                                            <input
+                                                type="checkbox"
+                                                name="inscripciones_abiertas"
+                                                checked={editedEvent.inscripciones_abiertas}
+                                                onChange={handleInputChange}
+                                            />
+                                            Inscripciones abiertas
+                                        </label>
+                                    </td>
+                                    <td>
                                         {loadingGames && <p>Cargando juegos...</p>}
                                         {errorGames && <p className="error-message">Error al cargar juegos: {errorGames}</p>}
 
@@ -259,6 +272,18 @@ export const EventsList = () => {
                                     <td>{new Date(event.fecha_inicio + 'T00:00:00').toLocaleDateString()}</td>
                                     <td>{new Date(event.fecha_fin + 'T00:00:00').toLocaleDateString()}</td>
                                     <td>{event.localidad}</td>
+                                    <td>
+                                        <span style={{
+                                            padding: '2px 8px',
+                                            borderRadius: '12px',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 600,
+                                            background: event.inscripciones_abiertas !== false ? '#d4edda' : '#f8d7da',
+                                            color: event.inscripciones_abiertas !== false ? '#155724' : '#721c24',
+                                        }}>
+                                            {event.inscripciones_abiertas !== false ? 'Abiertas' : 'Sin cupos'}
+                                        </span>
+                                    </td>
                                     <td>
                                         {loadingEventGames && <label>Cargando juegos...</label>}
                                         {errorEventGames && <label>Error al cargar juegos: {errorEventGames}</label>}

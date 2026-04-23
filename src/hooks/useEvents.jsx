@@ -9,7 +9,7 @@ export const useEvents = () => {
     useEffect (()=>{
         const fetchEvents = async ()=> {
             try {
-                const {data, error} = await supabase.from("events").select("id, fecha_inicio, fecha_fin, localidad, hora_inicio")
+                const {data, error} = await supabase.from("events").select("id, fecha_inicio, fecha_fin, localidad, hora_inicio, inscripciones_abiertas")
                 if (error) throw error
                 setEventsData (data)
             } catch (err) {

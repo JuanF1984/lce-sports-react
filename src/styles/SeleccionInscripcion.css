@@ -8,6 +8,36 @@
     background: transparent;
 }
 
+/* ── Pantalla de inscripciones cerradas ────────────────── */
+.si-cerrado {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 3rem 1.5rem;
+    gap: 1rem;
+}
+
+.si-cerrado-icon {
+    font-size: 3.5rem;
+    line-height: 1;
+}
+
+.si-cerrado-titulo {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1a2744;
+    margin: 0;
+}
+
+.si-cerrado-sub {
+    font-size: 1rem;
+    color: #4b5563;
+    margin: 0;
+    max-width: 320px;
+    line-height: 1.6;
+}
+
 /* ── Barra del evento ──────────────────────────────────── */
 .si-event-bar {
     background: #f3f4f6;

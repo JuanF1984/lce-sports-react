@@ -98,6 +98,36 @@ export const SeleccionInscripcion = () => {
         return <LogoNeon />;
     }
 
+    // Bloqueo: evento pasado o inscripciones cerradas por admin
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fechaFinEvento = eventoSeleccionado?.fecha_fin
+        ? (() => { const [y,m,d] = eventoSeleccionado.fecha_fin.split('-').map(Number); return new Date(y, m-1, d); })()
+        : (() => { const [y,m,d] = eventoSeleccionado.fecha_inicio.split('-').map(Number); return new Date(y, m-1, d); })();
+    const eventoVencido = fechaFinEvento < hoy;
+    const sinCupos = eventoSeleccionado?.inscripciones_abiertas === false;
+
+    if (eventoVencido || sinCupos) {
+        return (
+            <main className="si-page">
+                <div className="si-event-bar">
+                    <p className="si-event-text">{eventoSeleccionado.localidad}</p>
+                </div>
+                <div className="si-cerrado">
+                    <div className="si-cerrado-icon">{sinCupos && !eventoVencido ? '🎮' : '📅'}</div>
+                    <h2 className="si-cerrado-titulo">
+                        {eventoVencido ? 'Este evento ya finalizó' : 'No quedan más cupos'}
+                    </h2>
+                    <p className="si-cerrado-sub">
+                        {eventoVencido
+                            ? 'Las inscripciones para este evento están cerradas.'
+                            : 'Los cupos para este evento se han agotado. Seguinos en redes para enterarte de los próximos eventos.'}
+                    </p>
+                </div>
+            </main>
+        );
+    }
+
     // Helper: calcula el siguiente paso tras el formulario de datos
     const siguientePasoTrasDatos = (juegos) => {
         const needsSteam = juegos.some(g => getGameConfig(g.game_name).verifyType === 'steam');

@@ -109,8 +109,11 @@ const EventoCard = ({ evento, juegos, onImageLoad }) => {
 
                 {/* Cupos + countdown */}
                 <div className="pe-cupos-row">
-                    <span className="pe-cupos-badge">Cupos por juego</span>
-                    {countdown && (
+                    {evento.inscripciones_abiertas !== false
+                        ? <span className="pe-cupos-badge">Cupos por juego</span>
+                        : <span className="pe-sin-cupos-badge">Sin cupos disponibles</span>
+                    }
+                    {evento.inscripciones_abiertas !== false && countdown && (
                         <span className="pe-countdown">
                             Faltan{' '}
                             <strong>
@@ -122,12 +125,14 @@ const EventoCard = ({ evento, juegos, onImageLoad }) => {
                 </div>
 
                 {/* Botón inscripción */}
-                <button
-                    className="main-button pe-btn"
-                    onClick={() => setShowConfirm(true)}
-                >
-                    INSCRIBITE &gt;
-                </button>
+                {evento.inscripciones_abiertas !== false && (
+                    <button
+                        className="main-button pe-btn"
+                        onClick={() => setShowConfirm(true)}
+                    >
+                        INSCRIBITE &gt;
+                    </button>
+                )}
             </div>
         </div>
 
