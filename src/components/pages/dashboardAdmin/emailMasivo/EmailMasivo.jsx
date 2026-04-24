@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import ReactQuill, { Quill } from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 import supabase from '../../../../utils/supabase'
@@ -35,6 +35,27 @@ const EmailMasivo = () => {
     const [todosContactos, setTodosContactos] = useState(false)
     const [inscriptos, setInscriptos] = useState([])
     const [loadingInscriptos, setLoadingInscriptos] = useState(false)
+    const [juegosFiltro, setJuegosFiltro] = useState(null) // null = todos, Set = selección específica
+
+    const juegosDisponibles = useMemo(() => {
+        const map = new Map()
+        inscriptos.forEach(i => {
+            ;(i.juegos || []).forEach(j => {
+                if (j?.id && !map.has(j.id)) map.set(j.id, j.game_name)
+            })
+        })
+        return [...map.entries()]
+            .map(([id, game_name]) => ({ id, game_name }))
+            .sort((a, b) => a.game_name.localeCompare(b.game_name, 'es'))
+    }, [inscriptos])
+
+    const inscriptosFiltrados = useMemo(() => {
+        if (juegosFiltro === null) return inscriptos
+        if (juegosFiltro.size === 0) return []
+        return inscriptos.filter(i =>
+            (i.juegos || []).some(j => j?.id && juegosFiltro.has(j.id))
+        )
+    }, [inscriptos, juegosFiltro])
 
     // Localidades únicas ordenadas alfabéticamente
     const localidades = eventsData
@@ -68,9 +89,9 @@ const EmailMasivo = () => {
     const [progreso, setProgreso] = useState(null)
     const [resultados, setResultados] = useState([])
 
-    // Lista combinada
+    // Lista combinada (usa inscriptos filtrados por juego)
     const todosDestinatarios = [
-        ...inscriptos.map(i => ({ ...i, origen: 'evento' })),
+        ...inscriptosFiltrados.map(i => ({ ...i, origen: 'evento' })),
         ...manuales,
     ]
 
@@ -111,7 +132,8 @@ const EmailMasivo = () => {
                         cursor = { created_at: data[data.length - 1].created_at, id: data[data.length - 1].id }
                     }
                 } else {
-                    let query = supabase.from('inscriptions').select('nombre, apellido, email')
+                    let query = supabase.from('inscriptions')
+                        .select('nombre, apellido, email, games_inscriptions(game:games(id, game_name))')
                     if (eventoId) {
                         query = query.eq('id_evento', eventoId)
                     } else {
@@ -130,13 +152,21 @@ const EmailMasivo = () => {
                 }
 
                 const emailsManuales = new Set(manuales.map(m => m.email.toLowerCase().trim()))
-                const vistos = new Set()
-                const unicos = allData.filter(i => {
+                const emailMap = new Map()
+                allData.forEach(i => {
                     const key = i.email?.toLowerCase().trim()
-                    if (!key || vistos.has(key) || emailsManuales.has(key)) return false
-                    vistos.add(key)
-                    return true
+                    if (!key || emailsManuales.has(key)) return
+                    const juegos = (i.games_inscriptions || []).map(gi => gi.game).filter(Boolean)
+                    if (emailMap.has(key)) {
+                        const ex = emailMap.get(key)
+                        juegos.forEach(j => {
+                            if (!ex.juegos.some(ej => ej.id === j.id)) ex.juegos.push(j)
+                        })
+                    } else {
+                        emailMap.set(key, { nombre: i.nombre, apellido: i.apellido, email: i.email, juegos })
+                    }
                 })
+                const unicos = [...emailMap.values()]
 
                 setInscriptos(unicos)
                 setSeleccionados(new Set([
@@ -152,6 +182,29 @@ const EmailMasivo = () => {
 
         fetchInscriptos()
     }, [eventoId, localidadFiltro, todosContactos])
+
+    // Actualizar seleccionados cuando cambia el filtro de juego
+    useEffect(() => {
+        if (!eventoId && !localidadFiltro) return
+        setSeleccionados(new Set([
+            ...inscriptosFiltrados.map(i => i.email),
+            ...manuales.map(m => m.email),
+        ]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [juegosFiltro])
+
+    // ── Filtro por juego ──
+    const toggleTodosJuegos = () => setJuegosFiltro(prev => prev === null ? new Set() : null)
+
+    const toggleJuego = (id) => {
+        setJuegosFiltro(prev => {
+            if (prev === null) return new Set([id])
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }
 
     // ── Contactos manuales ──
     const agregarManual = () => {
@@ -353,6 +406,7 @@ const EmailMasivo = () => {
                                 setEventoId('')
                                 setLocalidadFiltro('')
                             }
+                            setJuegosFiltro(null)
                             setProgreso(null)
                             setResultados([])
                         }}
@@ -375,6 +429,7 @@ const EmailMasivo = () => {
                                 setEventoId(e.target.value)
                                 setLocalidadFiltro('')
                                 setTodosContactos(false)
+                                setJuegosFiltro(null)
                                 setProgreso(null)
                                 setResultados([])
                             }}
@@ -401,6 +456,7 @@ const EmailMasivo = () => {
                                 setLocalidadFiltro(e.target.value)
                                 setEventoId('')
                                 setTodosContactos(false)
+                                setJuegosFiltro(null)
                                 setProgreso(null)
                                 setResultados([])
                             }}
@@ -412,6 +468,37 @@ const EmailMasivo = () => {
                         </select>
                     )}
                 </div>
+
+                {juegosDisponibles.length > 0 && (
+                    <div className="filter-group">
+                        <label className="filter-label">Filtrar por juego:</label>
+                        <div className="email-masivo-juegos-filtro">
+                            <label className="email-masivo-juego-check">
+                                <input
+                                    type="checkbox"
+                                    checked={juegosFiltro === null}
+                                    onChange={toggleTodosJuegos}
+                                />
+                                <span>Todos los juegos ({inscriptos.length})</span>
+                            </label>
+                            {juegosDisponibles.map(j => {
+                                const count = inscriptos.filter(i =>
+                                    (i.juegos || []).some(jg => jg.id === j.id)
+                                ).length
+                                return (
+                                    <label key={j.id} className="email-masivo-juego-check">
+                                        <input
+                                            type="checkbox"
+                                            checked={juegosFiltro === null || juegosFiltro.has(j.id)}
+                                            onChange={() => toggleJuego(j.id)}
+                                        />
+                                        <span>{j.game_name} ({count})</span>
+                                    </label>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 <div className="filter-group" style={{ marginBottom: 0 }}>
                     <label className="filter-label">Agregar destinatario manualmente:</label>
@@ -460,9 +547,14 @@ const EmailMasivo = () => {
                                 Destinatarios —{' '}
                                 <strong style={{ color: '#1abc9c' }}>{seleccionados.size}</strong>{' '}
                                 de {todosDestinatarios.length} seleccionados
-                                {manuales.length > 0 && inscriptos.length > 0 && (
+                                {(manuales.length > 0 || inscriptosFiltrados.length > 0) && inscriptos.length > 0 && (
                                     <span style={{ color: '#95a5a6', fontSize: '0.85rem', marginLeft: 8 }}>
-                                        ({inscriptos.length} {localidadFiltro ? `de ${localidadFiltro}` : 'del evento'} · {manuales.length} manuales)
+                                        ({inscriptosFiltrados.length}
+                                        {juegosFiltro !== null && juegosFiltro.size > 0
+                                            ? ` de ${juegosDisponibles.filter(j => juegosFiltro.has(j.id)).map(j => j.game_name).join(', ')}`
+                                            : localidadFiltro ? ` de ${localidadFiltro}` : ' del evento'
+                                        }
+                                        {manuales.length > 0 ? ` · ${manuales.length} manuales` : ''})
                                     </span>
                                 )}
                             </span>
