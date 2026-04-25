@@ -9,8 +9,12 @@ const SizeStyle = Quill.import('attributors/style/size')
 SizeStyle.whitelist = ['12px', '16px', '20px', '28px']
 Quill.register(SizeStyle, true)
 import { useEvents } from '../../../../hooks/useEvents'
-import { enviarEmailMasivo } from '../../../../utils/emailMasivoService'
 import { formatearFecha } from '../../../../utils/dateUtils'
+
+const prepararCuerpoEmail = (html) =>
+    html
+        .replace(/<p><br><\/p>/g, '<div style="height:0.9em;">&nbsp;</div>')
+        .replace(/<p>([\s\S]*?)<\/p>/g, '<div style="margin:0;padding-bottom:0.6em;line-height:1.7;">$1</div>')
 
 const QUILL_MODULES = {
     toolbar: [
@@ -22,7 +26,7 @@ const QUILL_MODULES = {
 }
 const QUILL_FORMATS = ['size', 'bold', 'italic', 'color']
 
-const DELAY_ENTRE_ENVIOS_MS = 500
+const DELAY_ENTRE_BATCHES_MS = 600
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const STORAGE_BUCKET = 'email-images'
 
@@ -193,6 +197,14 @@ const EmailMasivo = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [juegosFiltro])
 
+    // Advertir si el usuario intenta cerrar la pestaña durante un envío activo
+    useEffect(() => {
+        if (!enviando) return
+        const handler = (e) => { e.preventDefault(); e.returnValue = '' }
+        window.addEventListener('beforeunload', handler)
+        return () => window.removeEventListener('beforeunload', handler)
+    }, [enviando])
+
     // ── Filtro por juego ──
     const toggleTodosJuegos = () => setJuegosFiltro(prev => prev === null ? new Set() : null)
 
@@ -336,33 +348,65 @@ const EmailMasivo = () => {
         const destinatarios = todosDestinatarios.filter(d => seleccionados.has(d.email))
         if (destinatarios.length === 0) return
 
+        const recipients = destinatarios.map(d => ({
+            email: d.email,
+            name: `${d.nombre} ${d.apellido}`.trim(),
+        }))
+
+        const chunks = []
+        for (let i = 0; i < recipients.length; i += 100) {
+            chunks.push(recipients.slice(i, i + 100))
+        }
+
+        const messageBody = prepararCuerpoEmail(cuerpo)
+        const imageHtml = imagenSrcFinal
+            ? `<img src="${imagenSrcFinal}" alt="Imagen" style="max-width:100%;border-radius:8px;display:block;margin:0 auto;box-shadow:0 4px 15px rgba(0,0,0,0.4);" />`
+            : ''
+
         setEnviando(true)
         setResultados([])
-        setProgreso({ total: destinatarios.length, enviados: 0 })
+        setProgreso({ current: 0, total: chunks.length, sent: 0, failed: 0 })
 
-        for (let i = 0; i < destinatarios.length; i++) {
-            const dest = destinatarios[i]
+        let totalSent = 0
+        const allFailed = []
+
+        for (let i = 0; i < chunks.length; i++) {
+            let result
             try {
-                await enviarEmailMasivo(dest, asunto, cuerpo, imagenSrcFinal)
-                setResultados(prev => [...prev, {
-                    email: dest.email,
-                    nombre: `${dest.nombre} ${dest.apellido}`.trim(),
-                    ok: true
-                }])
+                const r = await fetch('/api/admin/email/send-batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recipients: chunks[i],
+                        subject: asunto,
+                        messageBody,
+                        imageHtml,
+                    }),
+                })
+                result = await r.json()
             } catch (err) {
-                setResultados(prev => [...prev, {
-                    email: dest.email,
-                    nombre: `${dest.nombre} ${dest.apellido}`.trim(),
-                    ok: false,
-                    error: err?.text || err?.message || 'Error desconocido'
-                }])
+                result = {
+                    sent: 0,
+                    failed: chunks[i].map(r => ({ email: r.email, error: err?.message || 'Error de red' })),
+                }
             }
-            setProgreso({ total: destinatarios.length, enviados: i + 1 })
 
-            if (i < destinatarios.length - 1) {
-                await new Promise(res => setTimeout(res, DELAY_ENTRE_ENVIOS_MS))
+            totalSent += result.sent || 0
+            allFailed.push(...(result.failed || []))
+
+            setProgreso({
+                current: i + 1,
+                total: chunks.length,
+                sent: totalSent,
+                failed: allFailed.length,
+            })
+
+            if (i < chunks.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, DELAY_ENTRE_BATCHES_MS))
             }
         }
+
+        setResultados(allFailed)
 
         // Eliminar imagen temporal de Supabase una vez terminado el envío
         if (uploadedPath) {
@@ -400,6 +444,7 @@ const EmailMasivo = () => {
                     <input
                         type="checkbox"
                         checked={todosContactos}
+                        disabled={enviando}
                         onChange={e => {
                             setTodosContactos(e.target.checked)
                             if (e.target.checked) {
@@ -425,6 +470,7 @@ const EmailMasivo = () => {
                         <select
                             className="filter-select"
                             value={eventoId}
+                            disabled={enviando}
                             onChange={e => {
                                 setEventoId(e.target.value)
                                 setLocalidadFiltro('')
@@ -452,6 +498,7 @@ const EmailMasivo = () => {
                         <select
                             className="filter-select"
                             value={localidadFiltro}
+                            disabled={enviando}
                             onChange={e => {
                                 setLocalidadFiltro(e.target.value)
                                 setEventoId('')
@@ -714,28 +761,40 @@ const EmailMasivo = () => {
                     {progreso && (
                         <div className="email-masivo-progreso">
                             <h3 className="email-masivo-section-title">
-                                {enviando ? 'Enviando...' : 'Envío finalizado'}
+                                {enviando
+                                    ? `Enviando batch ${progreso.current} de ${progreso.total}...`
+                                    : 'Envío finalizado'}
                             </h3>
 
                             <div className="email-masivo-barra-wrapper">
                                 <div
                                     className="email-masivo-barra-fill"
-                                    style={{ width: `${Math.round((progreso.enviados / progreso.total) * 100)}%` }}
+                                    style={{ width: `${progreso.total > 0 ? Math.round((progreso.current / progreso.total) * 100) : 0}%` }}
                                 />
                             </div>
                             <p style={{ color: '#ecf0f1', textAlign: 'center', margin: '6px 0 16px' }}>
-                                {progreso.enviados} / {progreso.total} enviados
+                                {progreso.sent} enviados
+                                {progreso.failed > 0 && (
+                                    <span style={{ color: '#e74c3c', marginLeft: 8 }}>· {progreso.failed} fallidos</span>
+                                )}
                             </p>
 
-                            <div className="email-masivo-log">
-                                {resultados.map((r, idx) => (
-                                    <div key={idx} className={`email-masivo-log-item ${r.ok ? 'ok' : 'error'}`}>
-                                        <span>{r.ok ? '✓' : '✗'}</span>
-                                        <span>{r.nombre} — {r.email}</span>
-                                        {!r.ok && <span className="email-masivo-log-error">{r.error}</span>}
+                            {!enviando && resultados.length > 0 && (
+                                <details style={{ marginBottom: 16 }}>
+                                    <summary style={{ color: '#e74c3c', cursor: 'pointer', marginBottom: 8 }}>
+                                        {resultados.length} email{resultados.length !== 1 ? 's' : ''} con error — ver detalle
+                                    </summary>
+                                    <div className="email-masivo-log">
+                                        {resultados.map((r, idx) => (
+                                            <div key={idx} className="email-masivo-log-item error">
+                                                <span>✗</span>
+                                                <span>{r.email}</span>
+                                                <span className="email-masivo-log-error">{r.error}</span>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                </details>
+                            )}
 
                             {!enviando && (
                                 <button className="export-button" onClick={resetear} style={{ marginTop: 16 }}>

@@ -1,6 +1,4 @@
-import { Resend } from 'resend';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { resend, FROM } from './_lib/resend.js';
 
 const buildEmailHtml = (params) => {
     const {
@@ -137,7 +135,7 @@ export default async function handler(req, res) {
         const html = buildEmailHtml(params);
 
         const response = await resend.emails.send({
-            from: 'LC e-SPORTS <no-reply@lcesports.com.ar>',
+            from: FROM,
             to: [params.to_email],
             subject: 'Confirmación de inscripción — LC e-SPORTS',
             html,
