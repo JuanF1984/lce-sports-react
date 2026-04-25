@@ -45,19 +45,22 @@ export default async function handler(req, res) {
             });
         }
 
-        // Resend batch returns an array of { id } — one per email in order
+        // Resend SDK v6: data = { data: Array<{id}> }
+        const results = data?.data;
         const failed = [];
         let sent = 0;
-        (data || []).forEach((result, idx) => {
-            if (result?.id) {
-                sent++;
-            } else {
-                failed.push({ email: recipients[idx]?.email, error: 'No ID returned by Resend' });
-            }
-        });
-
-        // If data array is empty/null but no error, assume all sent
-        if (!data || data.length === 0) sent = recipients.length;
+        if (Array.isArray(results) && results.length > 0) {
+            results.forEach((result, idx) => {
+                if (result?.id) {
+                    sent++;
+                } else {
+                    failed.push({ email: recipients[idx]?.email, error: 'No ID returned by Resend' });
+                }
+            });
+        } else {
+            // No per-item data but no error either — assume all sent
+            sent = recipients.length;
+        }
 
         return res.status(200).json({ sent, failed });
     } catch (err) {
