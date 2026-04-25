@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import ReactQuill, { Quill } from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 import supabase from '../../../../utils/supabase'
+import { validateEmail } from '../../../../lib/email/validateEmail'
 
 // Registrar el attributor de tamaño con inline styles en lugar de clases CSS
 // para que los tamaños funcionen en clientes de email
@@ -40,6 +41,8 @@ const EmailMasivo = () => {
     const [inscriptos, setInscriptos] = useState([])
     const [loadingInscriptos, setLoadingInscriptos] = useState(false)
     const [juegosFiltro, setJuegosFiltro] = useState(null) // null = todos, Set = selección específica
+    const [excludedCount, setExcludedCount] = useState(0)
+    const [newlyInvalidList, setNewlyInvalidList] = useState([])
 
     const juegosDisponibles = useMemo(() => {
         const map = new Map()
@@ -108,6 +111,8 @@ const EmailMasivo = () => {
 
         const fetchInscriptos = async () => {
             setLoadingInscriptos(true)
+            setExcludedCount(0)
+            setNewlyInvalidList([])
             try {
                 let allData = []
 
@@ -155,6 +160,12 @@ const EmailMasivo = () => {
                     allData = data || []
                 }
 
+                // Obtener blacklist de emails inválidos
+                const { data: invalidData } = await supabase
+                    .from('invalid_emails')
+                    .select('email')
+                const invalidSet = new Set((invalidData || []).map(r => r.email.toLowerCase()))
+
                 const emailsManuales = new Set(manuales.map(m => m.email.toLowerCase().trim()))
                 const emailMap = new Map()
                 allData.forEach(i => {
@@ -170,8 +181,47 @@ const EmailMasivo = () => {
                         emailMap.set(key, { nombre: i.nombre, apellido: i.apellido, email: i.email, juegos })
                     }
                 })
-                const unicos = [...emailMap.values()]
 
+                // Filtrar emails inválidos (blacklisted + formato inválido)
+                const nuevosInvalidos = []
+                const unicos = []
+                let excluidos = 0
+
+                for (const [key, entry] of emailMap) {
+                    if (invalidSet.has(key)) {
+                        excluidos++
+                        continue
+                    }
+                    const result = validateEmail(key)
+                    if (!result.valid) {
+                        nuevosInvalidos.push({ email: key, reason: result.reason })
+                        excluidos++
+                        continue
+                    }
+                    unicos.push(entry)
+                }
+
+                // Guardar nuevos inválidos detectados por formato
+                if (nuevosInvalidos.length > 0) {
+                    try {
+                        await fetch('/api/admin/invalid-emails', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                emails: nuevosInvalidos.map(e => ({
+                                    email: e.email,
+                                    reason: e.reason,
+                                    detected_by: 'validation',
+                                })),
+                            }),
+                        })
+                    } catch (err) {
+                        console.error('Error al guardar emails inválidos:', err)
+                    }
+                }
+
+                setExcludedCount(excluidos)
+                setNewlyInvalidList(nuevosInvalidos)
                 setInscriptos(unicos)
                 setSeleccionados(new Set([
                     ...unicos.map(i => i.email),
@@ -583,6 +633,34 @@ const EmailMasivo = () => {
                 </div>
             </div>
 
+            {/* ── Resumen de destinatarios válidos/excluidos ── */}
+            {!loadingInscriptos && (eventoId || localidadFiltro || todosContactos) && (
+                <div style={{ margin: '12px 0' }}>
+                    {inscriptosFiltrados.length > 0 && (
+                        <p style={{ color: '#1abc9c', margin: '0 0 4px' }}>
+                            Se enviarán a <strong>{seleccionados.size}</strong> destinatario{seleccionados.size !== 1 ? 's' : ''}
+                        </p>
+                    )}
+                    {excludedCount > 0 && (
+                        <p style={{ color: '#f39c12', margin: '0 0 4px' }}>
+                            {excludedCount} email{excludedCount !== 1 ? 's' : ''} excluido{excludedCount !== 1 ? 's' : ''} por estar marcado{excludedCount !== 1 ? 's' : ''} como inválido{excludedCount !== 1 ? 's' : ''}
+                        </p>
+                    )}
+                    {newlyInvalidList.length > 0 && (
+                        <details style={{ marginTop: 8, background: '#2c1a1a', border: '1px solid #e74c3c', borderRadius: 6, padding: '8px 12px' }}>
+                            <summary style={{ color: '#e74c3c', cursor: 'pointer', fontWeight: 600 }}>
+                                {newlyInvalidList.length} email{newlyInvalidList.length !== 1 ? 's' : ''} inválido{newlyInvalidList.length !== 1 ? 's' : ''} nuevo{newlyInvalidList.length !== 1 ? 's' : ''} detectado{newlyInvalidList.length !== 1 ? 's' : ''} y marcado{newlyInvalidList.length !== 1 ? 's' : ''} automáticamente
+                            </summary>
+                            <ul style={{ margin: '8px 0 0', padding: '0 0 0 16px', color: '#ecf0f1', fontSize: '0.85rem' }}>
+                                {newlyInvalidList.map(e => (
+                                    <li key={e.email}><strong>{e.email}</strong> — {e.reason}</li>
+                                ))}
+                            </ul>
+                        </details>
+                    )}
+                </div>
+            )}
+
             {/* ── Tabla de destinatarios ── */}
             {loadingInscriptos ? (
                 <p style={{ color: '#ecf0f1', textAlign: 'center' }}>Cargando inscriptos...</p>
@@ -779,22 +857,41 @@ const EmailMasivo = () => {
                                 )}
                             </p>
 
-                            {!enviando && resultados.length > 0 && (
-                                <details style={{ marginBottom: 16 }}>
-                                    <summary style={{ color: '#e74c3c', cursor: 'pointer', marginBottom: 8 }}>
-                                        {resultados.length} email{resultados.length !== 1 ? 's' : ''} con error — ver detalle
-                                    </summary>
-                                    <div className="email-masivo-log">
-                                        {resultados.map((r, idx) => (
-                                            <div key={idx} className="email-masivo-log-item error">
-                                                <span>✗</span>
-                                                <span>{r.email}</span>
-                                                <span className="email-masivo-log-error">{r.error}</span>
+                            {!enviando && resultados.length > 0 && (() => {
+                                const invalidados = resultados.filter(r =>
+                                    r.error && (/non-ascii/i.test(r.error) || /invalid.*email/i.test(r.error) || /no permitidos/i.test(r.error))
+                                )
+                                return (
+                                    <>
+                                        {invalidados.length > 0 && (
+                                            <div style={{ background: '#2c1a1a', border: '1px solid #e74c3c', borderRadius: 6, padding: '8px 12px', marginBottom: 12 }}>
+                                                <p style={{ color: '#e74c3c', margin: '0 0 4px', fontWeight: 600 }}>
+                                                    {invalidados.length} email{invalidados.length !== 1 ? 's' : ''} rechazado{invalidados.length !== 1 ? 's' : ''} por Resend y marcado{invalidados.length !== 1 ? 's' : ''} como inválido{invalidados.length !== 1 ? 's' : ''}:
+                                                </p>
+                                                <ul style={{ margin: 0, padding: '0 0 0 16px', color: '#ecf0f1', fontSize: '0.85rem' }}>
+                                                    {invalidados.map((r, i) => (
+                                                        <li key={i}><strong>{r.email}</strong></li>
+                                                    ))}
+                                                </ul>
                                             </div>
-                                        ))}
-                                    </div>
-                                </details>
-                            )}
+                                        )}
+                                        <details style={{ marginBottom: 16 }}>
+                                            <summary style={{ color: '#e74c3c', cursor: 'pointer', marginBottom: 8 }}>
+                                                {resultados.length} email{resultados.length !== 1 ? 's' : ''} con error — ver detalle
+                                            </summary>
+                                            <div className="email-masivo-log">
+                                                {resultados.map((r, idx) => (
+                                                    <div key={idx} className="email-masivo-log-item error">
+                                                        <span>✗</span>
+                                                        <span>{r.email}</span>
+                                                        <span className="email-masivo-log-error">{r.error}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </details>
+                                    </>
+                                )
+                            })()}
 
                             {!enviando && (
                                 <button className="export-button" onClick={resetear} style={{ marginTop: 16 }}>

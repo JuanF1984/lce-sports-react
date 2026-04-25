@@ -4,7 +4,8 @@ import { useBackHandler } from "../../../context/BackHandlerContext";
 import { useEventoSeleccionado } from "./hooks/useEventoSeleccionado";
 
 import { useFormulario } from "../../../hooks/useFormulario";
-import { validateEmail, validatePhone, validateAge } from "../../../utils/validations";
+import { validateEmail as validateEmailStrict } from "../../../lib/email/validateEmail";
+import { validatePhone, validateAge } from "../../../utils/validations";
 
 import { LogoNeon } from '../../common/LogoNeon';
 import { useAuth } from "../../../context/UseAuth";
@@ -56,6 +57,7 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
     // Campos extra (UI only)
     const [emailRepetir, setEmailRepetir] = useState('');
     const [emailRepetirError, setEmailRepetirError] = useState('');
+    const [emailErrorMsg, setEmailErrorMsg] = useState('');
     const [showModal, setShowModal] = useState(false);
 
     const localidadesOptions = localidadesBuenosAires.map((l) => ({ value: l, label: l }));
@@ -92,14 +94,28 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
         else if (emailRepetir !== email) repError = 'Los emails no coinciden';
         setEmailRepetirError(repError);
 
+        const emailTrim = email.trim();
+        let emailFormatError = false;
+        if (emailTrim) {
+            const emailResult = validateEmailStrict(emailTrim);
+            if (!emailResult.valid) {
+                emailFormatError = true;
+                setEmailErrorMsg(emailResult.reason);
+            } else {
+                setEmailErrorMsg('');
+            }
+        } else {
+            setEmailErrorMsg('');
+        }
+
         const newErrors = {
             nombre:        !nombre.trim(),
             apellido:      !apellido.trim(),
             celular:       !celular.trim(),
             celularFormat: celular.trim() ? !validatePhone(celular.trim()) : false,
             localidad:     !localidad,
-            email:         !email.trim(),
-            emailFormat:   email.trim() ? !validateEmail(email.trim()) : false,
+            email:         !emailTrim,
+            emailFormat:   emailFormatError,
             edad:          !edad.trim(),
             edadFormat:    edad.trim() ? !validateAge(edad.trim()) : false,
             selectedGames: false,
@@ -246,15 +262,23 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
                         Email<span className="fd-required">*</span>
                     </label>
                     <input
-                        className={`fd-input${fieldErrors.email || fieldErrors.emailFormat ? ' fd-input--error' : ''}`}
+                        className={`fd-input${fieldErrors.email || fieldErrors.emailFormat || emailErrorMsg ? ' fd-input--error' : ''}`}
                         type="email"
                         name="email"
                         value={formValues.email}
-                        onChange={handleInputChange}
+                        onChange={e => {
+                            handleInputChange(e);
+                            const val = e.target.value.trim();
+                            if (!val) { setEmailErrorMsg(''); return; }
+                            const result = validateEmailStrict(val);
+                            setEmailErrorMsg(result.valid ? '' : result.reason);
+                        }}
                         placeholder="tomas@gmail.com"
                     />
                     {fieldErrors.email && <span className="fd-error-text">Requerido</span>}
-                    {fieldErrors.emailFormat && <span className="fd-error-text">Email inválido</span>}
+                    {(fieldErrors.emailFormat || emailErrorMsg) && !fieldErrors.email && (
+                        <span className="fd-error-text">{emailErrorMsg || 'Email inválido'}</span>
+                    )}
                 </div>
 
                 {/* Repetir email */}
@@ -325,6 +349,8 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
                 <button
                     type="submit"
                     className="main-button fd-submit-btn"
+                    disabled={!!emailErrorMsg}
+                    style={emailErrorMsg ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
                 >
                     {btnLabel}
                 </button>

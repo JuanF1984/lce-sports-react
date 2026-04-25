@@ -7,57 +7,41 @@ import { LineaNeon } from '../../common/LineaNeon'
 import { EventsList } from './events/EventsList'
 import InscriptionsList from './InsciptionList/InscriptionsList'
 import EmailMasivo from './emailMasivo/EmailMasivo'
+import EmailsInvalidos from './emailsInvalidos/EmailsInvalidos'
 
 export const DashboardAdmin = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [inscriptions, setInscriptions] = useState(false)
-    const [events, setEvents] = useState(false)
-    const [emailMasivo, setEmailMasivo] = useState(false)
+    const [view, setView] = useState(null) // 'inscriptions' | 'events' | 'emailMasivo' | 'emailsInvalidos'
 
-    const handleInscriptions = () => {
-        setInscriptions(true)
-        setEvents(false)
-        setEmailMasivo(false)
-    }
-
-    const handleEvents = () => {
-        setEvents(true)
-        setInscriptions(false)
-        setEmailMasivo(false)
-    }
-
-    const handleEmailMasivo = () => {
-        setEmailMasivo(true)
-        setInscriptions(false)
-        setEvents(false)
-    }
+    const setView_ = (v) => setView(v)
 
     useEffect(() => {
-
         if (!user) {
-            navigate("/"); // Si no hay usuario, redirigir.
+            navigate("/");
         }
     }, [user])
 
     return (
         <>
             <aside>
-                <button onClick={handleInscriptions} className='export-button'>Listar Inscripciones</button>
-                <button onClick={handleEvents} className='export-button'>Listar Eventos</button>
-                <button onClick={handleEmailMasivo} className='export-button'>Email Masivo</button>
+                <button onClick={() => setView_('inscriptions')} className='export-button'>Listar Inscripciones</button>
+                <button onClick={() => setView_('events')} className='export-button'>Listar Eventos</button>
+                <button onClick={() => setView_('emailMasivo')} className='export-button'>Email Masivo</button>
+                <button onClick={() => setView_('emailsInvalidos')} className='export-button'>Emails Inválidos</button>
             </aside>
             <LineaNeon />
             <main>
-                {(!inscriptions && !events && !emailMasivo) && (
+                {!view && (
                     <div className='welcome-container'>
                         <h2>Bienvenido/a</h2>
                         {user && (<h3>{user.user_metadata.name}</h3>)}
                     </div>
                 )}
-                {inscriptions && (<InscriptionsList />)}
-                {events && (<EventsList />)}
-                {emailMasivo && (<EmailMasivo />)}
+                {view === 'inscriptions' && <InscriptionsList />}
+                {view === 'events' && <EventsList />}
+                {view === 'emailMasivo' && <EmailMasivo />}
+                {view === 'emailsInvalidos' && <EmailsInvalidos />}
             </main>
         </>
     )

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { validateEmail, normalizeEmail } from '../../../src/lib/email/validateEmail.js';
 
 const supabase = createClient(
     process.env.VITE_SUPABASE_URL,
@@ -26,7 +27,9 @@ export default async function handler(req, res) {
                 .eq('localidad', filters.locality);
             if (evErr) throw evErr;
             const ids = (events || []).map(e => e.id);
-            if (ids.length === 0) return res.status(200).json({ recipients: [] });
+            if (ids.length === 0) {
+                return res.status(200).json({ recipients: [], excludedCount: 0, newlyInvalidEmails: [] });
+            }
             query = query.in('id_evento', ids);
         }
 
@@ -36,22 +39,66 @@ export default async function handler(req, res) {
             );
         }
 
-        const { data, error } = await query;
-        if (error) throw error;
+        const [inscResult, invalidResult] = await Promise.all([
+            query,
+            supabase.from('invalid_emails').select('email'),
+        ]);
 
+        if (inscResult.error) throw inscResult.error;
+
+        const raw = inscResult.data || [];
+        console.log(`[recipients] inscripciones brutas: ${raw.length}`);
+
+        const invalidSet = new Set((invalidResult.data || []).map(r => r.email.toLowerCase()));
+
+        // Dedup by normalized email — keep first occurrence
         const emailMap = new Map();
-        (data || []).forEach(i => {
-            const key = i.email?.toLowerCase().trim();
+        raw.forEach(i => {
+            if (!i.email) return;
+            const key = normalizeEmail(i.email);
             if (!key || emailMap.has(key)) return;
             emailMap.set(key, {
-                email: i.email,
-                name: `${i.nombre} ${i.apellido}`.trim(),
+                email: key,
+                name: `${i.nombre || ''} ${i.apellido || ''}`.trim(),
             });
         });
 
-        return res.status(200).json({ recipients: [...emailMap.values()] });
+        console.log(`[recipients] después de dedup: ${emailMap.size}`);
+
+        const newlyInvalidEmails = [];
+        const recipients = [];
+        let excludedByBlacklist = 0;
+
+        for (const [, entry] of emailMap) {
+            if (invalidSet.has(entry.email)) {
+                excludedByBlacklist++;
+                continue;
+            }
+            const result = validateEmail(entry.email);
+            if (!result.valid) {
+                newlyInvalidEmails.push({ email: entry.email, reason: result.reason });
+                continue;
+            }
+            recipients.push(entry);
+        }
+
+        if (newlyInvalidEmails.length > 0) {
+            await supabase.from('invalid_emails').upsert(
+                newlyInvalidEmails.map(e => ({
+                    email: e.email,
+                    reason: e.reason,
+                    detected_by: 'validation',
+                })),
+                { onConflict: 'email', ignoreDuplicates: true }
+            );
+        }
+
+        const excludedCount = excludedByBlacklist + newlyInvalidEmails.length;
+        console.log(`[recipients] resultado final: ${recipients.length} válidos, ${excludedCount} excluidos (${newlyInvalidEmails.length} nuevos inválidos)`);
+
+        return res.status(200).json({ recipients, excludedCount, newlyInvalidEmails });
     } catch (error) {
-        console.error('Recipients error:', error);
+        console.error('[recipients] error:', error);
         return res.status(500).json({ error: error?.message || 'Error al obtener destinatarios' });
     }
 }
