@@ -1,13 +1,9 @@
 import { resend, FROM } from '../../_lib/resend.js';
+import { supabaseAdmin } from '../../_lib/supabaseAdmin.js';
+import { requireAdmin } from '../../_lib/requireAdmin.js';
 import { renderMegaeventoTemplate } from '../../../src/email/templates/megaeventoTemplate.js';
 import { validateEmail } from '../../../src/lib/email/validateEmail.js';
 import { sanitizeName } from '../../../src/lib/email/sanitizeName.js';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.VITE_SUPABASE_ANON_KEY
-);
 
 const EMAIL_IN_TEXT_REGEX = /\S+@\S+\.\S+/g;
 const TRANSIENT_ERROR_PATTERNS = [/rate.?limit/i, /timeout/i, /5\d\d/];
@@ -26,7 +22,7 @@ const isTransientError = (msg) =>
 
 async function markInvalidEmail(email, reason) {
     try {
-        await supabase.from('invalid_emails').upsert(
+        await supabaseAdmin.from('invalid_emails').upsert(
             [{ email, reason: reason.slice(0, 500), detected_by: 'resend_error' }],
             { onConflict: 'email', ignoreDuplicates: true }
         );
@@ -36,6 +32,12 @@ async function markInvalidEmail(email, reason) {
 }
 
 export default async function handler(req, res) {
+    try {
+        await requireAdmin(req);
+    } catch (err) {
+        return res.status(err.statusCode || 500).json({ error: err.message });
+    }
+
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }

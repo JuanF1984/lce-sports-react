@@ -1,21 +1,23 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabaseAdmin } from '../../_lib/supabaseAdmin.js';
+import { requireAdmin } from '../../_lib/requireAdmin.js';
 
 export default async function handler(req, res) {
+    try {
+        await requireAdmin(req);
+    } catch (err) {
+        return res.status(err.statusCode || 500).json({ error: err.message });
+    }
+
     const { email } = req.query;
 
     if (!email) {
         return res.status(400).json({ error: 'Email requerido' });
     }
 
-    // GET /api/admin/invalid-emails/:email — inscripciones asociadas al email
+    // GET — inscripciones asociadas al email
     if (req.method === 'GET') {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseAdmin
                 .from('inscriptions')
                 .select('id, nombre, apellido, email, principal_game, secondary_game, created_at, id_evento')
                 .eq('email', email)
@@ -28,10 +30,10 @@ export default async function handler(req, res) {
         }
     }
 
-    // DELETE /api/admin/invalid-emails/:email — quitar de la blacklist
+    // DELETE — quitar de la blacklist
     if (req.method === 'DELETE') {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from('invalid_emails')
                 .delete()
                 .eq('email', email);

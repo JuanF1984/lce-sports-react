@@ -1,12 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '../../_lib/supabaseAdmin.js';
+import { requireAdmin } from '../../_lib/requireAdmin.js';
 import { validateEmail, normalizeEmail } from '../../../src/lib/email/validateEmail.js';
 
-const supabase = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.VITE_SUPABASE_ANON_KEY
-);
-
 export default async function handler(req, res) {
+    try {
+        await requireAdmin(req);
+    } catch (err) {
+        return res.status(err.statusCode || 500).json({ error: err.message });
+    }
+
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -14,14 +16,14 @@ export default async function handler(req, res) {
     const { tournamentId, filters = {} } = req.body || {};
 
     try {
-        let query = supabase
+        let query = supabaseAdmin
             .from('inscriptions')
             .select('nombre, apellido, email, principal_game, secondary_game');
 
         if (tournamentId) {
             query = query.eq('id_evento', tournamentId);
         } else if (filters.locality) {
-            const { data: events, error: evErr } = await supabase
+            const { data: events, error: evErr } = await supabaseAdmin
                 .from('events')
                 .select('id')
                 .eq('localidad', filters.locality);
@@ -41,7 +43,7 @@ export default async function handler(req, res) {
 
         const [inscResult, invalidResult] = await Promise.all([
             query,
-            supabase.from('invalid_emails').select('email'),
+            supabaseAdmin.from('invalid_emails').select('email'),
         ]);
 
         if (inscResult.error) throw inscResult.error;
@@ -51,7 +53,7 @@ export default async function handler(req, res) {
 
         const invalidSet = new Set((invalidResult.data || []).map(r => r.email.toLowerCase()));
 
-        // Dedup by normalized email — keep first occurrence
+        // Dedup por email normalizado — queda el primero encontrado
         const emailMap = new Map();
         raw.forEach(i => {
             if (!i.email) return;
@@ -83,7 +85,7 @@ export default async function handler(req, res) {
         }
 
         if (newlyInvalidEmails.length > 0) {
-            await supabase.from('invalid_emails').upsert(
+            await supabaseAdmin.from('invalid_emails').upsert(
                 newlyInvalidEmails.map(e => ({
                     email: e.email,
                     reason: e.reason,

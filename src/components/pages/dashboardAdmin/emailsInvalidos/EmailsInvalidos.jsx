@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { apiAdminFetch } from '../../../../lib/apiAdminFetch'
 
 const DETECTED_BY_LABELS = {
     validation: 'Validación automática',
@@ -21,7 +22,7 @@ const EmailsInvalidos = () => {
         setLoading(true)
         setError('')
         try {
-            const r = await fetch('/api/admin/invalid-emails')
+            const r = await apiAdminFetch('/api/admin/invalid-emails')
             const json = await r.json()
             if (!r.ok) throw new Error(json.error || 'Error al cargar')
             setEmails(json.invalidEmails || [])
@@ -45,7 +46,7 @@ const EmailsInvalidos = () => {
     const handleDelete = async (email) => {
         setDeleting(email)
         try {
-            const r = await fetch(`/api/admin/invalid-emails/${encodeURIComponent(email)}`, { method: 'DELETE' })
+            const r = await apiAdminFetch(`/api/admin/invalid-emails/${encodeURIComponent(email)}`, { method: 'DELETE' })
             if (!r.ok) {
                 const json = await r.json()
                 throw new Error(json.error || 'Error al eliminar')
@@ -63,7 +64,7 @@ const EmailsInvalidos = () => {
         setLoadingInsc(true)
         setInscriptionsModal({ email, data: null })
         try {
-            const r = await fetch(`/api/admin/invalid-emails/${encodeURIComponent(email)}`)
+            const r = await apiAdminFetch(`/api/admin/invalid-emails/${encodeURIComponent(email)}`)
             const json = await r.json()
             if (!r.ok) throw new Error(json.error || 'Error')
             setInscriptionsModal({ email, data: json.inscriptions || [] })

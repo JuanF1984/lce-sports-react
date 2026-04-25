@@ -1,14 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabaseAdmin } from '../../_lib/supabaseAdmin.js';
+import { requireAdmin } from '../../_lib/requireAdmin.js';
 
 export default async function handler(req, res) {
+    try {
+        await requireAdmin(req);
+    } catch (err) {
+        return res.status(err.statusCode || 500).json({ error: err.message });
+    }
+
     if (req.method === 'GET') {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseAdmin
                 .from('invalid_emails')
                 .select('email, reason, detected_at, detected_by')
                 .order('detected_at', { ascending: false });
@@ -26,7 +28,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'emails must be a non-empty array' });
         }
         try {
-            const { error } = await supabase.from('invalid_emails').upsert(
+            const { error } = await supabaseAdmin.from('invalid_emails').upsert(
                 emails.map(e => ({
                     email: e.email,
                     reason: e.reason,

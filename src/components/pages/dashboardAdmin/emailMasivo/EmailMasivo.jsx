@@ -3,6 +3,7 @@ import ReactQuill, { Quill } from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 import supabase from '../../../../utils/supabase'
 import { validateEmail } from '../../../../lib/email/validateEmail'
+import { apiAdminFetch } from '../../../../lib/apiAdminFetch'
 
 // Registrar el attributor de tamaño con inline styles en lugar de clases CSS
 // para que los tamaños funcionen en clientes de email
@@ -204,9 +205,8 @@ const EmailMasivo = () => {
                 // Guardar nuevos inválidos detectados por formato
                 if (nuevosInvalidos.length > 0) {
                     try {
-                        await fetch('/api/admin/invalid-emails', {
+                        await apiAdminFetch('/api/admin/invalid-emails', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 emails: nuevosInvalidos.map(e => ({
                                     email: e.email,
@@ -423,9 +423,8 @@ const EmailMasivo = () => {
         for (let i = 0; i < chunks.length; i++) {
             let result
             try {
-                const r = await fetch('/api/admin/email/send-batch', {
+                const r = await apiAdminFetch('/api/admin/email/send-batch', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         recipients: chunks[i],
                         subject: asunto,
