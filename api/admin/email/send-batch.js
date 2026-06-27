@@ -20,6 +20,15 @@ const isEmailRelatedError = (msg) =>
 const isTransientError = (msg) =>
     msg && TRANSIENT_ERROR_PATTERNS.some(p => p.test(msg));
 
+const renderPlainEmail = ({ messageBody, imageHtml }) =>
+    `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>` +
+    `<body style="margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif;">` +
+    `<table width="100%" cellspacing="0" cellpadding="0"><tr><td style="padding:32px 24px;">` +
+    `<div style="max-width:600px;margin:0 auto;">` +
+    `<div style="color:#222222;font-size:15px;line-height:1.7;">${messageBody}</div>` +
+    (imageHtml ? `<div style="margin-top:24px;">${imageHtml}</div>` : '') +
+    `</div></td></tr></table></body></html>`;
+
 async function markInvalidEmail(email, reason) {
     try {
         await supabaseAdmin.from('invalid_emails').upsert(
@@ -42,7 +51,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { recipients, subject, messageBody, imageHtml = '' } = req.body || {};
+    const { recipients, subject, messageBody, imageHtml = '', useTemplate = true } = req.body || {};
 
     if (!Array.isArray(recipients) || recipients.length === 0) {
         return res.status(400).json({ error: 'recipients must be a non-empty array' });
@@ -74,12 +83,14 @@ export default async function handler(req, res) {
         from: FROM,
         to: [r.email],
         subject: subject || '(sin asunto)',
-        html: renderMegaeventoTemplate({
-            toName: sanitizeName(r.name || r.email),
-            toEmail: r.email,
-            messageBody: safeBody,
-            imageHtml,
-        }),
+        html: useTemplate
+            ? renderMegaeventoTemplate({
+                toName: sanitizeName(r.name || r.email),
+                toEmail: r.email,
+                messageBody: safeBody,
+                imageHtml,
+            })
+            : renderPlainEmail({ messageBody: safeBody, imageHtml }),
     }));
 
     try {

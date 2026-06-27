@@ -82,6 +82,7 @@ const EmailMasivo = () => {
     // Mensaje
     const [asunto, setAsunto] = useState('')
     const [cuerpo, setCuerpo] = useState('')
+    const [usarPlantilla, setUsarPlantilla] = useState(true)
 
     // Imagen
     const [imagenPreview, setImagenPreview] = useState('')   // base64 local para preview
@@ -430,13 +431,18 @@ const EmailMasivo = () => {
                         subject: asunto,
                         messageBody,
                         imageHtml,
+                        useTemplate: usarPlantilla,
                     }),
                 })
-                result = await r.json()
+                const text = await r.text()
+                if (!r.ok) {
+                    throw new Error(`Error ${r.status}: ${text.slice(0, 300)}`)
+                }
+                result = JSON.parse(text)
             } catch (err) {
                 result = {
                     sent: 0,
-                    failed: chunks[i].map(r => ({ email: r.email, error: err?.message || 'Error de red' })),
+                    failed: chunks[i].map(rec => ({ email: rec.email, error: err?.message || 'Error de red' })),
                 }
             }
 
@@ -736,6 +742,33 @@ const EmailMasivo = () => {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    {/* ── Formato del mail (siempre visible mientras hay destinatarios) ── */}
+                    <div className="filter-group" style={{ marginBottom: 12 }}>
+                        <label className="filter-label">Formato del mail:</label>
+                        <div style={{ display: 'flex', gap: 20, marginTop: 4 }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#1a2744', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="usarPlantilla"
+                                    checked={usarPlantilla}
+                                    onChange={() => setUsarPlantilla(true)}
+                                    disabled={enviando}
+                                />
+                                Con plantilla LC e-Sports
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#1a2744', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="usarPlantilla"
+                                    checked={!usarPlantilla}
+                                    onChange={() => setUsarPlantilla(false)}
+                                    disabled={enviando}
+                                />
+                                Sin plantilla (mail genérico)
+                            </label>
                         </div>
                     </div>
 
