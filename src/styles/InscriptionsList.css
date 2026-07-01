@@ -1020,3 +1020,317 @@ aside .export-button:active {
     font-size: 0.85rem;
     color: #374151;
 }
+
+/* ── Barra de acciones de eventos ──────────────────────── */
+.events-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.events-actions .export-button {
+    margin: 0;
+}
+
+/* Botón de acción destructiva secundaria (ej: cerrar todas las presentaciones) */
+.btn-warning-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #92400e;
+    background: transparent;
+    border: 1.5px solid #d97706;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.btn-warning-outline::before {
+    content: '⚠';
+    font-size: 0.85em;
+    line-height: 1;
+}
+
+.btn-warning-outline:hover {
+    background: #fef3c7;
+    border-color: #b45309;
+    color: #78350f;
+    box-shadow: 0 2px 8px rgba(180, 83, 9, 0.18);
+}
+
+.btn-warning-outline:active {
+    background: #fde68a;
+    transform: scale(0.98);
+}
+
+/* Link de inscripción tras guardar */
+.inscription-link-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: #eef4ff;
+    border: 1.5px solid #3b6cb4;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+}
+
+.inscription-link-box span {
+    font-size: 0.85rem;
+    color: #1a2744;
+    word-break: break-all;
+    flex: 1;
+}
+
+.inscription-link-box .btn-copy {
+    flex-shrink: 0;
+    padding: 5px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #ffffff;
+    background: #3b6cb4;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.inscription-link-box .btn-copy:hover {
+    background: #1a2744;
+}
+
+/* ── Badges tabla de eventos ───────────────────────────── */
+.event-tipo-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.event-tipo-badge--torneo {
+    background: #d4edda;
+    color: #155724;
+}
+.event-tipo-badge--presentacion {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+.event-cupos-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.event-cupos-badge--abiertas {
+    background: #d4edda;
+    color: #155724;
+}
+.event-cupos-badge--cerradas {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* ── Modal de edición de evento ────────────────────────── */
+.event-edit-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 18, 40, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.event-edit-modal {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(26, 39, 68, 0.22);
+    border: 1px solid #d0d9ea;
+    width: 640px;
+    max-width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.event-edit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid #e8eef7;
+    flex-shrink: 0;
+}
+
+.event-edit-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1a2744;
+}
+
+.event-edit-close {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.15s;
+}
+.event-edit-close:hover {
+    color: #1a2744;
+}
+
+.event-edit-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Fila de 2 columnas */
+.event-edit-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+@media (max-width: 520px) {
+    .event-edit-section {
+        grid-template-columns: 1fr;
+    }
+}
+
+.event-edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.event-edit-field--center {
+    justify-content: center;
+}
+
+/* Campo que ocupa todo el ancho */
+.event-edit-field--full {
+    grid-column: 1 / -1;
+}
+
+.event-edit-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.event-edit-input,
+.event-edit-select {
+    padding: 8px 10px;
+    border: 1.5px solid #d0d9ea;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    color: #1a2744;
+    background: #f8fafc;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+    box-sizing: border-box;
+}
+.event-edit-input:focus,
+.event-edit-select:focus {
+    outline: none;
+    border-color: #3b6cb4;
+    box-shadow: 0 0 0 2px rgba(59, 108, 180, 0.14);
+    background: #fff;
+}
+
+.event-edit-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #1a2744;
+    cursor: pointer;
+    user-select: none;
+}
+.event-edit-checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #3b6cb4;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.event-edit-games {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.event-edit-game-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border: 1.5px solid #d0d9ea;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #1a2744;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.event-edit-game-label:has(input:checked) {
+    border-color: #3b6cb4;
+    background: #eef4ff;
+    color: #1a2744;
+    font-weight: 600;
+}
+.event-edit-game-label input[type="checkbox"] {
+    accent-color: #3b6cb4;
+    cursor: pointer;
+}
+
+.event-edit-hint {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    margin: 4px 0 0;
+}
+
+.event-edit-error {
+    font-size: 0.85rem;
+    color: #e74c3c;
+    margin: 4px 0 0;
+}
+
+.event-edit-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 24px 18px;
+    border-top: 1px solid #e8eef7;
+    flex-shrink: 0;
+}
+
+.event-edit-footer .export-button,
+.event-edit-footer .cancel-button {
+    margin: 0;
+}

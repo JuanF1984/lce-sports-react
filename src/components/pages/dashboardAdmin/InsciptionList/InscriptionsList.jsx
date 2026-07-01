@@ -42,6 +42,9 @@ const InscriptionsList = () => {
     gameId: "",
   });
 
+  const selectedEvent = eventsData?.find(e => e.id === activeFilters.eventId);
+  const esPresentacion = selectedEvent?.tipo === 'presentacion';
+
   const headerTable = [
     'Fecha de inscripción',
     'Nombre',
@@ -50,7 +53,7 @@ const InscriptionsList = () => {
     'Celular',
     'Email',
     'Localidad',
-    'Juegos',
+    ...(!esPresentacion ? ['Juegos'] : []),
   ];
 
   // Paginación — derivada de filteredInscriptions
@@ -318,7 +321,7 @@ const InscriptionsList = () => {
                   <td>{inscription.celular}</td>
                   <td>{inscription.email}</td>
                   <td>{inscription.localidad}</td>
-                  <td>{inscription.juegos}</td>
+                  {!esPresentacion && <td>{inscription.juegos}</td>}
                 </tr>
               ))
             ) : (

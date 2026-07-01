@@ -62,6 +62,12 @@ export const SeleccionInscripcion = () => {
                     }
 
                     setEventoSeleccionado(data);
+
+                    // Para presentaciones: saltar pasos de tipo/juego, ir directo a datos
+                    if (data.tipo === 'presentacion') {
+                        setTipoInscripcion('individual');
+                        setPaso('datos');
+                    }
                 } catch (err) {
                     navigate('/');
                 } finally {
@@ -84,7 +90,6 @@ export const SeleccionInscripcion = () => {
 
     const hayJuegosEquipo = games.some(game => game.team_option);
 
-    // Precarga de imágenes de juegos en cuanto se conocen
     useEffect(() => {
         if (games.length === 0) return;
         games.forEach(game => {
@@ -98,16 +103,32 @@ export const SeleccionInscripcion = () => {
         return <LogoNeon />;
     }
 
-    // Bloqueo: evento pasado o inscripciones cerradas por admin
+    const esPresentacion = eventoSeleccionado?.tipo === 'presentacion';
+
+    // Cierre: evento pasado, inscripciones cerradas por admin, o fecha_cierre_inscripcion ya pasó
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     const fechaFinEvento = eventoSeleccionado?.fecha_fin
         ? (() => { const [y,m,d] = eventoSeleccionado.fecha_fin.split('-').map(Number); return new Date(y, m-1, d); })()
         : (() => { const [y,m,d] = eventoSeleccionado.fecha_inicio.split('-').map(Number); return new Date(y, m-1, d); })();
     const eventoVencido = fechaFinEvento < hoy;
-    const sinCupos = eventoSeleccionado?.inscripciones_abiertas === false;
+
+    const fechaCierre = eventoSeleccionado?.fecha_cierre_inscripcion;
+    const cerradoPorFecha = fechaCierre && new Date() > new Date(fechaCierre);
+    const sinCupos = eventoSeleccionado?.inscripciones_abiertas === false || cerradoPorFecha;
 
     if (eventoVencido || sinCupos) {
+        const mensajeTitulo = eventoVencido
+            ? 'Este evento ya finalizó'
+            : esPresentacion
+                ? 'Inscripción cerrada'
+                : 'No quedan más cupos';
+        const mensajeSub = eventoVencido
+            ? 'Las inscripciones para este evento están cerradas.'
+            : esPresentacion
+                ? 'Las inscripciones para esta presentación están cerradas.'
+                : 'Los cupos para este evento se han agotado. Seguinos en redes para enterarte de los próximos eventos.';
+
         return (
             <main className="si-page">
                 <div className="si-event-bar">
@@ -115,20 +136,13 @@ export const SeleccionInscripcion = () => {
                 </div>
                 <div className="si-cerrado">
                     <div className="si-cerrado-icon">{sinCupos && !eventoVencido ? '🎮' : '📅'}</div>
-                    <h2 className="si-cerrado-titulo">
-                        {eventoVencido ? 'Este evento ya finalizó' : 'No quedan más cupos'}
-                    </h2>
-                    <p className="si-cerrado-sub">
-                        {eventoVencido
-                            ? 'Las inscripciones para este evento están cerradas.'
-                            : 'Los cupos para este evento se han agotado. Seguinos en redes para enterarte de los próximos eventos.'}
-                    </p>
+                    <h2 className="si-cerrado-titulo">{mensajeTitulo}</h2>
+                    <p className="si-cerrado-sub">{mensajeSub}</p>
                 </div>
             </main>
         );
     }
 
-    // Helper: calcula el siguiente paso tras el formulario de datos
     const siguientePasoTrasDatos = (juegos) => {
         const needsSteam = juegos.some(g => getGameConfig(g.game_name).verifyType === 'steam');
         const needsRiot  = juegos.some(g => getGameConfig(g.game_name).verifyType === 'riot');
@@ -142,7 +156,7 @@ export const SeleccionInscripcion = () => {
         return needsRiot ? 'riot' : 'confirmacion';
     };
 
-    // ── Paso: selección de juego ────────────────────────
+    // ── Paso: selección de juego (solo torneos) ─────────
     if (paso === 'juego') {
         const gamesDisponibles = tipoInscripcion === 'equipo'
             ? games.filter(g => g.team_option)
@@ -162,10 +176,12 @@ export const SeleccionInscripcion = () => {
         if (tipoInscripcion === 'individual') {
             return (
                 <Formulario
-                    onBack={() => setPaso('juego')}
+                    onBack={esPresentacion
+                        ? () => navigate('/')
+                        : () => setPaso('juego')}
                     onNext={(data) => {
                         setFormData(data);
-                        setPaso(siguientePasoTrasDatos(juegosSeleccionados));
+                        setPaso(esPresentacion ? 'confirmacion' : siguientePasoTrasDatos(juegosSeleccionados));
                     }}
                     eventoId={eventoSeleccionado.id}
                     juegosSeleccionados={juegosSeleccionados}
@@ -244,7 +260,7 @@ export const SeleccionInscripcion = () => {
         );
     }
 
-    // ── Paso: tipo de inscripción (default) ─────────────
+    // ── Paso: tipo de inscripción (solo torneos) ────────
     const fechaCorta = formatearFechaCorta(eventoSeleccionado.fecha_inicio);
     const hora = formatearHora(eventoSeleccionado.hora_inicio);
 
@@ -252,7 +268,6 @@ export const SeleccionInscripcion = () => {
         <main className="si-page">
             {showModalEvento && <EventoModal evento={eventoSeleccionado} onClose={() => setShowModalEvento(false)} />}
 
-            {/* Barra de info del evento */}
             <div className="si-event-bar">
                 <p className="si-event-text">
                     {eventoSeleccionado.localidad}
@@ -268,10 +283,8 @@ export const SeleccionInscripcion = () => {
                 </button>
             </div>
 
-            {/* Título */}
             <h2 className="si-titulo">¿Cómo te anotás?</h2>
 
-            {/* Grid de cards */}
             <div className="si-cards-grid">
                 <button
                     className="si-card"

@@ -15,10 +15,11 @@ export const useProximosEventos = (cantidad) => {
 
                 let query = supabase
                     .from('events')
-                    .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, ubicacion_url, slug, imagen_url, inscripciones_abiertas')
+                    .select('id, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, ubicacion_url, slug, imagen_url, inscripciones_abiertas, tipo')
                     // Mostrar si aún no terminó (fecha_fin >= hoy)
                     // o si no tiene fecha_fin y aún no empezó/es hoy (fecha_inicio >= ayer)
                     .or(`fecha_fin.gte.${hoy},and(fecha_fin.is.null,fecha_inicio.gte.${ayer})`)
+                    .eq('visible_en_home', true)
                     .order('fecha_inicio', { ascending: true });
 
                 if (cantidad) query = query.limit(cantidad);

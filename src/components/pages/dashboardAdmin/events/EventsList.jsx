@@ -6,140 +6,298 @@ import supabase from '../../../../utils/supabase';
 import { AddTournamentForm } from './AddTournamentForm';
 import { localidadesBuenosAires } from '../../../../data/localidades';
 
+const BASE_URL = 'https://lcesports.com.ar';
+
+const isoToDatetimeLocal = (isoStr) => {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const EditEventModal = ({
+    event,
+    initialGames,
+    games,
+    loadingGames,
+    errorGames,
+    isSaving,
+    onSave,
+    onCancel,
+}) => {
+    const [form, setForm] = useState({
+        fecha_inicio: event.fecha_inicio,
+        fecha_fin: event.fecha_fin,
+        localidad: event.localidad,
+        ubicacion_url: event.ubicacion_url || '',
+        inscripciones_abiertas: event.inscripciones_abiertas ?? true,
+        tipo: event.tipo || 'torneo',
+        visible_en_home: event.visible_en_home ?? true,
+        fecha_cierre_inscripcion: isoToDatetimeLocal(event.fecha_cierre_inscripcion),
+    });
+    const [selectedGames, setSelectedGames] = useState(initialGames);
+
+    const esPresentacion = form.tipo === 'presentacion';
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        const newValue = type === 'checkbox' ? checked : value;
+        setForm(prev => {
+            const updated = { ...prev, [name]: newValue };
+            if (name === 'tipo' && newValue === 'presentacion') {
+                updated.visible_en_home = false;
+            }
+            return updated;
+        });
+    };
+
+    const toggleGame = (gameId) => {
+        setSelectedGames(prev =>
+            prev.includes(gameId) ? prev.filter(id => id !== gameId) : [...prev, gameId]
+        );
+    };
+
+    const localidadesOptions = localidadesBuenosAires.map(l => ({ value: l, label: l }));
+
+    return (
+        <div className="event-edit-overlay" onClick={onCancel}>
+            <div className="event-edit-modal" onClick={e => e.stopPropagation()}>
+                <div className="event-edit-header">
+                    <h3 className="event-edit-title">Modificar evento</h3>
+                    <button className="event-edit-close" onClick={onCancel} aria-label="Cerrar">×</button>
+                </div>
+
+                <div className="event-edit-body">
+                    {/* Tipo + visibilidad */}
+                    <div className="event-edit-section">
+                        <div className="event-edit-field">
+                            <label className="event-edit-label">Tipo de evento</label>
+                            <select name="tipo" value={form.tipo} onChange={handleChange} className="event-edit-select">
+                                <option value="torneo">Torneo</option>
+                                <option value="presentacion">Presentación</option>
+                            </select>
+                        </div>
+                        <div className="event-edit-field event-edit-field--center">
+                            <label className="event-edit-checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    name="visible_en_home"
+                                    checked={form.visible_en_home}
+                                    onChange={handleChange}
+                                />
+                                Visible en la home
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Fechas */}
+                    <div className="event-edit-section">
+                        <div className="event-edit-field">
+                            <label className="event-edit-label">Fecha de inicio</label>
+                            <input type="date" name="fecha_inicio" value={form.fecha_inicio} onChange={handleChange} className="event-edit-input" />
+                        </div>
+                        <div className="event-edit-field">
+                            <label className="event-edit-label">Fecha de finalización</label>
+                            <input type="date" name="fecha_fin" value={form.fecha_fin} onChange={handleChange} className="event-edit-input" />
+                        </div>
+                    </div>
+
+                    {/* Localidad + Maps */}
+                    <div className="event-edit-section">
+                        <div className="event-edit-field">
+                            <label className="event-edit-label">Localidad</label>
+                            <select name="localidad" value={form.localidad} onChange={handleChange} className="event-edit-select">
+                                <option value="">Seleccioná una localidad</option>
+                                {localidadesOptions.map((l, i) => (
+                                    <option key={i} value={l.value}>{l.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="event-edit-field">
+                            <label className="event-edit-label">URL Google Maps</label>
+                            <input
+                                type="text"
+                                name="ubicacion_url"
+                                value={form.ubicacion_url}
+                                onChange={handleChange}
+                                className="event-edit-input"
+                                placeholder="https://maps.google.com/..."
+                            />
+                        </div>
+                    </div>
+
+                    {/* Inscripciones */}
+                    <div className="event-edit-section">
+                        <div className="event-edit-field event-edit-field--center">
+                            <label className="event-edit-checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    name="inscripciones_abiertas"
+                                    checked={form.inscripciones_abiertas}
+                                    onChange={handleChange}
+                                />
+                                Inscripciones abiertas
+                            </label>
+                        </div>
+                        <div className="event-edit-field">
+                            <label className="event-edit-label">Cierre anticipado (opcional)</label>
+                            <input
+                                type="datetime-local"
+                                name="fecha_cierre_inscripcion"
+                                value={form.fecha_cierre_inscripcion}
+                                onChange={handleChange}
+                                className="event-edit-input"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Juegos */}
+                    {!esPresentacion ? (
+                        <div className="event-edit-field event-edit-field--full">
+                            <label className="event-edit-label">Juegos</label>
+                            {loadingGames && <p className="event-edit-hint">Cargando juegos...</p>}
+                            {errorGames && <p className="event-edit-error">Error al cargar juegos</p>}
+                            {!loadingGames && !errorGames && (
+                                <div className="event-edit-games">
+                                    {games?.map(game => (
+                                        <label key={game.id} className="event-edit-game-label">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedGames.includes(game.id)}
+                                                onChange={() => toggleGame(game.id)}
+                                            />
+                                            {game.game_name}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="event-edit-field event-edit-field--full">
+                            <p className="event-edit-hint">Las presentaciones no tienen juegos asociados.</p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="event-edit-footer">
+                    <button className="cancel-button" onClick={onCancel} disabled={isSaving}>
+                        Cancelar
+                    </button>
+                    <button
+                        className="export-button"
+                        onClick={() => onSave(form, selectedGames)}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? 'Guardando…' : 'Guardar cambios'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const EventsList = () => {
-    const [showModal, setShowModal] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [editingEvent, setEditingEvent] = useState(null);
     const { eventsData, eventsError, eventsLoading, setEventsData } = useEvents();
-    const [editingId, setEditingId] = useState(null);
-    const [editedEvent, setEditedEvent] = useState(null);
     const [message, setMessage] = useState({ type: '', text: '' });
-    const [selectedGames, setSelectedGames] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [localEventGames, setLocalEventGames] = useState({});
+    const [inscriptionLink, setInscriptionLink] = useState('');
+    const [copied, setCopied] = useState(false);
 
+    const anyModalOpen = showCreateModal || !!editingEvent;
     useEffect(() => {
-        document.body.style.overflow = showModal ? 'hidden' : '';
+        document.body.style.overflow = anyModalOpen ? 'hidden' : '';
         return () => { document.body.style.overflow = ''; };
-    }, [showModal]);
+    }, [anyModalOpen]);
 
-    const eventIds = eventsData?.map(event => event.id) || [];
+    const eventIds = eventsData?.map(e => e.id) || [];
     const { eventGames, loading: loadingEventGames, error: errorEventGames } = useEventGames(eventIds);
     const { games, loading: loadingGames, error: errorGames } = useGames();
 
-    // Inicializar localEventGames cuando eventGames cambia
     useEffect(() => {
         if (eventGames && Object.keys(eventGames).length > 0) {
             setLocalEventGames(eventGames);
         }
     }, [eventGames]);
 
-    const localidadesOptions = localidadesBuenosAires.map((localidad) => ({
-        value: localidad,
-        label: localidad
-    }));
-
-    const startEditing = (event) => {
-        setEditingId(event.id);
-        setEditedEvent({
-            fecha_inicio: event.fecha_inicio,
-            fecha_fin: event.fecha_fin,
-            localidad: event.localidad,
-            ubicacion_url: event.ubicacion_url || "",
-            inscripciones_abiertas: event.inscripciones_abiertas ?? true,
-        });
-        const eventGameIds = localEventGames[event.id]?.map(game => game.id) || [];
-        setSelectedGames(eventGameIds);
-    };
-
-    const cancelEditing = () => {
-        setEditingId(null);
-        setEditedEvent(null);
-        setSelectedGames([]);
-    };
-
-    const handleInputChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setEditedEvent(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-    };
-
-    const handleCheckboxChange = (gameId) => {
-        setSelectedGames(prev => {
-            if (prev.includes(gameId)) {
-                return prev.filter(id => id !== gameId);
-            } else {
-                return [...prev, gameId];
-            }
-        });
-    };
-
-    const saveChanges = async (id) => {
-        if (isSaving) return;
+    const saveChanges = async (form, selectedGames) => {
+        if (isSaving || !editingEvent) return;
         setIsSaving(true);
 
         try {
-            // Update event details
+            const payload = {
+                ...form,
+                fecha_cierre_inscripcion: form.fecha_cierre_inscripcion
+                    ? new Date(form.fecha_cierre_inscripcion).toISOString()
+                    : null,
+            };
+
             const { error: eventError } = await supabase
                 .from('events')
-                .update(editedEvent)
-                .eq('id', id);
-
+                .update(payload)
+                .eq('id', editingEvent.id);
             if (eventError) throw eventError;
 
-            // Delete existing game associations
             const { error: deleteError } = await supabase
                 .from('event_games')
                 .delete()
-                .eq('event_id', id);
-
+                .eq('event_id', editingEvent.id);
             if (deleteError) throw deleteError;
 
-            // Insert new game associations
-            if (selectedGames.length > 0) {
+            if (form.tipo !== 'presentacion' && selectedGames.length > 0) {
                 const { error: insertError } = await supabase
                     .from('event_games')
-                    .insert(
-                        selectedGames.map(gameId => ({
-                            event_id: id,
-                            game_id: gameId
-                        }))
-                    );
-
+                    .insert(selectedGames.map(gameId => ({ event_id: editingEvent.id, game_id: gameId })));
                 if (insertError) throw insertError;
             }
 
-            // Update local states
-            setEventsData(prevEvents =>
-                prevEvents.map(event =>
-                    event.id === id ? { ...event, ...editedEvent } : event
-                )
-            );
-
-            // Update local event games state
-            const selectedGamesDetails = games
-                .filter(game => selectedGames.includes(game.id))
-                .map(game => ({
-                    id: game.id,
-                    game_name: game.game_name
-                }));
+            setEventsData(prev => prev.map(e => e.id === editingEvent.id ? { ...e, ...payload } : e));
 
             setLocalEventGames(prev => ({
                 ...prev,
-                [id]: selectedGamesDetails
+                [editingEvent.id]: games
+                    .filter(g => selectedGames.includes(g.id))
+                    .map(g => ({ id: g.id, game_name: g.game_name })),
             }));
 
-            setEditingId(null);
-            setEditedEvent(null);
-            setSelectedGames([]);
+            if (editingEvent.slug) {
+                setInscriptionLink(`${BASE_URL}/formulario/${editingEvent.slug}`);
+            }
+
+            setEditingEvent(null);
             setMessage({ type: 'success', text: 'Evento actualizado correctamente' });
-            setTimeout(() => setMessage({ type: '', text: '' }), 2000);
-        } catch (error) {
-            console.error('Error al actualizar:', error);
+            setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        } catch (err) {
+            console.error('Error al actualizar:', err);
             setMessage({ type: 'error', text: 'Error al guardar los cambios' });
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const cerrarTodasPresentaciones = async () => {
+        if (!window.confirm('¿Cerrar las inscripciones de todas las presentaciones?')) return;
+        const { error } = await supabase
+            .from('events')
+            .update({ inscripciones_abiertas: false })
+            .eq('tipo', 'presentacion');
+        if (error) {
+            setMessage({ type: 'error', text: 'Error al cerrar inscripciones' });
+        } else {
+            setEventsData(prev => prev.map(e =>
+                e.tipo === 'presentacion' ? { ...e, inscripciones_abiertas: false } : e
+            ));
+            setMessage({ type: 'success', text: 'Inscripciones de todas las presentaciones cerradas' });
+            setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        }
+    };
+
+    const copyLink = async () => {
+        await navigator.clipboard.writeText(inscriptionLink);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
 
     if (eventsLoading) return <div className="inscriptions-container">Cargando eventos...</div>;
@@ -147,10 +305,16 @@ export const EventsList = () => {
 
     return (
         <div className="inscriptions-container">
-            <h2 className='titulos-admin'>Lista de Eventos</h2>
-            <button className="export-button" onClick={() => setShowModal(true)}>
-                Cargar Evento
-            </button>
+            <h2 className="titulos-admin">Lista de Eventos</h2>
+
+            <div className="events-actions">
+                <button className="export-button" onClick={() => setShowCreateModal(true)}>
+                    Cargar Evento
+                </button>
+                <button className="btn-warning-outline" onClick={cerrarTodasPresentaciones}>
+                    Cerrar inscripciones de presentaciones
+                </button>
+            </div>
 
             {message.text && (
                 <div className={message.type === 'success' ? 'success-message-admin' : 'error-message-admin'}>
@@ -158,173 +322,102 @@ export const EventsList = () => {
                 </div>
             )}
 
+            {inscriptionLink && (
+                <div className="inscription-link-box">
+                    <span>{inscriptionLink}</span>
+                    <button type="button" className="btn-copy" onClick={copyLink}>
+                        {copied ? '¡Copiado!' : 'Copiar'}
+                    </button>
+                </div>
+            )}
+
             <div className="table-wrapper">
-            <table className="inscriptions-table">
-                <thead>
-                    <tr>
-                        <th>Fecha Inicio</th>
-                        <th>Fecha Fin</th>
-                        <th>Localidad</th>
-                        <th>Cupos</th>
-                        <th>Juegos</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {eventsData?.map(event => (
-                        <tr key={event.id}>
-                            {editingId === event.id ? (
-                                <>
-                                    <td>
-                                        <input
-                                            type="date"
-                                            name="fecha_inicio"
-                                            value={editedEvent.fecha_inicio}
-                                            onChange={handleInputChange}
-                                            className="filter-date"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="date"
-                                            name="fecha_fin"
-                                            value={editedEvent.fecha_fin}
-                                            onChange={handleInputChange}
-                                            className="filter-date"
-                                        />
-                                    </td>
-                                    <td>
-                                        <select
-                                            name="localidad"
-                                            value={editedEvent.localidad}
-                                            onChange={handleInputChange}
-                                            className="filter-select"
-                                        >
-                                            <option value="">Selecciona una localidad</option>
-                                            {localidadesOptions.map((localidad, index) => (
-                                                <option key={index} value={localidad.value}>
-                                                    {localidad.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <input
-                                            type="text"
-                                            name="ubicacion_url"
-                                            value={editedEvent.ubicacion_url}
-                                            onChange={handleInputChange}
-                                            className="filter-select"
-                                            placeholder="https://maps.google.com/..."
-                                            style={{ marginTop: '4px' }}
-                                        />
-                                    </td>
-                                    <td>
-                                        <label className="game-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                                            <input
-                                                type="checkbox"
-                                                name="inscripciones_abiertas"
-                                                checked={editedEvent.inscripciones_abiertas}
-                                                onChange={handleInputChange}
-                                            />
-                                            Inscripciones abiertas
-                                        </label>
-                                    </td>
-                                    <td>
-                                        {loadingGames && <p>Cargando juegos...</p>}
-                                        {errorGames && <p className="error-message">Error al cargar juegos: {errorGames}</p>}
-
-                                        {!loadingGames && !errorGames && games?.length > 0 ? (
-                                            <div className="games-checkbox-container">
-                                                {games.map((game) => (
-                                                    <label key={game.id} className="game-checkbox">
-                                                        <input
-                                                            type="checkbox"
-                                                            value={game.id}
-                                                            checked={selectedGames.includes(game.id)}
-                                                            onChange={() => handleCheckboxChange(game.id)}
-                                                        />
-                                                        {game.game_name}
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            !loadingGames && <p>No hay juegos disponibles.</p>
-                                        )}
-                                    </td>
-                                    <td>
-                                        <button
-                                            className="export-button"
-                                            onClick={() => saveChanges(event.id)}
-                                            disabled={isSaving}
-                                        >
-                                            {isSaving ? 'Guardando...' : 'Aceptar'}
-                                        </button>
-                                        <button
-                                            className="cancel-button"
-                                            onClick={cancelEditing}
-                                            disabled={isSaving}
-                                        >
-                                            Cancelar
-                                        </button>
-                                    </td>
-                                </>
-                            ) : (
-                                <>
-                                    <td>{new Date(event.fecha_inicio + 'T00:00:00').toLocaleDateString()}</td>
-                                    <td>{new Date(event.fecha_fin + 'T00:00:00').toLocaleDateString()}</td>
-                                    <td>{event.localidad}</td>
-                                    <td>
-                                        <span style={{
-                                            padding: '2px 8px',
-                                            borderRadius: '12px',
-                                            fontSize: '0.8rem',
-                                            fontWeight: 600,
-                                            background: event.inscripciones_abiertas !== false ? '#d4edda' : '#f8d7da',
-                                            color: event.inscripciones_abiertas !== false ? '#155724' : '#721c24',
-                                        }}>
-                                            {event.inscripciones_abiertas !== false ? 'Abiertas' : 'Sin cupos'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {loadingEventGames && <label>Cargando juegos...</label>}
-                                        {errorEventGames && <label>Error al cargar juegos: {errorEventGames}</label>}
-
-                                        {!loadingEventGames && !errorEventGames && localEventGames[event.id]?.length > 0 ? (
-                                            <div className="games-tags-container">
-                                                {localEventGames[event.id]?.map(game => (
-                                                    <span key={game.game_name} className="game-tag">
-                                                        {game.game_name}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            !loadingEventGames && <p>No hay juegos disponibles.</p>
-                                        )}
-                                    </td>
-                                    <td>
-                                        <button className="export-button" onClick={() => startEditing(event)}>
-                                            Modificar
-                                        </button>
-                                    </td>
-                                </>
-                            )}
+                <table className="inscriptions-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Fecha inicio</th>
+                            <th>Fecha fin</th>
+                            <th>Localidad</th>
+                            <th>Cupos</th>
+                            <th>Juegos</th>
+                            <th>Acciones</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {eventsData?.map(event => (
+                            <tr key={event.id}>
+                                <td>
+                                    <span className={`event-tipo-badge event-tipo-badge--${event.tipo === 'presentacion' ? 'presentacion' : 'torneo'}`}>
+                                        {event.tipo === 'presentacion' ? 'Presentación' : 'Torneo'}
+                                    </span>
+                                </td>
+                                <td>{new Date(event.fecha_inicio + 'T00:00:00').toLocaleDateString()}</td>
+                                <td>{new Date(event.fecha_fin + 'T00:00:00').toLocaleDateString()}</td>
+                                <td>{event.localidad}</td>
+                                <td>
+                                    <span className={`event-cupos-badge event-cupos-badge--${event.inscripciones_abiertas !== false ? 'abiertas' : 'cerradas'}`}>
+                                        {event.inscripciones_abiertas !== false ? 'Abiertas' : 'Cerradas'}
+                                    </span>
+                                </td>
+                                <td>
+                                    {event.tipo === 'presentacion' ? (
+                                        <span style={{ fontSize: '0.82rem', color: '#9ca3af' }}>—</span>
+                                    ) : (
+                                        <>
+                                            {loadingEventGames && <span style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Cargando…</span>}
+                                            {!loadingEventGames && !errorEventGames && localEventGames[event.id]?.length > 0 ? (
+                                                <div className="games-tags-container">
+                                                    {localEventGames[event.id].map(game => (
+                                                        <span key={game.game_name} className="game-tag">{game.game_name}</span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                !loadingEventGames && <span style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Sin juegos</span>
+                                            )}
+                                        </>
+                                    )}
+                                </td>
+                                <td>
+                                    <button
+                                        className="export-button"
+                                        style={{ margin: '0' }}
+                                        onClick={() => setEditingEvent(event)}
+                                    >
+                                        Modificar
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
 
-            {showModal && (
+            {/* Modal: editar evento */}
+            {editingEvent && (
+                <EditEventModal
+                    event={editingEvent}
+                    initialGames={localEventGames[editingEvent.id]?.map(g => g.id) || []}
+                    games={games}
+                    loadingGames={loadingGames}
+                    errorGames={errorGames}
+                    isSaving={isSaving}
+                    onSave={saveChanges}
+                    onCancel={() => setEditingEvent(null)}
+                />
+            )}
+
+            {/* Modal: crear evento */}
+            {showCreateModal && (
                 <div className="modal-torneo">
-                    <div className="modal-content">
-                        <button className="cancel-button" onClick={() => setShowModal(false)}>Cerrar</button>
-                        <AddTournamentForm
-                            onSuccess={() => {
-                                setShowModal(false);
-                                setMessage({ type: 'success', text: 'Torneo creado con éxito.' });
-                                setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-                            }}
-                        />
-                    </div>
+                    <button className="cancel-button" onClick={() => setShowCreateModal(false)}>Cerrar</button>
+                    <AddTournamentForm
+                        onSuccess={(slug) => {
+                            if (slug) setInscriptionLink(`${BASE_URL}/formulario/${slug}`);
+                            setMessage({ type: 'success', text: 'Evento creado con éxito.' });
+                            setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+                        }}
+                    />
                 </div>
             )}
         </div>
