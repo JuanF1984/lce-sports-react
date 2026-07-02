@@ -82,8 +82,8 @@ export const Confirmacion = ({
                 if (gameErr) throw gameErr;
             }
 
-            // Email (best-effort)
-            if (formData.email) {
+            // Email (best-effort) — las presentaciones no llevan mail de confirmación de torneo
+            if (formData.email && eventoSeleccionado?.tipo !== 'presentacion') {
                 try {
                     await enviarConfirmacionIndividual(
                         { ...inscriptionData, qr_code: qrString },

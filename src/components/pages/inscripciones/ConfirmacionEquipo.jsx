@@ -120,8 +120,8 @@ export const ConfirmacionEquipo = ({
                 });
             }
 
-            // 3. Email de confirmación (best-effort)
-            if (formValues.email) {
+            // 3. Email de confirmación (best-effort) — las presentaciones no llevan mail de confirmación de torneo
+            if (formValues.email && eventoSeleccionado?.tipo !== 'presentacion') {
                 try {
                     const juegoSeleccionado = juegosSeleccionados.find(g => g.id === selectedGame);
                     await enviarConfirmacionEquipo(
