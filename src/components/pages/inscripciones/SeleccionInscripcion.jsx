@@ -57,6 +57,9 @@ export const SeleccionInscripcion = () => {
                         .single();
 
                     if (error || !data) {
+                        // Se deja registrado el motivo real (RLS, slug duplicado, etc.)
+                        // en vez de perderlo silenciosamente al volver a '/'.
+                        console.error('No se pudo cargar el evento por slug:', eventoSlug, error);
                         navigate('/');
                         return;
                     }
@@ -69,6 +72,7 @@ export const SeleccionInscripcion = () => {
                         setPaso('datos');
                     }
                 } catch (err) {
+                    console.error('Error inesperado al cargar el evento por slug:', eventoSlug, err);
                     navigate('/');
                 } finally {
                     setLoading(false);
@@ -101,6 +105,14 @@ export const SeleccionInscripcion = () => {
 
     if (loading || loadingGames) {
         return <LogoNeon />;
+    }
+
+    // El evento no pudo cargarse (slug inexistente/duplicado, error de Supabase, etc.).
+    // El efecto de carga ya disparó navigate('/') y registró el error real en consola;
+    // acá solo evitamos renderizar accediendo a propiedades de null mientras se completa
+    // esa navegación.
+    if (!eventoSeleccionado) {
+        return null;
     }
 
     const esPresentacion = eventoSeleccionado?.tipo === 'presentacion';

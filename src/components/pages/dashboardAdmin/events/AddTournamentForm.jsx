@@ -7,15 +7,42 @@ const BASE_URL = 'https://lcesports.com.ar';
 
 const DIAS_NOMBRES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-const generateSlug = (localidad, fecha) => {
-    if (!localidad || !fecha) return '';
+// Slug base: lugar + fecha + tipo (p. ej. "chascomus-2026-08-22-torneo").
+// No incluye correlativo: eso lo resuelve generateUniqueSlug contra los slugs existentes.
+const buildSlugBase = (localidad, fecha, tipo) => {
+    if (!localidad || !fecha || !tipo) return '';
     const loc = localidad
         .toLowerCase()
         .normalize('NFD')
         .replace(/[̀-ͯ]/g, '')
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '');
-    return `${loc}-${fecha}`;
+    return `${loc}-${fecha}-${tipo}`;
+};
+
+// Busca el próximo slug libre para esta base consultando `events`. Si la base ya
+// existe, agrega un correlativo -2, -3, etc. No es 100% atómico (dos altas en
+// paralelo podrían pisarse la misma consulta): el UNIQUE en la base es la
+// protección definitiva, ver docs/supabase.md.
+const generateUniqueSlug = async (localidad, fecha, tipo) => {
+    const base = buildSlugBase(localidad, fecha, tipo);
+    if (!base) return '';
+
+    const { data, error } = await supabase
+        .from('events')
+        .select('slug')
+        .like('slug', `${base}%`);
+
+    if (error) throw error;
+
+    const existentes = new Set((data || []).map(e => e.slug));
+    if (!existentes.has(base)) return base;
+
+    let n = 2;
+    while (existentes.has(`${base}-${n}`)) {
+        n += 1;
+    }
+    return `${base}-${n}`;
 };
 
 const getDatesInRange = (startStr, endStr) => {
@@ -67,6 +94,7 @@ export const AddTournamentForm = ({ onSuccess }) => {
     const [imagenPreview, setImagenPreview] = useState('');
     const [uploadingImage, setUploadingImage] = useState(false);
     const [errorImagen, setErrorImagen] = useState('');
+    const [submitting, setSubmitting] = useState(false);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -132,6 +160,11 @@ export const AddTournamentForm = ({ onSuccess }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Evita altas duplicadas por doble click / doble submit mientras la
+        // primera request todavía está en vuelo (causa concreta de eventos
+        // duplicados con el mismo lugar+fecha detectada en producción).
+        if (submitting) return;
+        setSubmitting(true);
         setErrorMessage("");
         setSuccessMessage("");
         setSavedLink("");
@@ -140,11 +173,13 @@ export const AddTournamentForm = ({ onSuccess }) => {
 
         if (!fecha_inicio || !fecha_fin || !localidad) {
             setErrorMessage("Por favor completá todos los campos obligatorios (*).");
+            setSubmitting(false);
             return;
         }
 
         if (!esPresentacion && selectedGames.length === 0) {
             setErrorMessage("Por favor, seleccioná al menos un juego.");
+            setSubmitting(false);
             return;
         }
 
@@ -153,6 +188,7 @@ export const AddTournamentForm = ({ onSuccess }) => {
                 if (getEffectiveDays(gameId).length === 0) {
                     const game = games.find(g => g.id === gameId);
                     setErrorMessage(`El juego "${game?.game_name}" no tiene ningún día seleccionado.`);
+                    setSubmitting(false);
                     return;
                 }
             }
@@ -178,27 +214,48 @@ export const AddTournamentForm = ({ onSuccess }) => {
                 setUploadingImage(false);
             }
 
-            const slug = generateSlug(localidad, fecha_inicio);
+            // Reintenta con el próximo correlativo si otra alta en paralelo se llevó
+            // puesto el mismo slug (colisión detectada por el UNIQUE de la base).
+            let slug = await generateUniqueSlug(localidad, fecha_inicio, tipo);
+            let eventData = null;
+            let eventError = null;
 
-            const { data: eventData, error: eventError } = await supabase
-                .from('events')
-                .insert({
-                    fecha_inicio,
-                    fecha_fin,
-                    localidad,
-                    hora_inicio: hora_inicio || null,
-                    direccion: direccion || null,
-                    ubicacion_url: ubicacion_url || null,
-                    slug,
-                    imagen_url,
-                    tipo,
-                    visible_en_home,
-                    fecha_cierre_inscripcion: fecha_cierre_inscripcion
-                        ? new Date(fecha_cierre_inscripcion).toISOString()
-                        : null,
-                })
-                .select()
-                .single();
+            for (let intento = 0; intento < 5; intento++) {
+                const res = await supabase
+                    .from('events')
+                    .insert({
+                        fecha_inicio,
+                        fecha_fin,
+                        localidad,
+                        hora_inicio: hora_inicio || null,
+                        direccion: direccion || null,
+                        ubicacion_url: ubicacion_url || null,
+                        slug,
+                        imagen_url,
+                        tipo,
+                        visible_en_home,
+                        fecha_cierre_inscripcion: fecha_cierre_inscripcion
+                            ? new Date(fecha_cierre_inscripcion).toISOString()
+                            : null,
+                    })
+                    .select()
+                    .single();
+
+                if (!res.error) {
+                    eventData = res.data;
+                    eventError = null;
+                    break;
+                }
+
+                const esColisionDeSlug = res.error.code === '23505';
+                if (!esColisionDeSlug) {
+                    eventError = res.error;
+                    break;
+                }
+
+                eventError = res.error;
+                slug = await generateUniqueSlug(localidad, fecha_inicio, tipo);
+            }
 
             if (eventError) throw eventError;
             if (!eventData) throw new Error("No se recibieron datos.");
@@ -243,6 +300,8 @@ export const AddTournamentForm = ({ onSuccess }) => {
             const msg = err?.message || err?.error_description || JSON.stringify(err);
             console.error("Error al guardar evento:", msg, err);
             setErrorMessage(`Error: ${msg}`);
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -448,10 +507,10 @@ export const AddTournamentForm = ({ onSuccess }) => {
                 <button
                     type="submit"
                     className="export-button"
-                    disabled={uploadingImage}
-                    style={{ opacity: uploadingImage ? 0.6 : 1 }}
+                    disabled={uploadingImage || submitting}
+                    style={{ opacity: (uploadingImage || submitting) ? 0.6 : 1 }}
                 >
-                    {uploadingImage ? 'Subiendo imagen...' : 'Guardar evento'}
+                    {uploadingImage ? 'Subiendo imagen...' : submitting ? 'Guardando…' : 'Guardar evento'}
                 </button>
             </form>
         </div>

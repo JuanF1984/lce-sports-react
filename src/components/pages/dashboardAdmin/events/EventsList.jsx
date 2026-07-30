@@ -42,13 +42,9 @@ const EditEventModal = ({
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         const newValue = type === 'checkbox' ? checked : value;
-        setForm(prev => {
-            const updated = { ...prev, [name]: newValue };
-            if (name === 'tipo' && newValue === 'presentacion') {
-                updated.visible_en_home = false;
-            }
-            return updated;
-        });
+        // 'tipo' es inmutable una vez creado el evento: no tiene campo editable
+        // (ver el <select disabled> más abajo), así que nunca llega acá.
+        setForm(prev => ({ ...prev, [name]: newValue }));
     };
 
     const toggleGame = (gameId) => {
@@ -72,10 +68,19 @@ const EditEventModal = ({
                     <div className="event-edit-section">
                         <div className="event-edit-field">
                             <label className="event-edit-label">Tipo de evento</label>
-                            <select name="tipo" value={form.tipo} onChange={handleChange} className="event-edit-select">
+                            <select
+                                name="tipo"
+                                value={form.tipo}
+                                disabled
+                                className="event-edit-select"
+                                title="El tipo de evento no se puede modificar después de creado"
+                            >
                                 <option value="torneo">Torneo</option>
                                 <option value="presentacion">Presentación</option>
                             </select>
+                            <p className="event-edit-hint">
+                                No se puede modificar después de creado. Si es incorrecto, eliminá el evento (si no tiene inscripciones) y creá uno nuevo.
+                            </p>
                         </div>
                         <div className="event-edit-field event-edit-field--center">
                             <label className="event-edit-checkbox-label">
@@ -205,6 +210,8 @@ export const EventsList = () => {
     const [localEventGames, setLocalEventGames] = useState({});
     const [inscriptionLink, setInscriptionLink] = useState('');
     const [copied, setCopied] = useState(false);
+    const [tieneInscripciones, setTieneInscripciones] = useState({}); // { [eventId]: boolean } — solo para mostrar en la UI
+    const [deletingId, setDeletingId] = useState(null);
 
     const anyModalOpen = showCreateModal || !!editingEvent;
     useEffect(() => {
@@ -222,13 +229,41 @@ export const EventsList = () => {
         }
     }, [eventGames]);
 
+    // Trae, para cada evento listado, si tiene al menos una inscripción asociada.
+    // Es solo para que la UI deje claro qué eventos son borrables — la validación
+    // real y autoritativa se vuelve a hacer justo antes del DELETE, en handleDeleteEvent.
+    useEffect(() => {
+        const fetchInscripcionesFlags = async () => {
+            if (eventIds.length === 0) return;
+            const { data, error } = await supabase
+                .from('inscriptions')
+                .select('id_evento')
+                .in('id_evento', eventIds);
+
+            if (error) {
+                console.error('Error al verificar inscripciones por evento:', error);
+                return;
+            }
+
+            const conInscripciones = new Set((data || []).map(r => r.id_evento));
+            setTieneInscripciones(
+                Object.fromEntries(eventIds.map(id => [id, conInscripciones.has(id)]))
+            );
+        };
+        fetchInscripcionesFlags();
+    }, [JSON.stringify(eventIds)]);
+
     const saveChanges = async (form, selectedGames) => {
         if (isSaving || !editingEvent) return;
         setIsSaving(true);
 
         try {
+            // 'tipo' se excluye a propósito del payload de update: es inmutable
+            // después de creado el evento (el <select> de arriba ya está disabled,
+            // esto es una segunda barrera por si algo llega a tocar form.tipo).
+            const { tipo: _tipoInmutable, ...formEditable } = form;
             const payload = {
-                ...form,
+                ...formEditable,
                 fecha_cierre_inscripcion: form.fecha_cierre_inscripcion
                     ? new Date(form.fecha_cierre_inscripcion).toISOString()
                     : null,
@@ -294,6 +329,63 @@ export const EventsList = () => {
         }
     };
 
+    // Elimina un evento SOLO si no tiene inscripciones asociadas. La comprobación
+    // se hace acá, contra la base, en el momento real del borrado — no alcanza con
+    // deshabilitar el botón en la UI (eso es sólo una ayuda visual, ver tieneInscripciones).
+    const handleDeleteEvent = async (event) => {
+        if (deletingId) return;
+        setDeletingId(event.id);
+
+        try {
+            const { data: inscripcionesExistentes, error: checkError } = await supabase
+                .from('inscriptions')
+                .select('id')
+                .eq('id_evento', event.id)
+                .limit(1);
+
+            if (checkError) throw checkError;
+
+            if (inscripcionesExistentes && inscripcionesExistentes.length > 0) {
+                setMessage({ type: 'error', text: 'No se puede eliminar este evento porque tiene inscripciones asociadas.' });
+                setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+                return;
+            }
+
+            if (!window.confirm(`¿Eliminar el evento de ${event.localidad} (${event.fecha_inicio})? Esta acción no se puede deshacer.`)) {
+                return;
+            }
+
+            const { error: deleteGamesError } = await supabase
+                .from('event_games')
+                .delete()
+                .eq('event_id', event.id);
+            if (deleteGamesError) throw deleteGamesError;
+
+            const { error: deleteEventError } = await supabase
+                .from('events')
+                .delete()
+                .eq('id', event.id);
+            if (deleteEventError) throw deleteEventError;
+
+            setEventsData(prev => prev.filter(e => e.id !== event.id));
+            setLocalEventGames(prev => {
+                const { [event.id]: _omit, ...rest } = prev;
+                return rest;
+            });
+            setTieneInscripciones(prev => {
+                const { [event.id]: _omit, ...rest } = prev;
+                return rest;
+            });
+            setMessage({ type: 'success', text: 'Evento eliminado correctamente' });
+            setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        } catch (err) {
+            console.error('Error al eliminar evento:', err);
+            setMessage({ type: 'error', text: 'Error al eliminar el evento' });
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
     const copyLink = async () => {
         await navigator.clipboard.writeText(inscriptionLink);
         setCopied(true);
@@ -341,6 +433,7 @@ export const EventsList = () => {
                             <th>Localidad</th>
                             <th>Cupos</th>
                             <th>Juegos</th>
+                            <th>Inscriptos</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -379,13 +472,31 @@ export const EventsList = () => {
                                     )}
                                 </td>
                                 <td>
-                                    <button
-                                        className="export-button"
-                                        style={{ margin: '0' }}
-                                        onClick={() => setEditingEvent(event)}
-                                    >
-                                        Modificar
-                                    </button>
+                                    <span className={`event-cupos-badge event-cupos-badge--${tieneInscripciones[event.id] ? 'cerradas' : 'abiertas'}`}>
+                                        {tieneInscripciones[event.id] ? 'Sí' : 'No'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        <button
+                                            className="export-button"
+                                            style={{ margin: '0' }}
+                                            onClick={() => setEditingEvent(event)}
+                                        >
+                                            Modificar
+                                        </button>
+                                        <button
+                                            className="cancel-button"
+                                            style={{ margin: '0' }}
+                                            disabled={tieneInscripciones[event.id] === true || deletingId === event.id}
+                                            title={tieneInscripciones[event.id]
+                                                ? 'Este evento tiene inscripciones asociadas y no se puede eliminar'
+                                                : 'Eliminar evento'}
+                                            onClick={() => handleDeleteEvent(event)}
+                                        >
+                                            {deletingId === event.id ? 'Eliminando…' : 'Eliminar'}
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
