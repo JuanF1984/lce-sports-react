@@ -170,6 +170,21 @@ columnas nuevas (`tipo`, `visible_en_home`, `inscripciones_abiertas`) de forma m
 "cualquiera puede leer cualquier evento por su slug", eso explicaría una redirección a Home
 intermitente en el fetch de `SeleccionInscripcion.jsx` sin que haya nada mal en el código React.
 
+### Límite de filas por request (PostgREST) — ya mordió a esta app más de una vez
+
+Supabase/PostgREST trunca silenciamente cualquier `select` a un máximo de filas por request
+configurado a nivel de proyecto (Dashboard → Settings → API). Esta app ya se topó con esto antes:
+`InscriptionsList.jsx` y `EmailMasivo.jsx` paginan explícitamente con un cursor (`const BATCH =
+1000`) para poder leer *toda* la tabla `inscriptions` sin perder filas. La consulta que arma la
+columna "Inscriptos" en `EventsList.jsx` no tenía ese resguardo y sufría el mismo problema —
+corregido en esta revisión reusando el mismo patrón de paginación (ver `docs/eventos.md`).
+
+**Recomendación general:** cualquier `select` nuevo contra una tabla que pueda crecer sin límite
+(`inscriptions` es la candidata obvia acá) debería paginar por cursor desde el principio, en vez de
+asumir que un solo request trae todo. No hay forma de detectar esto solo mirando el código — si
+alguna vez el número real de filas queda por debajo del límite configurado, la consulta "funciona
+bien" en las pruebas y solo falla más adelante, a medida que crecen los datos.
+
 ### Nueva dependencia de RLS: eliminación de eventos desde el admin
 
 La función de borrado agregada en esta revisión (`EventsList.jsx` → `handleDeleteEvent`) corre

@@ -232,20 +232,44 @@ export const EventsList = () => {
     // Trae, para cada evento listado, si tiene al menos una inscripción asociada.
     // Es solo para que la UI deje claro qué eventos son borrables — la validación
     // real y autoritativa se vuelve a hacer justo antes del DELETE, en handleDeleteEvent.
+    //
+    // Paginado por cursor a propósito: sin esto, con muchas inscripciones históricas
+    // acumuladas Supabase trunca la respuesta a su límite de filas por request y
+    // eventos viejos con inscripciones reales terminaban mostrando "No" acá (mismo
+    // problema que ya se resolvió con este patrón en InscriptionsList.jsx / EmailMasivo.jsx).
     useEffect(() => {
         const fetchInscripcionesFlags = async () => {
             if (eventIds.length === 0) return;
-            const { data, error } = await supabase
-                .from('inscriptions')
-                .select('id_evento')
-                .in('id_evento', eventIds);
 
-            if (error) {
-                console.error('Error al verificar inscripciones por evento:', error);
-                return;
+            const BATCH = 1000;
+            const conInscripciones = new Set();
+            let cursor = null;
+
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+                let q = supabase
+                    .from('inscriptions')
+                    .select('id, id_evento')
+                    .in('id_evento', eventIds)
+                    .order('id', { ascending: true })
+                    .limit(BATCH);
+
+                if (cursor) q = q.gt('id', cursor);
+
+                const { data, error } = await q;
+
+                if (error) {
+                    console.error('Error al verificar inscripciones por evento:', error);
+                    return;
+                }
+                if (!data || data.length === 0) break;
+
+                data.forEach(r => conInscripciones.add(r.id_evento));
+
+                if (data.length < BATCH) break;
+                cursor = data[data.length - 1].id;
             }
 
-            const conInscripciones = new Set((data || []).map(r => r.id_evento));
             setTieneInscripciones(
                 Object.fromEntries(eventIds.map(id => [id, conInscripciones.has(id)]))
             );

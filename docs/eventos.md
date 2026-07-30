@@ -156,11 +156,35 @@ Botón "Eliminar" en `EventsList.jsx`, junto a "Modificar":
 
 La comprobación (`inscriptions` con `id_evento = <id del evento>`, `limit(1)`) se hace **en el
 momento real del borrado**, dentro de `handleDeleteEvent`, no solo para decidir si mostrar el botón
-habilitado. La tabla además precarga (una sola consulta, al cargar la lista) qué eventos tienen
-inscripciones para mostrar la columna "Inscriptos" y deshabilitar visualmente el botón en esos
-casos — es una ayuda de UX, no la validación real; si esa foto quedó desactualizada (p. ej. alguien
-se inscribió justo después de cargar la página), el chequeo en vivo dentro de `handleDeleteEvent`
-igual bloquea el borrado.
+habilitado. La tabla además precarga qué eventos tienen inscripciones para mostrar la columna
+"Inscriptos" y deshabilitar visualmente el botón en esos casos — es una ayuda de UX, no la
+validación real; si esa foto quedó desactualizada (p. ej. alguien se inscribió justo después de
+cargar la página), el chequeo en vivo dentro de `handleDeleteEvent` igual bloquea el borrado.
+
+**Estas dos consultas usan la misma relación (`inscriptions.id_evento`) pero no son la misma
+consulta, y eso importa:** `handleDeleteEvent` filtra por un solo evento y pide como máximo 1 fila
+(`.eq('id_evento', event.id).limit(1)`) — no le afecta el volumen total de la tabla. La precarga de
+la columna, en cambio, tiene que enumerar qué eventos de **toda la lista** tienen inscripciones, y
+por eso sí es sensible a cuántas filas devuelve Supabase por request (ver el bug corregido más
+abajo). Conclusión práctica: **el DELETE está protegido incluso si la columna "Inscriptos" muestra
+un valor incorrecto** — la única forma de que el DELETE falle de la misma manera sería que RLS
+oculte las filas de `inscriptions` a la sesión del admin, algo que no se puede confirmar desde el
+código (ver `docs/supabase.md`).
+
+### Bug corregido: la columna "Inscriptos" podía mostrar "No" en eventos que sí tenían inscripciones
+
+La consulta original de la precarga (`select('id_evento').in('id_evento', eventIds)`, sin
+`.limit()` ni paginación) no traía todas las filas si el total de inscripciones de los eventos
+listados superaba el límite de filas por request de Supabase — el mismo límite que ya había
+obligado a paginar por cursor en `InscriptionsList.jsx` (`BATCH = 1000`) y `EmailMasivo.jsx`. Con
+suficiente volumen histórico acumulado, cualquier evento cuyas filas de `inscriptions` quedaran
+fuera de la página devuelta aparecía como "No" sin serlo.
+
+Corregido reusando el mismo patrón de paginación por cursor (ordenando por `id` de `inscriptions` y
+avanzando con `.gt('id', cursor)` hasta agotar los resultados) para acumular el set completo de
+`id_evento` con inscripciones, sin importar cuántas haya en total. No afecta a `handleDeleteEvent`
+(ya era seguro, ver el punto anterior) ni cambia ningún comportamiento de eliminación — solo corrige
+qué muestra la columna.
 
 Se pide confirmación (`window.confirm`) antes de ejecutar el `DELETE`, después de haber verificado
 que no hay inscripciones.
