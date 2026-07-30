@@ -5,6 +5,7 @@ import { useGames } from '../../../../hooks/useGames';
 import supabase from '../../../../utils/supabase';
 import { AddTournamentForm } from './AddTournamentForm';
 import { localidadesBuenosAires } from '../../../../data/localidades';
+import { getEffectiveRegistrationMode } from '../../../../utils/registrationMode';
 
 const BASE_URL = 'https://lcesports.com.ar';
 
@@ -15,17 +16,46 @@ const isoToDatetimeLocal = (isoStr) => {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+// Relación real entre una inscripción y el juego dentro de un evento puntual:
+// inscriptions.id_evento = events.id, y games_inscriptions (id_inscription, id_game)
+// conecta esa inscripción con el juego. No hay una columna que apunte directo de
+// games_inscriptions a event_games, así que hay que pasar por inscriptions.
+// Devuelve el set de game_id que ya tienen al menos una inscripción para ese evento.
+const getGamesConInscripcionesDelEvento = async (eventId) => {
+    const { data: inscripcionesDelEvento, error: errInscripciones } = await supabase
+        .from('inscriptions')
+        .select('id')
+        .eq('id_evento', eventId);
+    if (errInscripciones) throw errInscripciones;
+
+    const inscripcionIds = (inscripcionesDelEvento || []).map(i => i.id);
+    if (inscripcionIds.length === 0) return new Set();
+
+    const { data: gamesInscriptions, error: errGamesInscripciones } = await supabase
+        .from('games_inscriptions')
+        .select('id_game')
+        .in('id_inscription', inscripcionIds);
+    if (errGamesInscripciones) throw errGamesInscripciones;
+
+    return new Set((gamesInscriptions || []).map(r => r.id_game));
+};
+
 const EditEventModal = ({
     event,
     initialGames,
+    initialGameModes,
     games,
     loadingGames,
     errorGames,
     isSaving,
     onSave,
     onCancel,
+    gamesConInscripciones,
+    verificandoInscripciones,
+    errorVerificandoInscripciones,
 }) => {
     const [form, setForm] = useState({
+        nombre: event.nombre || '',
         fecha_inicio: event.fecha_inicio,
         fecha_fin: event.fecha_fin,
         localidad: event.localidad,
@@ -36,6 +66,7 @@ const EditEventModal = ({
         fecha_cierre_inscripcion: isoToDatetimeLocal(event.fecha_cierre_inscripcion),
     });
     const [selectedGames, setSelectedGames] = useState(initialGames);
+    const [gameModes, setGameModes] = useState(initialGameModes);
 
     const esPresentacion = form.tipo === 'presentacion';
 
@@ -51,6 +82,10 @@ const EditEventModal = ({
         setSelectedGames(prev =>
             prev.includes(gameId) ? prev.filter(id => id !== gameId) : [...prev, gameId]
         );
+    };
+
+    const handleModeChange = (gameId, mode) => {
+        setGameModes(prev => ({ ...prev, [gameId]: mode }));
     };
 
     const localidadesOptions = localidadesBuenosAires.map(l => ({ value: l, label: l }));
@@ -104,6 +139,21 @@ const EditEventModal = ({
                         <div className="event-edit-field">
                             <label className="event-edit-label">Fecha de finalización</label>
                             <input type="date" name="fecha_fin" value={form.fecha_fin} onChange={handleChange} className="event-edit-input" />
+                        </div>
+                    </div>
+
+                    {/* Nombre propio del evento */}
+                    <div className="event-edit-section">
+                        <div className="event-edit-field event-edit-field--full">
+                            <label className="event-edit-label">Nombre del evento (opcional)</label>
+                            <input
+                                type="text"
+                                name="nombre"
+                                value={form.nombre}
+                                onChange={handleChange}
+                                className="event-edit-input"
+                                placeholder="Ej: San Fernando Gamers"
+                            />
                         </div>
                     </div>
 
@@ -162,18 +212,66 @@ const EditEventModal = ({
                             <label className="event-edit-label">Juegos</label>
                             {loadingGames && <p className="event-edit-hint">Cargando juegos...</p>}
                             {errorGames && <p className="event-edit-error">Error al cargar juegos</p>}
+                            {errorVerificandoInscripciones && (
+                                <p className="event-edit-error">
+                                    No se pudo verificar si estos juegos ya tienen inscripciones asociadas.
+                                    Por seguridad, no se pueden quitar juegos ni editar su modalidad ahora — cerrá y volvé a intentar.
+                                </p>
+                            )}
                             {!loadingGames && !errorGames && (
                                 <div className="event-edit-games">
-                                    {games?.map(game => (
-                                        <label key={game.id} className="event-edit-game-label">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedGames.includes(game.id)}
-                                                onChange={() => toggleGame(game.id)}
-                                            />
-                                            {game.game_name}
-                                        </label>
-                                    ))}
+                                    {games?.map(game => {
+                                        const isSelected = selectedGames.includes(game.id);
+                                        // Fail-closed: mientras no se confirmó que el juego NO tiene
+                                        // inscripciones (todavía verificando, o la verificación falló),
+                                        // se trata como si las tuviera — ni se puede quitar del evento
+                                        // ni cambiar su modalidad.
+                                        const bloqueadoPorInscripciones = verificandoInscripciones
+                                            || errorVerificandoInscripciones
+                                            || gamesConInscripciones?.has(game.id);
+                                        return (
+                                            <div key={game.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                                <label className="event-edit-game-label">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => toggleGame(game.id)}
+                                                        disabled={isSelected && bloqueadoPorInscripciones}
+                                                        title={isSelected && gamesConInscripciones?.has(game.id)
+                                                            ? 'No se puede quitar este juego porque ya tiene inscripciones asociadas.'
+                                                            : isSelected && (verificandoInscripciones || errorVerificandoInscripciones)
+                                                                ? 'Verificando inscripciones…'
+                                                                : undefined}
+                                                    />
+                                                    {game.game_name}
+                                                </label>
+                                                {isSelected && game.team_option && (
+                                                    <select
+                                                        value={gameModes[game.id] ?? 'both'}
+                                                        onChange={(e) => handleModeChange(game.id, e.target.value)}
+                                                        disabled={bloqueadoPorInscripciones}
+                                                        className="event-edit-select"
+                                                        style={{ marginLeft: '1.5rem', width: 'auto', fontSize: '0.83rem' }}
+                                                        title={gamesConInscripciones?.has(game.id)
+                                                            ? 'Este juego ya tiene inscripciones asociadas: la modalidad no se puede modificar.'
+                                                            : verificandoInscripciones
+                                                                ? 'Verificando inscripciones…'
+                                                                : undefined}
+                                                    >
+                                                        <option value="individual">Individual</option>
+                                                        <option value="team">Solo equipos</option>
+                                                        <option value="both">Individual o equipos</option>
+                                                    </select>
+                                                )}
+                                                {isSelected && gamesConInscripciones?.has(game.id) && (
+                                                    <span className="event-edit-hint" style={{ marginLeft: '1.5rem' }}>
+                                                        No se puede quitar este juego porque ya tiene inscripciones asociadas
+                                                        {game.team_option ? ' ni cambiar su modalidad.' : '.'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -190,7 +288,7 @@ const EditEventModal = ({
                     </button>
                     <button
                         className="export-button"
-                        onClick={() => onSave(form, selectedGames)}
+                        onClick={() => onSave(form, selectedGames, gameModes)}
                         disabled={isSaving}
                     >
                         {isSaving ? 'Guardando…' : 'Guardar cambios'}
@@ -212,6 +310,9 @@ export const EventsList = () => {
     const [copied, setCopied] = useState(false);
     const [tieneInscripciones, setTieneInscripciones] = useState({}); // { [eventId]: boolean } — solo para mostrar en la UI
     const [deletingId, setDeletingId] = useState(null);
+    const [gamesConInscripcionesEditar, setGamesConInscripcionesEditar] = useState(new Set());
+    const [verificandoInscripciones, setVerificandoInscripciones] = useState(false);
+    const [errorVerificandoInscripciones, setErrorVerificandoInscripciones] = useState(false);
 
     const anyModalOpen = showCreateModal || !!editingEvent;
     useEffect(() => {
@@ -277,17 +378,69 @@ export const EventsList = () => {
         fetchInscripcionesFlags();
     }, [JSON.stringify(eventIds)]);
 
-    const saveChanges = async (form, selectedGames) => {
+    const saveChanges = async (form, selectedGames, gameModes) => {
         if (isSaving || !editingEvent) return;
         setIsSaving(true);
 
         try {
+            // Freno de seguridad, independiente de lo que ya haya filtrado la UI del
+            // modal (gamesConInscripcionesEditar): puede haber pasado tiempo entre
+            // abrir el modal y guardar, así que se vuelve a comprobar acá, en el
+            // momento real del guardado, cuáles de los juegos seleccionados ya
+            // tienen inscripciones — y si alguno de ésos cambió de modalidad, se
+            // frena TODO el guardado (no se aplica ningún cambio parcial).
+            if (form.tipo !== 'presentacion') {
+                const gamesConInscripciones = await getGamesConInscripcionesDelEvento(editingEvent.id);
+                const juegosActuales = localEventGames[editingEvent.id] || [];
+
+                const gameIdBloqueado = selectedGames.find(gameId => {
+                    if (!gamesConInscripciones.has(gameId)) return false;
+                    const game = games.find(g => g.id === gameId);
+                    const modoNuevo = game?.team_option ? (gameModes[gameId] ?? 'both') : 'individual';
+                    const juegoActual = juegosActuales.find(g => g.id === gameId);
+                    const modoActual = getEffectiveRegistrationMode(juegoActual || {});
+                    return modoNuevo !== modoActual;
+                });
+
+                if (gameIdBloqueado) {
+                    const nombreJuego = games.find(g => g.id === gameIdBloqueado)?.game_name || 'este juego';
+                    setMessage({
+                        type: 'error',
+                        text: `No se puede modificar la modalidad de "${nombreJuego}" porque ya tiene inscripciones asociadas.`,
+                    });
+                    setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+                    setIsSaving(false);
+                    return;
+                }
+
+                // Mismo freno, para juegos que se están quitando del evento (destildados):
+                // si alguno de los que ya estaban asociados y ya tiene inscripciones no
+                // figura en selectedGames, se frena TODO el guardado.
+                const gameIdNoSePuedeQuitar = juegosActuales
+                    .map(g => g.id)
+                    .find(gameId => !selectedGames.includes(gameId) && gamesConInscripciones.has(gameId));
+
+                if (gameIdNoSePuedeQuitar) {
+                    const nombreJuego = games.find(g => g.id === gameIdNoSePuedeQuitar)?.game_name
+                        || juegosActuales.find(g => g.id === gameIdNoSePuedeQuitar)?.game_name
+                        || 'este juego';
+                    setMessage({
+                        type: 'error',
+                        text: `No se puede quitar "${nombreJuego}" del evento porque ya tiene inscripciones asociadas.`,
+                    });
+                    setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+                    setIsSaving(false);
+                    return;
+                }
+            }
+
             // 'tipo' se excluye a propósito del payload de update: es inmutable
             // después de creado el evento (el <select> de arriba ya está disabled,
             // esto es una segunda barrera por si algo llega a tocar form.tipo).
             const { tipo: _tipoInmutable, ...formEditable } = form;
             const payload = {
                 ...formEditable,
+                nombre: form.nombre?.trim() ? form.nombre.trim() : '',
                 fecha_cierre_inscripcion: form.fecha_cierre_inscripcion
                     ? new Date(form.fecha_cierre_inscripcion).toISOString()
                     : null,
@@ -308,7 +461,14 @@ export const EventsList = () => {
             if (form.tipo !== 'presentacion' && selectedGames.length > 0) {
                 const { error: insertError } = await supabase
                     .from('event_games')
-                    .insert(selectedGames.map(gameId => ({ event_id: editingEvent.id, game_id: gameId })));
+                    .insert(selectedGames.map(gameId => {
+                        const game = games.find(g => g.id === gameId);
+                        return {
+                            event_id: editingEvent.id,
+                            game_id: gameId,
+                            registration_mode: game?.team_option ? (gameModes[gameId] ?? 'both') : 'individual',
+                        };
+                    }));
                 if (insertError) throw insertError;
             }
 
@@ -318,7 +478,12 @@ export const EventsList = () => {
                 ...prev,
                 [editingEvent.id]: games
                     .filter(g => selectedGames.includes(g.id))
-                    .map(g => ({ id: g.id, game_name: g.game_name })),
+                    .map(g => ({
+                        id: g.id,
+                        game_name: g.game_name,
+                        team_option: g.team_option,
+                        registration_mode: g.team_option ? (gameModes[g.id] ?? 'both') : 'individual',
+                    })),
             }));
 
             if (editingEvent.slug) {
@@ -333,6 +498,27 @@ export const EventsList = () => {
             setMessage({ type: 'error', text: 'Error al guardar los cambios' });
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    // Antes de habilitar la edición de modalidad por juego, hay que saber cuáles
+    // de los juegos de ESTE evento ya tienen inscripciones (ver
+    // getGamesConInscripcionesDelEvento). Si la verificación falla, no se sabe si
+    // es seguro editar — por eso se bloquea todo el selector de modalidad
+    // (errorVerificandoInscripciones) en vez de asumir que no hay inscripciones.
+    const abrirEdicion = async (event) => {
+        setEditingEvent(event);
+        setGamesConInscripcionesEditar(new Set());
+        setErrorVerificandoInscripciones(false);
+        setVerificandoInscripciones(true);
+        try {
+            const set = await getGamesConInscripcionesDelEvento(event.id);
+            setGamesConInscripcionesEditar(set);
+        } catch (err) {
+            console.error('Error al verificar inscripciones por juego antes de editar:', err);
+            setErrorVerificandoInscripciones(true);
+        } finally {
+            setVerificandoInscripciones(false);
         }
     };
 
@@ -471,7 +657,15 @@ export const EventsList = () => {
                                 </td>
                                 <td>{new Date(event.fecha_inicio + 'T00:00:00').toLocaleDateString()}</td>
                                 <td>{new Date(event.fecha_fin + 'T00:00:00').toLocaleDateString()}</td>
-                                <td>{event.localidad}</td>
+                                <td>
+                                    {event.nombre ? (
+                                        <>
+                                            <strong>{event.nombre}</strong>
+                                            <br />
+                                            <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>{event.localidad}</span>
+                                        </>
+                                    ) : event.localidad}
+                                </td>
                                 <td>
                                     <span className={`event-cupos-badge event-cupos-badge--${event.inscripciones_abiertas !== false ? 'abiertas' : 'cerradas'}`}>
                                         {event.inscripciones_abiertas !== false ? 'Abiertas' : 'Cerradas'}
@@ -505,7 +699,7 @@ export const EventsList = () => {
                                         <button
                                             className="export-button"
                                             style={{ margin: '0' }}
-                                            onClick={() => setEditingEvent(event)}
+                                            onClick={() => abrirEdicion(event)}
                                         >
                                             Modificar
                                         </button>
@@ -533,12 +727,18 @@ export const EventsList = () => {
                 <EditEventModal
                     event={editingEvent}
                     initialGames={localEventGames[editingEvent.id]?.map(g => g.id) || []}
+                    initialGameModes={Object.fromEntries(
+                        (localEventGames[editingEvent.id] || []).map(g => [g.id, getEffectiveRegistrationMode(g)])
+                    )}
                     games={games}
                     loadingGames={loadingGames}
                     errorGames={errorGames}
                     isSaving={isSaving}
                     onSave={saveChanges}
                     onCancel={() => setEditingEvent(null)}
+                    gamesConInscripciones={gamesConInscripcionesEditar}
+                    verificandoInscripciones={verificandoInscripciones}
+                    errorVerificandoInscripciones={errorVerificandoInscripciones}
                 />
             )}
 

@@ -3,6 +3,7 @@ import { useBackHandler } from "../../../context/BackHandlerContext";
 import { useEventoSeleccionado } from "./hooks/useEventoSeleccionado";
 import { getGameConfig } from "../../../data/gameConfig";
 import { formatearHora } from "../../../utils/dateUtils";
+import { tituloEventoCorto } from "../../../utils/eventoDisplay";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendarAlt, faLock } from "@fortawesome/free-solid-svg-icons";
 import { EventoModal } from "./common/EventoModal";
@@ -73,7 +74,7 @@ export const VerificacionRiot = ({ onBack, onNext, eventoId, juegosSeleccionados
             {/* Barra del evento */}
             <div className="fd-event-bar">
                 <p className="fd-event-text">
-                    {eventoSeleccionado?.localidad}
+                    {tituloEventoCorto(eventoSeleccionado)}
                     {fechaCorta && <> · {fechaCorta}</>}
                     {hora && <> · {hora}</>}
                 </p>

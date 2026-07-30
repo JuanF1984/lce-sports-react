@@ -27,7 +27,14 @@ export const EventoModal = ({ evento, onClose }) => {
                     <FontAwesomeIcon icon={faXmark} />
                 </button>
 
-                <h3 className="em-titulo">Detalles del evento</h3>
+                {evento.nombre ? (
+                    <>
+                        <p className="em-eyebrow">Detalles del evento</p>
+                        <h3 className="em-titulo">{evento.nombre}</h3>
+                    </>
+                ) : (
+                    <h3 className="em-titulo">Detalles del evento</h3>
+                )}
 
                 <ul className="em-lista">
                     <li>

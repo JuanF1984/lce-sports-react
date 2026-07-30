@@ -66,6 +66,7 @@ const formatDiaLabel = (fechaStr) => {
 
 export const AddTournamentForm = ({ onSuccess }) => {
     const [formValues, setFormValues] = useState({
+        nombre: "",
         fecha_inicio: "",
         fecha_fin: "",
         localidad: "",
@@ -85,6 +86,11 @@ export const AddTournamentForm = ({ onSuccess }) => {
     const { games, loading: loadingGames, error: errorGames } = useGames();
     const [selectedGames, setSelectedGames] = useState([]);
     const [gameDays, setGameDays] = useState({});
+    // Modalidad de inscripción por juego (event_games.registration_mode).
+    // Default al cargar el catálogo: si el juego admite equipo (team_option),
+    // arranca en 'both' (igual que el comportamiento histórico de team_option=true);
+    // si no, queda forzado en 'individual' y no se ofrece el selector.
+    const [gameModes, setGameModes] = useState({});
     const [successMessage, setSuccessMessage] = useState("");
     const [savedLink, setSavedLink] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
@@ -100,8 +106,21 @@ export const AddTournamentForm = ({ onSuccess }) => {
     useEffect(() => {
         if (games && games.length > 0) {
             setSelectedGames(games.map(g => g.id));
+            setGameModes(prev => {
+                const next = { ...prev };
+                games.forEach(g => {
+                    if (next[g.id] === undefined) {
+                        next[g.id] = g.team_option ? 'both' : 'individual';
+                    }
+                });
+                return next;
+            });
         }
     }, [games]);
+
+    const handleModeChange = (gameId, mode) => {
+        setGameModes(prev => ({ ...prev, [gameId]: mode }));
+    };
 
     const esPresentacion = formValues.tipo === 'presentacion';
 
@@ -169,7 +188,7 @@ export const AddTournamentForm = ({ onSuccess }) => {
         setSuccessMessage("");
         setSavedLink("");
 
-        const { fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, ubicacion_url, tipo, visible_en_home, fecha_cierre_inscripcion } = formValues;
+        const { nombre, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, ubicacion_url, tipo, visible_en_home, fecha_cierre_inscripcion } = formValues;
 
         if (!fecha_inicio || !fecha_fin || !localidad) {
             setErrorMessage("Por favor completá todos los campos obligatorios (*).");
@@ -224,6 +243,7 @@ export const AddTournamentForm = ({ onSuccess }) => {
                 const res = await supabase
                     .from('events')
                     .insert({
+                        nombre: nombre?.trim() ? nombre.trim() : null,
                         fecha_inicio,
                         fecha_fin,
                         localidad,
@@ -263,10 +283,16 @@ export const AddTournamentForm = ({ onSuccess }) => {
             if (!esPresentacion) {
                 const { data: eventGamesData, error: gameInsertError } = await supabase
                     .from("event_games")
-                    .insert(selectedGames.map(gameId => ({
-                        game_id: gameId,
-                        event_id: eventData.id,
-                    })))
+                    .insert(selectedGames.map(gameId => {
+                        const game = games.find(g => g.id === gameId);
+                        return {
+                            game_id: gameId,
+                            event_id: eventData.id,
+                            // Un juego sin team_option solo puede jugarse individual,
+                            // sin importar qué haya quedado seleccionado en el UI.
+                            registration_mode: game?.team_option ? (gameModes[gameId] ?? 'both') : 'individual',
+                        };
+                    }))
                     .select();
 
                 if (gameInsertError) throw gameInsertError;
@@ -333,6 +359,18 @@ export const AddTournamentForm = ({ onSuccess }) => {
                         />
                         Visible en la home
                     </label>
+                </div>
+
+                <div className="filter-group">
+                    <label className="filter-label">Nombre del evento (opcional):</label>
+                    <input
+                        type="text"
+                        name="nombre"
+                        value={formValues.nombre}
+                        onChange={handleInputChange}
+                        className="filter-select"
+                        placeholder="Ej: San Fernando Gamers"
+                    />
                 </div>
 
                 <div className="filter-group">
@@ -464,6 +502,19 @@ export const AddTournamentForm = ({ onSuccess }) => {
                                                 />
                                                 {game.game_name}
                                             </label>
+
+                                            {isSelected && game.team_option && (
+                                                <select
+                                                    value={gameModes[game.id] ?? 'both'}
+                                                    onChange={(e) => handleModeChange(game.id, e.target.value)}
+                                                    className="filter-select"
+                                                    style={{ marginLeft: '1.5rem', width: 'auto', fontSize: '0.83rem' }}
+                                                >
+                                                    <option value="individual">Individual</option>
+                                                    <option value="team">Solo equipos</option>
+                                                    <option value="both">Individual o equipos</option>
+                                                </select>
+                                            )}
 
                                             {isSelected && isMultiDay && (
                                                 <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>

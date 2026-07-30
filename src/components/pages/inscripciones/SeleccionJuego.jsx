@@ -4,6 +4,7 @@ import { useBackHandler } from "../../../context/BackHandlerContext";
 import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 
 import { formatearHora } from "../../../utils/dateUtils";
+import { tituloEventoCorto } from "../../../utils/eventoDisplay";
 import { getGameConfig } from "../../../data/gameConfig";
 import { EventoModal } from "./common/EventoModal";
 
@@ -131,7 +132,7 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
     // Máximo de juegos secundarios: 1 si hay principal, 3 si no hay
     const maxSecundarios = juegoSeleccionado ? 1 : 3;
 
-    // Hay juegos secundarios disponibles en este set (ya filtrado por team_option si es equipo)
+    // Hay juegos secundarios disponibles en este set (ya filtrado por modalidad en SeleccionInscripcion)
     const hayJuegosSecundarios = games.some(g => g.principal === false);
 
     // Paso 2 siempre. Totales dinámicos según verificaciones necesarias.
@@ -204,7 +205,7 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
             {/* Barra de info del evento */}
             <div className="sj-event-bar">
                 <p className="sj-event-text">
-                    {eventoSeleccionado?.localidad}
+                    {tituloEventoCorto(eventoSeleccionado)}
                     {fechaCorta && <> · {fechaCorta}</>}
                     {hora && <> · {hora}</>}
                 </p>

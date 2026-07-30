@@ -27,14 +27,22 @@ confirmar que la base real coincide con esto.
 | `visible_en_home` | boolean, `not null default true` | agregada en `20260701_add_event_tipo.sql` |
 | `tipo` | text, `not null default 'torneo'`, `check (tipo in ('torneo','presentacion'))` | agregada en la misma migración |
 | `fecha_cierre_inscripcion` | `timestamptz`, nullable | agregada en la misma migración |
+| `nombre` | text, nullable | **creada manualmente en Supabase** (no vino de una migración versionada en el repo) — ver "Columnas nuevas creadas manualmente" más abajo |
 
 ### `games`
 
-`id, game_name, team_option, principal, active`. `useGames` sólo trae `active = true`.
+`id, game_name, team_option, principal, active`. `useGames` sólo trae `active = true`. **Sin
+cambios** en esta revisión — `team_option` sigue siendo el flag general del juego, la modalidad
+efectiva por evento vive en `event_games.registration_mode` (ver abajo).
 
 ### `event_games`
 
-`id, event_id (FK events.id), game_id (FK games.id)`.
+`id, event_id (FK events.id), game_id (FK games.id), registration_mode`.
+
+- `registration_mode`: text, nullable, **creada manualmente en Supabase**. Valores permitidos:
+  `individual | team | both | NULL`. Ver "Columnas nuevas creadas manualmente" y
+  `docs/inscripciones.md` (sección "Modalidad de inscripción por juego") para el detalle completo
+  de semántica y fallback de `NULL`.
 
 ### `event_games_days`
 
@@ -85,6 +93,35 @@ alter table events add column fecha_cierre_inscripcion timestamptz;
 **No se restauró el archivo** en esta revisión para no asumir que sigue haciendo falta (si ya se
 corrió en Supabase, el archivo era solo un registro histórico). Si querés mantener un historial de
 migraciones en el repo, decime y lo recreo tal cual.
+
+## Columnas nuevas creadas manualmente en Supabase (`events.nombre`, `event_games.registration_mode`)
+
+A diferencia de `tipo`/`visible_en_home`/`fecha_cierre_inscripcion` (que sí tuvieron una migración
+`.sql`, aunque después se haya borrado del repo — ver arriba), estas dos columnas **ya fueron
+creadas manualmente en Supabase antes de adaptar el código**, según indicación explícita: no hay
+ningún `ALTER TABLE` que ejecutar para crearlas, el código de esta revisión asume que ya existen.
+Se documentan acá solo a fines de referencia (no como una migración pendiente):
+
+```sql
+-- events.nombre — ya existe en Supabase, no ejecutar
+-- alter table events add column nombre text;
+
+-- event_games.registration_mode — ya existe en Supabase, no ejecutar
+-- alter table event_games add column registration_mode text
+--   check (registration_mode in ('individual', 'team', 'both'));
+```
+
+El `CHECK` de `registration_mode` permite `individual`, `team`, `both` o `NULL` (un `CHECK` de
+Postgres deja pasar `NULL` salvo que la columna sea además `NOT NULL`, que no es el caso acá — así
+que `NULL` es un cuarto valor válido en la práctica, usado como "sin migrar", ver
+`docs/inscripciones.md`).
+
+**Verificación recomendada** (no asumido, para que lo confirmes vos): correr
+`select column_name, data_type, is_nullable from information_schema.columns where table_name in
+('events', 'event_games') and column_name in ('nombre', 'registration_mode');` en el SQL Editor y
+confirmar que el tipo es `text` y `is_nullable = YES` en ambos casos, y que existe el `CHECK` sobre
+`registration_mode` (`select conname, pg_get_constraintdef(oid) from pg_constraint where conrelid =
+'event_games'::regclass and contype = 'c';`).
 
 ## Protección en Supabase: `UNIQUE(events.slug)`
 
@@ -203,6 +240,15 @@ fallar con un error de permisos — no vas a ver un `PGRST` de datos, sino algo 
 violates row-level security policy" o un 401/403 de Postgres. Si eso pasa, hay que agregar (o
 ajustar) las policies correspondientes; no se puede resolver desde el código del frontend.
 
+**Se suma en esta revisión**: las restricciones para editar `registration_mode` y para quitar un
+juego del evento (ver `docs/inscripciones.md`) hacen, con la misma sesión de frontend, `SELECT`
+sobre `games_inscriptions` (antes solo se leía `inscriptions`) para saber qué juegos de un evento ya
+tienen participantes. Si `games_inscriptions` tiene RLS sin policy para el admin, el chequeo va a
+fallar — y, como está diseñado en modo *fail-closed*, el efecto va a ser que **ningún** selector de
+modalidad ni checkbox de juego se pueda tocar (mensaje "no se pudo verificar"), no que se editen o
+quiten a ciegas. Es un síntoma molesto pero seguro; si pasa, hay que revisar las policies de
+`games_inscriptions` para el rol admin.
+
 ## Discrepancias encontradas
 
 1. **Migración borrada sin dejar rastro en el repo** (ver arriba) — riesgo de que, si en algún
@@ -220,6 +266,14 @@ ajustar) las policies correspondientes; no se puede resolver desde el código de
    componentes no redirigen a ningún lado, simplemente renderizan con `eventoSeleccionado` en
    `null` (localidad/fecha vacíos en el header del paso) — es un bug distinto (UI rota, no
    redirect) pero comparte la misma raíz potencial (permisos/errores silenciosos contra `events`).
+4. ~~Sacar un juego de un evento que ya tiene inscripciones no está protegido.~~ **Corregido en la
+   revisión siguiente**: `EventsList.jsx` → `saveChanges` sigue borrando **todas** las filas de
+   `event_games` del evento y reinsertando solo las tildadas, pero ahora, antes de hacerlo, valida
+   que ningún juego que se esté sacando tenga inscripciones asociadas (misma relación
+   `inscriptions.id_evento` + `games_inscriptions.id_game` que ya se usaba para la modalidad) — si
+   las tiene, frena todo el guardado. También se bloquea visualmente el checkbox correspondiente en
+   `EditEventModal`. Ver el detalle completo en `docs/inscripciones.md` ("Restricción para quitar un
+   juego con inscripciones existentes del evento").
 
 ## Qué verificar manualmente en Supabase (no se puede confirmar desde el código)
 
@@ -252,3 +306,15 @@ ajustar) las policies correspondientes; no se puede resolver desde el código de
 8. **Aplicar la migración `20260730_events_slug_unique.sql`** siguiendo sus 3 pasos (detectar,
    inspeccionar, aplicar) — es la protección definitiva para que el incidente original no se
    repita.
+9. **Confirmar `events.nombre` y `event_games.registration_mode`** con la consulta de
+   `information_schema.columns` de la sección "Columnas nuevas creadas manualmente" arriba, y que
+   el `CHECK` de `registration_mode` acepta exactamente `individual`, `team`, `both` (y `NULL`).
+10. **RLS de `games_inscriptions` para `SELECT`**, con el rol del admin — necesario para que el
+    chequeo de "¿este juego ya tiene inscripciones?" funcione tanto para editar la modalidad como
+    para quitar un juego del evento. Si falla, el síntoma es que todos los selectores de modalidad
+    y checkboxes de juego aparecen bloqueados con un aviso de error (fail-closed), no que se pueda
+    editar/quitar de más.
+11. **Probar manualmente el bloqueo de quitar un juego**: en un evento de prueba, anotar una
+    inscripción a un juego puntual y confirmar que, al editar el evento, ese juego aparece tildado
+    pero con el checkbox deshabilitado y el aviso correspondiente — e intentar guardar sin tocarlo
+    (debería guardar bien) y con otro juego sin inscripciones destildado (también debería andar).

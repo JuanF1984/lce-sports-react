@@ -29,12 +29,136 @@
 (`siguientePasoTrasDatos` / `siguientePasoTrasSteam`), y **para presentaciones se fuerza
 `'confirmacion'` directo tras `'datos'`**, sin pasar por juego/steam/riot.
 
+## Modalidad de inscripción por juego (`event_games.registration_mode`)
+
+Columna `text`, `nullable`, agregada manualmente en Supabase (ver `docs/supabase.md`), con un
+`CHECK` que permite `individual | team | both | NULL`. Vive en `event_games`, no en `games` — la
+modalidad es de la **combinación juego + evento**, no del juego en general. El mismo juego (p. ej.
+CS2) puede ser `team` en un evento y `both` en otro.
+
+- **`individual`**: no se ofrece elección de modalidad; el juego solo aparece en el flujo
+  individual (`Formulario.jsx`).
+- **`team`**: no se ofrece inscripción individual; el juego solo aparece en el flujo de equipo
+  (`FormularioEquipo.jsx`).
+- **`both`**: se mantiene la elección entre individual y equipo, con el flujo que ya existía antes
+  de esta modificación (nada nuevo).
+- **`NULL`** (registros históricos, no migrados a propósito): ver fallback más abajo.
+
+### Dónde se resuelve en el flujo público
+
+La resolución vive en `src/utils/registrationMode.js` (`getEffectiveRegistrationMode`,
+`permiteIndividual`, `permiteEquipo`) y se aplica en `SeleccionInscripcion.jsx`:
+
+- `hayJuegosIndividual` / `hayJuegosEquipo` deciden si se muestran las cards "Individual" /
+  "Equipo" en el paso `'tipo'` (antes, "Individual" se mostraba siempre incondicionalmente; ahora
+  se oculta si **ningún** juego del evento admite modalidad individual — evento 100% `team`).
+- `gamesDisponibles` en el paso `'juego'` filtra la lista de juegos ofrecidos según el
+  `tipoInscripcion` ya elegido: si es `'individual'`, solo juegos con `permiteIndividual`
+  (`individual` o `both`); si es `'equipo'`, solo juegos con `permiteEquipo` (`team` o `both`).
+
+**Importante sobre el orden de pantallas**: el wizard sigue eligiendo primero "Individual/Equipo"
+(paso `'tipo'`) y recién después el juego puntual (paso `'juego'`) — no se invirtió ese orden ni se
+armó un sistema nuevo, tal como se pidió. La consulta a `registration_mode` ocurre igual, solo que
+se aplica como filtro de qué juegos quedan disponibles en cada rama, en vez de decidir la modalidad
+después de elegir el juego. El resultado final es equivalente: un juego `team` nunca puede
+terminar en el flujo individual, y viceversa.
+
+### Fallback para `registration_mode = NULL` (compatibilidad histórica)
+
+**No se migran registros existentes.** Para `event_games` con `registration_mode = NULL`, el
+comportamiento debe ser idéntico al que había antes de esta feature, que dependía de
+`games.team_option`:
+
+- Antes de esta revisión, un juego con `team_option = true` se mostraba **tanto en el flujo
+  individual como en el de equipo** (no existía un modo "solo equipo"). Es decir, se comportaba
+  como `both`, **no** como `team`.
+- Un juego con `team_option = false` solo se mostraba en el flujo individual — se comportaba como
+  `individual`.
+
+`getEffectiveRegistrationMode(game)` replica exactamente esto:
+
+```js
+registration_mode ?? (team_option ? 'both' : 'individual')
+```
+
+Ningún evento/juego histórico cambia de comportamiento: los que ya eran "team_option=true" siguen
+ofreciendo ambas modalidades, y los "team_option=false" siguen siendo solo individuales.
+
+### Configuración desde el admin
+
+- **`AddTournamentForm.jsx`** (alta de evento): por cada juego seleccionado con
+  `team_option = true`, aparece un `<select>` con "Individual" / "Solo equipos" / "Individual o
+  equipos" (default `both`, para que un evento nuevo se comporte igual que el histórico si el
+  admin no toca nada). Si `team_option = false`, no se muestra selector — se guarda
+  `registration_mode = 'individual'` sin depender de ningún estado de UI.
+- **`EventsList.jsx` → `EditEventModal`** (edición): mismo selector, mismas reglas — con el
+  agregado de la restricción de la siguiente sección.
+
+### Restricción para editar la modalidad con inscripciones existentes
+
+**Relación real usada para decidirlo** (no hay columna que conecte `games_inscriptions`
+directamente con `event_games`): `inscriptions.id_evento = events.id`, y
+`games_inscriptions(id_inscription, id_game)` conecta cada inscripción con el juego elegido. Para
+saber si un `event_games` puntual (evento + juego) ya tiene participantes:
+
+1. Traer los `id` de `inscriptions` donde `id_evento = <id del evento>`.
+2. Traer los `id_game` de `games_inscriptions` donde `id_inscription` esté en ese set.
+3. El juego está "bloqueado" si su `id` aparece en ese segundo resultado.
+
+Implementado en `getGamesConInscripcionesDelEvento(eventId)` (`EventsList.jsx`), reutilizada en dos
+momentos:
+
+- **Al abrir el modal de edición** (`abrirEdicion`): calcula qué juegos del evento ya tienen
+  inscripciones y deshabilita su selector de modalidad, con el tooltip/mensaje "Ya tiene
+  inscripciones — la modalidad no se puede modificar." Si la verificación en sí falla (error de
+  red/RLS), **no se asume que es seguro editar**: se bloquean todos los selectores de modalidad del
+  modal hasta que se pueda verificar (fail-closed, no fail-open).
+- **Al guardar** (`saveChanges`), como chequeo autoritativo e independiente de lo que haya mostrado
+  la UI (mismo patrón de "defensa en profundidad" que ya se usa para el borrado de eventos): se
+  vuelve a calcular en ese momento y, si algún juego seleccionado cambió de modalidad efectiva
+  respecto a la guardada y ya tiene inscripciones, se frena **todo el guardado** (no se aplica
+  ningún cambio parcial) con el mensaje `No se puede modificar la modalidad de "<juego>" porque ya
+  tiene inscripciones asociadas.`.
+
+### Restricción para quitar un juego con inscripciones existentes del evento
+
+**Regla:** un juego asociado a un evento no puede quitarse si existen inscripciones de ese juego
+dentro de ese evento. Cierra el hueco que quedaba abierto tras la restricción de modalidad de
+arriba: antes de este cambio, un juego con inscripciones no podía cambiar de modalidad, pero sí se
+podía destildar por completo y sacarlo del evento — dejando esas inscripciones "huérfanas" (el
+juego ya no figuraría entre los `event_games` del evento, aunque la inscripción y su
+`games_inscriptions` siguieran existiendo).
+
+Usa **la misma relación real** que la restricción de modalidad (no hay columna que conecte
+`games_inscriptions` directamente con `event_games`): `inscriptions.id_evento = events.id` +
+`games_inscriptions.id_game`. Reutiliza el mismo `getGamesConInscripcionesDelEvento(eventId)`, sin
+lógica duplicada:
+
+- **En el modal de edición**: el checkbox de un juego con inscripciones queda `disabled` (no se
+  puede destildar), sigue mostrándose tildado y visible como juego asociado, y se agrega el
+  hint "No se puede quitar este juego porque ya tiene inscripciones asociadas." (más "ni cambiar su
+  modalidad" si además admite equipo). Mientras la verificación está en curso o si falla, el
+  checkbox también queda bloqueado — mismo criterio *fail-closed* que la modalidad: si no se puede
+  confirmar que un juego no tiene inscripciones, no se permite quitarlo.
+- **Al guardar** (`saveChanges`): chequeo autoritativo independiente de la UI. Compara los juegos
+  que estaban asociados al evento contra los que quedaron tildados; si alguno de los que se está
+  sacando tiene inscripciones, se frena **todo el guardado** (no se aplica ningún cambio parcial)
+  con el mensaje `No se puede quitar "<juego>" del evento porque ya tiene inscripciones
+  asociadas.`. Si la propia verificación (`getGamesConInscripcionesDelEvento`) falla, la excepción
+  se propaga al `catch` general de `saveChanges` y el guardado completo se aborta con el mensaje de
+  error genérico — nada se persiste, consistente con fail-closed.
+
+**Alcance de estas dos restricciones combinadas**: un juego con al menos una inscripción en ese
+evento no puede cambiar de modalidad ni quitarse del evento. Sí puede seguir agregándose/quitando
+libremente cualquier juego **sin** inscripciones, y el resto de los campos del evento (fecha,
+localidad, `visible_en_home`, etc.) se editan sin restricciones nuevas.
+
 ## Consultas a Supabase por paso
 
 | Paso | Tabla(s) | Operación |
 |---|---|---|
 | Carga inicial | `events` | `select('*').eq('slug', eventoSlug).single()` |
-| Carga inicial | `event_games` (join `games`), `event_games_days` | `select` vía `useEventGames` |
+| Carga inicial | `event_games` (join `games`), `event_games_days` | `select` vía `useEventGames` (incluye `registration_mode`) |
 | `Formulario` / `FormularioEquipo` / `VerificacionSteam` / `VerificacionRiot` | `events` | **Re-fetch** por `id` vía `useEventoSeleccionado(eventoId)` (hook separado, duplica la consulta ya hecha en `SeleccionInscripcion`) |
 | `Confirmacion` (individual) | `inscriptions`, `games_inscriptions` | `insert` + `update` (para `qr_code`) |
 | `ConfirmacionEquipo` | `inscriptions` (una fila por capitán + una por jugador), `games_inscriptions` | `insert` + `update` por cada fila |
@@ -145,3 +269,32 @@ duplicado más nuevo. Ver `docs/eventos.md` (generación de slug + correlativo) 
 Ninguno de estos cambios altera el comportamiento del flujo público más allá de lo descripto: sigue
 yendo a Home ante un fallo de carga del evento, solo que ahora sin el crash intermedio y dejando
 registrado el motivo real en consola.
+
+### Cambios de esta segunda revisión (nombre del evento + modalidad por juego)
+
+- `events.nombre` (opcional) se agregó a los hooks de lectura y a los formularios de alta/edición
+  de evento, y se muestra como título principal (con `localidad` como contexto) en todos los
+  lugares donde se presenta un evento — ver el detalle completo en `docs/eventos.md`.
+- `event_games.registration_mode` (`individual | team | both | NULL`) se agregó a `useEventGames`,
+  a los formularios de alta/edición de evento (selector por juego, solo si `team_option = true`), y
+  al flujo público (`SeleccionInscripcion.jsx` filtra juegos disponibles según la modalidad
+  efectiva). Ver toda la sección "Modalidad de inscripción por juego" más arriba.
+- Se agregó la restricción para no permitir cambiar la modalidad de un juego que ya tiene
+  inscripciones, con doble chequeo (al abrir el modal de edición y, de nuevo, al guardar).
+- **No se tocó**: el esquema de `games`, la estructura ni el propósito de `event_games_days`
+  (sigue relacionándose con `event_games.id` exactamente igual que antes — un `event_game` puede
+  tener uno o varios registros de días sin importar su modalidad), ni se migró ningún registro
+  histórico de `registration_mode`.
+
+### Cambios de esta tercera revisión (bloqueo de quitar un juego con inscripciones)
+
+- Se agregó la restricción **"un juego asociado a un evento no puede quitarse si existen
+  inscripciones de ese juego dentro de ese evento"** — ver la sección dedicada más arriba. Cierra
+  el hueco que había quedado señalado (no corregido) al final de la revisión anterior.
+- Mismo patrón que la restricción de modalidad: bloqueo visual del checkbox en
+  `EditEventModal` (fail-closed mientras se verifica o si la verificación falla) + chequeo
+  autoritativo independiente en `saveChanges` que frena todo el guardado si detecta que se está
+  intentando quitar un juego con inscripciones.
+- No se tocó nada de `event_games_days`, `games.team_option`, `registration_mode` en sí, el flujo
+  público de inscripción, los slugs, ni se migró ningún dato histórico — todo esto seguía
+  funcionando bien y no era parte de este pedido.

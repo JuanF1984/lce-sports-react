@@ -12,6 +12,7 @@ import { useAuth } from "../../../context/UseAuth";
 import { localidadesBuenosAires } from "../../../data/localidades";
 import { getGameConfig } from "../../../data/gameConfig";
 import { formatearHora } from "../../../utils/dateUtils";
+import { tituloEventoCorto } from "../../../utils/eventoDisplay";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 import { EventoModal } from "./common/EventoModal";
@@ -162,7 +163,7 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
             {/* Barra de info del evento */}
             <div className="fd-event-bar">
                 <p className="fd-event-text">
-                    {eventoSeleccionado?.localidad}
+                    {tituloEventoCorto(eventoSeleccionado)}
                     {fechaCorta && <> · {fechaCorta}</>}
                     {hora && <> · {hora}</>}
                 </p>

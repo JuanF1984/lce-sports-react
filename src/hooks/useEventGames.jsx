@@ -21,6 +21,7 @@ export const useEventGames = (eventIds) => {
                         id,
                         event_id,
                         game_id,
+                        registration_mode,
                         games (
                             id,
                             game_name,
@@ -64,9 +65,11 @@ export const useEventGames = (eventIds) => {
                         if (!acc[item.event_id]) acc[item.event_id] = [];
                         acc[item.event_id].push({
                             id: item.game_id,
+                            event_game_id: item.id,
                             game_name: item.games.game_name,
                             team_option: item.games.team_option,
                             principal: item.games.principal,
+                            registration_mode: item.registration_mode,
                             dias: daysMap[item.id] ?? [],
                         });
                     }

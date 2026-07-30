@@ -64,6 +64,12 @@
     margin-bottom: 0.1rem;
 }
 
+.pe-localidad-sub {
+    font-size: 0.88rem;
+    color: #6b7280;
+    margin-bottom: 0.1rem;
+}
+
 .pe-fecha {
     font-size: 0.88rem;
     color: #6b7280;
@@ -326,7 +332,8 @@
     }
 
     .pe-fecha,
-    .pe-direccion {
+    .pe-direccion,
+    .pe-localidad-sub {
         font-size: 0.95rem;
     }
 
@@ -358,7 +365,8 @@
     }
 
     .pe-fecha,
-    .pe-direccion {
+    .pe-direccion,
+    .pe-localidad-sub {
         font-size: 1rem;
     }
 

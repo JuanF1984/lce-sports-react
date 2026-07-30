@@ -16,6 +16,8 @@ import { useEventGames } from "../../../hooks/useEventGames";
 import { LogoNeon } from "../../common/LogoNeon";
 import supabase from "../../../utils/supabase";
 import { formatearHora } from "../../../utils/dateUtils";
+import { tituloEventoCorto } from "../../../utils/eventoDisplay";
+import { permiteIndividual, permiteEquipo } from "../../../utils/registrationMode";
 
 import "@styles/SeleccionInscripcion.css";
 
@@ -92,7 +94,10 @@ export const SeleccionInscripcion = () => {
 
     const games = eventoSeleccionado?.id ? (eventGames[eventoSeleccionado.id] || []) : [];
 
-    const hayJuegosEquipo = games.some(game => game.team_option);
+    // La modalidad (individual/equipo/ambas) es por juego dentro del evento
+    // (event_games.registration_mode), no global al juego — ver src/utils/registrationMode.js.
+    const hayJuegosEquipo = games.some(permiteEquipo);
+    const hayJuegosIndividual = games.some(permiteIndividual);
 
     useEffect(() => {
         if (games.length === 0) return;
@@ -144,7 +149,7 @@ export const SeleccionInscripcion = () => {
         return (
             <main className="si-page">
                 <div className="si-event-bar">
-                    <p className="si-event-text">{eventoSeleccionado.localidad}</p>
+                    <p className="si-event-text">{tituloEventoCorto(eventoSeleccionado)}</p>
                 </div>
                 <div className="si-cerrado">
                     <div className="si-cerrado-icon">{sinCupos && !eventoVencido ? '🎮' : '📅'}</div>
@@ -171,8 +176,8 @@ export const SeleccionInscripcion = () => {
     // ── Paso: selección de juego (solo torneos) ─────────
     if (paso === 'juego') {
         const gamesDisponibles = tipoInscripcion === 'equipo'
-            ? games.filter(g => g.team_option)
-            : games;
+            ? games.filter(permiteEquipo)
+            : games.filter(permiteIndividual);
         return (
             <SeleccionJuego
                 onBack={() => { setPaso('tipo'); setTipoInscripcion(null); }}
@@ -282,7 +287,7 @@ export const SeleccionInscripcion = () => {
 
             <div className="si-event-bar">
                 <p className="si-event-text">
-                    {eventoSeleccionado.localidad}
+                    {tituloEventoCorto(eventoSeleccionado)}
                     {fechaCorta && <> · {fechaCorta}</>}
                     {hora && <> · {hora}</>}
                 </p>
@@ -298,17 +303,19 @@ export const SeleccionInscripcion = () => {
             <h2 className="si-titulo">¿Cómo te anotás?</h2>
 
             <div className="si-cards-grid">
-                <button
-                    className="si-card"
-                    onClick={() => { setTipoInscripcion('individual'); setPaso('juego'); }}
-                >
-                    <div className="si-card-icon">
-                        <FontAwesomeIcon icon={faUser} />
-                    </div>
-                    <p className="si-card-title">Individual</p>
-                    <p className="si-card-sub">Para inscribirte solo</p>
-                    <span className="si-card-arrow">›</span>
-                </button>
+                {hayJuegosIndividual && (
+                    <button
+                        className="si-card"
+                        onClick={() => { setTipoInscripcion('individual'); setPaso('juego'); }}
+                    >
+                        <div className="si-card-icon">
+                            <FontAwesomeIcon icon={faUser} />
+                        </div>
+                        <p className="si-card-title">Individual</p>
+                        <p className="si-card-sub">Para inscribirte solo</p>
+                        <span className="si-card-arrow">›</span>
+                    </button>
+                )}
 
                 {hayJuegosEquipo && (
                     <button

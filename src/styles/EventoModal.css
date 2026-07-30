@@ -48,6 +48,14 @@
     margin: 0 0 20px;
 }
 
+.em-eyebrow {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #718096;
+    margin: 0 0 4px;
+}
+
 .em-lista {
     list-style: none;
     padding: 0;

@@ -75,7 +75,14 @@ const EventoCard = ({ evento, juegos, onImageLoad }) => {
 
             {/* Datos del evento */}
             <div className="pe-info">
-                <p className="pe-localidad">{evento.localidad}</p>
+                {evento.nombre ? (
+                    <>
+                        <p className="pe-localidad">{evento.nombre}</p>
+                        <p className="pe-localidad-sub">{evento.localidad}</p>
+                    </>
+                ) : (
+                    <p className="pe-localidad">{evento.localidad}</p>
+                )}
                 <p className="pe-fecha">
                     {formatearRangoFechas(evento.fecha_inicio, evento.fecha_fin)}
                     {evento.hora_inicio && (
@@ -142,7 +149,14 @@ const EventoCard = ({ evento, juegos, onImageLoad }) => {
                 <div className="pe-confirm-modal" onClick={(e) => e.stopPropagation()}>
                     <p className="pe-confirm-titulo">¿Confirmás tu inscripción?</p>
                     <div className="pe-confirm-detalle">
-                        <p className="pe-confirm-localidad">{evento.localidad}</p>
+                        {evento.nombre ? (
+                            <>
+                                <p className="pe-confirm-localidad">{evento.nombre}</p>
+                                <p className="pe-confirm-dir">{evento.localidad}</p>
+                            </>
+                        ) : (
+                            <p className="pe-confirm-localidad">{evento.localidad}</p>
+                        )}
                         <p className="pe-confirm-fecha">
                             {formatearRangoFechas(evento.fecha_inicio, evento.fecha_fin)}
                             {evento.hora_inicio && (
