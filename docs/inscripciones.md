@@ -153,6 +153,252 @@ evento no puede cambiar de modalidad ni quitarse del evento. Sí puede seguir ag
 libremente cualquier juego **sin** inscripciones, y el resto de los campos del evento (fecha,
 localidad, `visible_en_home`, etc.) se editan sin restricciones nuevas.
 
+## Reglas configurables por evento (edad y modo de selección de juegos)
+
+Agregado en esta revisión. Cuatro columnas nuevas en `events` —
+`edad_minima`, `edad_maxima`, `modo_seleccion_juegos`, `max_juegos_por_participante`
+— permiten configurar, **por evento**, un límite de edad y/o un modo de
+selección de juegos sin distinción principal/secundario. Ver
+`docs/eventos.md` para el significado de cada columna y `docs/supabase.md`
+para la migración, los triggers y los constraints exactos.
+
+Principio general: **el frontend valida para la experiencia de usuario, la
+base de datos (triggers) es la validación definitiva.** Cualquier cosa que el
+frontend deje pasar (bug, evento cargado a medias, request directa a
+Supabase) el trigger la rechaza igual.
+
+### Límite de edad
+
+**No existe `fecha_nacimiento` en ningún lado del esquema** (decisión
+explícita para esta entrega). La edad sigue siendo el mismo campo de texto
+auto-declarado de siempre (`edad`, validado como "solo dígitos" por
+`validateAge`), sin verificación de identidad ni comparación contra la fecha
+del evento. La validación de límite de edad se hace sobre ese mismo valor
+auto-declarado — mismo nivel de confianza que el resto del formulario.
+Consecuencia práctica: alguien que se inscribe siendo menor de la edad límite
+pero que cumple años antes de la fecha del evento no queda detectado por
+este mecanismo (no hay forma de saberlo sin fecha de nacimiento).
+
+`edad_maxima` y `edad_minima` son **inclusive**: con `edad_maxima = 17`, una
+persona de 17 años puede inscribirse y una de 18 no.
+
+**Dónde se persiste cada participante** (verificado en el código antes de
+implementar, no asumido):
+
+| Participante | Dónde se inserta | Archivo |
+|---|---|---|
+| Inscripción individual | 1 fila en `inscriptions` | `Confirmacion.jsx` |
+| Capitán de equipo | 1 fila en `inscriptions` | `ConfirmacionEquipo.jsx`, paso 1 |
+| Cada jugador del equipo | 1 fila en `inscriptions` por jugador, insertadas secuencialmente | `ConfirmacionEquipo.jsx`, paso 2 |
+
+Los tres casos son, en el fondo, un INSERT individual sobre `inscriptions`
+por participante — por eso un único trigger `BEFORE INSERT FOR EACH ROW`
+sobre esa tabla alcanza para cubrir individual, capitán **y** cada jugador
+del equipo. **El límite de edad aplica a todos los integrantes, incluido el
+capitán** — no solo al capitán.
+
+**Frontend** (experiencia de usuario, no definitivo):
+- Helper compartido `validateParticipantAge(edad, evento)` en
+  `src/utils/eventRules.js` — si el evento no tiene `edad_minima` ni
+  `edad_maxima`, siempre devuelve válido (no cambia nada para eventos sin
+  estas reglas). Se usa en:
+  - `Formulario.jsx` (inscripción individual).
+  - `useFormularioEquipo.jsx` → `validateForm(eventoSeleccionado)` (capitán y
+    cada jugador del array `jugadores`; `FormularioEquipo.jsx` ahora le pasa
+    el evento seleccionado a `validateForm`).
+- Mensaje específico vía `participantAgeErrorMessage(code, evento)`, p. ej.
+  para `edad_maxima = 17`: *"Este torneo admite participantes de hasta 17
+  años inclusive."*
+
+**Backend/Supabase (definitivo)**: función `validate_participant_age()` +
+trigger `trg_validate_participant_age` (`BEFORE INSERT ON inscriptions FOR
+EACH ROW`), en
+`supabase/migrations/20260804_event_participation_rules.sql`. Si el evento no
+tiene límites configurados, no hace nada (evento sin cambios de
+comportamiento). Si los tiene:
+1. Requiere que `edad` esté presente (si no, `INVALID_PARTICIPANT_AGE`).
+2. Intenta convertirla a entero de forma controlada (bloque
+   `BEGIN/EXCEPTION`, no deja que un cast inválido tire un error genérico de
+   Postgres) — si falla, `INVALID_PARTICIPANT_AGE`.
+3. Rechaza negativos (`INVALID_PARTICIPANT_AGE`).
+4. Si hay `edad_minima` y no se cumple: `EVENT_MINIMUM_AGE_NOT_MET`.
+5. Si hay `edad_maxima` y se supera: `EVENT_MAXIMUM_AGE_EXCEEDED`.
+
+Estos tres marcadores viajan como el mensaje de la excepción (y como
+`errcode` custom `LCE01`/`LCE02`/`LCE03`), y el frontend los traduce a
+mensajes de usuario en `Confirmacion.jsx`/`ConfirmacionEquipo.jsx` (ver más
+abajo) — nunca se muestra el error crudo de SQL.
+
+**Supuesto pendiente de verificar contra Supabase real** (sin acceso directo
+a la instancia desde este entorno, ver `docs/supabase.md`): el trigger asume
+que `inscriptions.edad` es una columna de texto (así la manda siempre el
+frontend, sin parsear) y hace un cast defensivo — funciona igual si en
+realidad ya fuera `integer`, pero no se pudo confirmar el tipo real de la
+columna.
+
+### Selección libre de juegos (`modo_seleccion_juegos = 'libre'`)
+
+En `'clasificado'` (default histórico) **no cambia absolutamente nada**:
+`SeleccionJuego.jsx` sigue exactamente igual, con el mismo hardcode de
+siempre (1 principal + 1 secundario, o hasta 3 secundarios sin principal,
+según `games.principal`). Esas reglas **siguen siendo exclusivamente de
+frontend** — a propósito no se replicaron en la base en esta revisión (no era
+parte del pedido, y el modo `'clasificado'` ya viene funcionando así desde
+antes).
+
+En `'libre'`:
+- `SeleccionJuego.jsx` muestra **todos** los juegos del evento en un único
+  conjunto (mismo componente `GameCard`, sin sub-pasos "principal"/
+  "secundario"), ignorando `games.principal` por completo.
+- Se puede seleccionar cualquier combinación, sin orden de prioridad.
+- Cantidad permitida: `max_juegos_por_participante` si no es `NULL`; sin
+  límite si es `NULL`.
+- No se puede continuar sin seleccionar al menos un juego (mismo
+  comportamiento que el modo `'clasificado'`, que tampoco lo permite).
+- El contrato `onNext(juegos)` (array de juegos elegidos) es el mismo de
+  siempre, así que el resto del wizard (verificación Steam/Riot, formulario
+  de datos) no necesitó cambios: ya usaba `.some()` sobre un array de N
+  juegos.
+- Las validaciones de modalidad individual/equipo (`event_games.registration_mode`,
+  ver más arriba) no se tocan: el filtrado por modalidad ocurre **antes**, en
+  `SeleccionInscripcion.jsx`, sobre la lista de juegos que se le pasa a
+  `SeleccionJuego.jsx` — es ortogonal a este cambio.
+
+**Backend/Supabase (definitivo)**: la regla de cantidad máxima se protege
+donde se crean las relaciones con los juegos, no en el frontend. Función
+`enforce_event_game_limit()`, reutilizada por **dos triggers de sentencia**
+independientes: `trg_enforce_event_game_limit_insert` (`AFTER INSERT ON
+games_inscriptions REFERENCING NEW TABLE AS inserted_games FOR EACH
+STATEMENT`) y `trg_enforce_event_game_limit_update` (mismo `REFERENCING`/
+`FOR EACH STATEMENT`, pero `AFTER UPDATE`).
+
+**Por qué dos triggers y no uno combinado**: Postgres no permite un trigger
+`AFTER INSERT OR UPDATE ... REFERENCING NEW TABLE` — cuando un trigger lista
+más de un evento, no puede pedir tabla de transición, hay que declarar un
+trigger separado por cada evento que la necesite. La función no necesita
+saber cuál de los dos la disparó (no lee `TG_OP`): en ambos casos opera
+exclusivamente sobre `inserted_games`, la tabla de transición con las filas
+nuevas de la sentencia.
+
+Este diseño reemplaza uno anterior (`BEFORE INSERT FOR EACH ROW`) que
+dependía de que un trigger de fila viera, vía `SELECT`, las filas hermanas ya
+procesadas de un mismo `INSERT` multi-fila — nunca verificado contra una
+instancia real y frágil por depender de un detalle interno de ejecución fila
+por fila. El trigger de sentencia con tabla de transición evalúa en cambio el
+**resultado final** de toda la sentencia, sin importar cuántas filas insertó
+ni a cuántas inscripciones tocó:
+
+1. Identifica todas las inscripciones afectadas por la sentencia
+   (`select distinct id_inscription from inserted_games`, la tabla de
+   transición con las filas nuevas del `INSERT`/`UPDATE`).
+2. Bloquea esas inscripciones una por una, en orden ascendente por `id`
+   (`select ... for update`), antes de contar nada.
+3. Cuenta el total definitivo de `games_inscriptions` por cada inscripción
+   afectada, cruzando con `events` para aplicar el filtro solo cuando
+   `modo_seleccion_juegos = 'libre'` **y** `max_juegos_por_participante is
+   not null` — en cualquier otro caso (`'clasificado'`, o `'libre'` sin
+   máximo) esa inscripción queda afuera del cálculo por el propio
+   `JOIN`/`WHERE`, nunca puede hacer fallar la sentencia.
+4. Si alguna inscripción tocada por la sentencia quedó con más juegos que su
+   máximo, rechaza con `EVENT_GAME_LIMIT_EXCEEDED` — Postgres revierte la
+   sentencia **completa** (estándar de un trigger `AFTER STATEMENT`), así que
+   no quedan filas parciales de ningún participante ni de ninguna
+   inscripción del lote, aunque solo una de varias haya excedido el máximo.
+
+**Multi-fila**: la inscripción individual inserta todos sus juegos en un
+solo INSERT con múltiples filas (`Confirmacion.jsx`, un solo
+`.insert(gameRows)`). Como el trigger corre una sola vez después de toda la
+sentencia (no fila por fila), esto ya no depende de ningún supuesto sobre
+visibilidad de filas hermanas dentro del mismo comando — el conteo siempre
+ve el resultado final real. La inscripción de equipo inserta un juego a la
+vez por participante (el flujo de equipo solo admite un juego por
+inscripción); el mismo trigger cubre igual ese caso, porque también dispara
+en sentencias de una sola fila.
+
+**Condición de carrera**: el trigger bloquea (`select ... for update`) todas
+las inscripciones afectadas, en orden determinístico, antes de contar —
+serializa sentencias concurrentes que tocan la misma inscripción (la segunda
+queda esperando el lock hasta que la primera haga commit o rollback, y recién
+ahí cuenta el total real combinado de ambas) y el orden ascendente evita
+deadlocks entre dos sentencias que bloqueen el mismo conjunto de
+inscripciones en órdenes distintos. **Esto todavía no se probó contra una
+instancia real** — el diseño requiere confirmarse con dos sesiones SQL
+simultáneas, no alcanza con el análisis estático del trigger; el guion
+exacto para hacerlo está en
+`supabase/tests/20260804_event_participation_rules_manual_tests.sql`, sección
+"Concurrencia".
+
+**UPDATE**: `trg_enforce_event_game_limit_update` cubre un `UPDATE` que
+reasigne `id_inscription` o `id_game` de una fila existente de
+`games_inscriptions` — la inscripción de destino (adonde queda la relación
+tras el cambio) es la que aparece en `inserted_games`, así que entra en el
+cálculo igual que cualquier inscripción tocada por un INSERT, sin lógica
+aparte. Hoy el código de la app nunca hace `UPDATE` sobre esa tabla (solo
+`INSERT`, ver `Confirmacion.jsx` / `ConfirmacionEquipo.jsx`) — se cubre de
+todas formas para que la protección sea real contra cualquier request
+directa, no solo contra el `INSERT` que usa
+hoy el frontend.
+
+**Duplicados de juego por inscripción**: restricción real
+`games_inscriptions_inscription_game_key unique (id_inscription, id_game)`,
+aplicada por la migración. A diferencia de una versión anterior (que dejaba
+esto comentado, sin aplicar), la migración ahora comprueba ella misma si
+existen duplicados antes de crear la restricción (bloque `do $$ ... $$` con
+`raise exception` si encuentra alguno, marcador
+`GAMES_INSCRIPTIONS_DUPLICATE_ROWS_FOUND`) — no borra ni fusiona filas
+automáticamente, y como toda la migración corre en una única transacción, un
+aborto por duplicados revierte también el resto del archivo (columnas,
+trigger de edad, trigger de límite de juegos). Si el frontend intentara
+insertar el mismo `(id_inscription, id_game)` dos veces (no debería poder
+pasar en el flujo normal — `SeleccionJuego.jsx` arma la selección con
+`.some()`/`.findIndex()`, que evita elegir el mismo juego dos veces), la
+violación de esta restricción (`errcode` estándar de Postgres `23505`) se
+traduce a un mensaje genérico vía `mapSupabaseRuleError` en
+`src/utils/eventRules.js`, igual que los demás marcadores — nunca se expone
+el error crudo de SQL.
+
+### Mensajes de error específicos en la pantalla de confirmación
+
+`Confirmacion.jsx` y `ConfirmacionEquipo.jsx` usan
+`mapSupabaseRuleError(err)` (`src/utils/eventRules.js`) para traducir los
+marcadores del trigger a mensajes de usuario:
+
+| Marcador | Mensaje mostrado |
+|---|---|
+| `INVALID_PARTICIPANT_AGE` | "La edad ingresada no es válida para este evento." |
+| `EVENT_MINIMUM_AGE_NOT_MET` | "No se cumple la edad mínima requerida para este evento." |
+| `EVENT_MAXIMUM_AGE_EXCEEDED` | "Se superó la edad máxima permitida para este evento." |
+| `EVENT_GAME_LIMIT_EXCEEDED` | "Se superó la cantidad máxima de juegos permitida por participante en este evento." |
+
+Además de estos cuatro marcadores custom, `mapSupabaseRuleError` también
+reconoce la violación de la restricción `UNIQUE`
+`games_inscriptions_inscription_game_key` (`errcode` estándar de Postgres
+`23505`, no un marcador propio) y la traduce a "Ese juego ya estaba
+registrado para esta inscripción.".
+
+Si el error no coincide con ninguno de estos casos, se mantiene el mensaje
+genérico de siempre ("Hubo un error al guardar tu inscripción..."). En
+ningún caso se expone el mensaje crudo de Postgres/SQL al usuario final.
+
+### Bloqueo de edición con inscripciones existentes
+
+`edad_minima`, `edad_maxima`, `modo_seleccion_juegos` y
+`max_juegos_por_participante` quedan de solo lectura en `EditEventModal` en
+cuanto el evento tiene al menos una inscripción — mismo criterio que ya
+existía para `tipo` (inmutable siempre) y `registration_mode`/quitar juegos
+(bloqueados con inscripciones). Doble chequeo, igual que el resto del
+archivo:
+- **Al abrir el modal**: se usa el flag `tieneInscripciones[event.id]` que
+  `EventsList.jsx` ya precarga para toda la lista (columna "Inscriptos"),
+  deshabilitando los 4 campos.
+- **Al guardar** (`saveChanges`): chequeo autoritativo e independiente,
+  `eventoTieneInscripciones(eventId)` (nueva consulta puntual, mismo patrón
+  que la que ya usa `handleDeleteEvent`). Si el evento tiene inscripciones y
+  alguno de los 4 campos cambió respecto al valor original, se frena **todo
+  el guardado** (no se aplica ningún cambio parcial). Si esa verificación
+  falla (red, RLS), se trata como si el evento **sí** tuviera inscripciones
+  (fail-closed) y también se bloquea el guardado de esos campos.
+
 ## Consultas a Supabase por paso
 
 | Paso | Tabla(s) | Operación |
@@ -298,3 +544,101 @@ registrado el motivo real en consola.
 - No se tocó nada de `event_games_days`, `games.team_option`, `registration_mode` en sí, el flujo
   público de inscripción, los slugs, ni se migró ningún dato histórico — todo esto seguía
   funcionando bien y no era parte de este pedido.
+
+### Cambios de esta cuarta revisión (reglas configurables por evento: edad y modo de selección de juegos)
+
+- Se agregaron `events.edad_minima`, `events.edad_maxima`,
+  `events.modo_seleccion_juegos` (`'clasificado'`/`'libre'`, default
+  `'clasificado'`) y `events.max_juegos_por_participante` — ver la sección
+  dedicada más arriba y `docs/eventos.md`/`docs/supabase.md`.
+- Validación de edad de UI en `Formulario.jsx` y `useFormularioEquipo.jsx`
+  (capitán y cada jugador) vía el helper compartido
+  `validateParticipantAge`/`participantAgeErrorMessage`
+  (`src/utils/eventRules.js`).
+- Validación de edad **definitiva** vía trigger `BEFORE INSERT ON
+  inscriptions` (`supabase/migrations/20260804_event_participation_rules.sql`).
+- `SeleccionJuego.jsx` agregó una rama para `modo_seleccion_juegos = 'libre'`
+  (todos los juegos en un único conjunto, sin principal/secundario, tope
+  opcional). El modo `'clasificado'` no cambió ni un carácter de su
+  comportamiento.
+- Validación **definitiva** del máximo de juegos vía trigger de sentencia
+  sobre `games_inscriptions`, activo solo bajo modo `'libre'` (rediseñado en
+  la quinta revisión, ver más abajo — el diseño original de esta cuarta
+  revisión era `BEFORE INSERT FOR EACH ROW` y quedó reemplazado).
+- `Confirmacion.jsx`/`ConfirmacionEquipo.jsx` traducen los marcadores de
+  error del trigger (`INVALID_PARTICIPANT_AGE`, `EVENT_MINIMUM_AGE_NOT_MET`,
+  `EVENT_MAXIMUM_AGE_EXCEEDED`, `EVENT_GAME_LIMIT_EXCEEDED`) a mensajes
+  específicos, con fallback al mensaje genérico de siempre.
+- `EventsList.jsx`/`EditEventModal` agregaron los 4 campos nuevos, bloqueados
+  a solo lectura cuando el evento ya tiene inscripciones (mismo criterio que
+  `tipo`/`registration_mode`), con chequeo autoritativo fail-closed al
+  guardar.
+- **No se tocó** `games.principal`, `event_games`, ni las reglas de
+  principal/secundario del modo `'clasificado'` (siguen siendo
+  exclusivamente de frontend, a propósito). No se agregó `fecha_nacimiento`
+  ni ninguna iniciativa de tipado TypeScript — quedó fuera de alcance a
+  pedido explícito.
+- No se implementaron condiciones basadas en el id/slug/nombre de ningún
+  evento puntual: toda la lógica nueva lee exclusivamente las 4 columnas de
+  configuración de `events`.
+
+### Cambios de esta quinta revisión (integridad del límite de juegos + UNIQUE real)
+
+Cierra dos puntos que habían quedado abiertos al final de la cuarta revisión,
+antes de aplicar la migración por primera vez contra Supabase:
+
+- **El trigger de máximo de juegos se rediseñó por completo**: de
+  `BEFORE INSERT ON games_inscriptions FOR EACH ROW` (dependía de un supuesto
+  no verificado sobre visibilidad de filas hermanas dentro de un mismo
+  `INSERT` multi-fila) a un trigger de sentencia con tabla de transición
+  (`REFERENCING NEW TABLE AS inserted_games FOR EACH STATEMENT`) que evalúa
+  el resultado definitivo de toda la sentencia, sin ese supuesto. Ver el
+  detalle completo en la sección "Selección libre de juegos" más arriba y en
+  `docs/supabase.md`.
+  - Postgres no permite combinar `INSERT`/`UPDATE` en un solo trigger cuando
+    se pide tabla de transición, así que quedaron **dos triggers separados**
+    que reutilizan la misma función `enforce_event_game_limit()`:
+    `trg_enforce_event_game_limit_insert` (`AFTER INSERT`) y
+    `trg_enforce_event_game_limit_update` (`AFTER UPDATE`). Un primer intento
+    de esta revisión los había combinado en uno solo (`AFTER INSERT OR
+    UPDATE ... REFERENCING NEW TABLE`), sintácticamente inválido en
+    Postgres — corregido antes de aplicar la migración por primera vez.
+  - `trg_enforce_event_game_limit_update` cubre `UPDATE` sobre
+    `games_inscriptions`, no solo `INSERT` (aunque el frontend hoy solo hace
+    `INSERT`), incluyendo el caso de mover una relación hacia una
+    inscripción de destino que ya está en su máximo.
+- **Se aplicó la restricción `UNIQUE (id_inscription, id_game)`
+  (`games_inscriptions_inscription_game_key`)**, que en la cuarta revisión
+  había quedado documentada pero comentada. La migración ahora comprueba ella
+  misma si hay duplicados (bloque `do $$ ... $$`) y aborta con un mensaje
+  explícito si encuentra alguno, en vez de depender de que una persona lea a
+  mano el resultado de un `SELECT`.
+- Toda la migración pasó a correr dentro de una única transacción explícita
+  (`begin;` / `commit;`): un aborto por duplicados en la sección del `UNIQUE`
+  revierte también las columnas nuevas de `events` y el trigger de edad — o
+  se aplica el archivo completo, o no se aplica nada.
+- **`ConfirmacionEquipo.jsx` corrigió un bug preexistente**: los `insert` en
+  `games_inscriptions` para el capitán y para cada jugador no revisaban
+  `error` (`await supabase.from("games_inscriptions").insert(...)` sin
+  desestructurar ni chequear el resultado). Con los triggers/constraint
+  nuevos, un rechazo del lado de Supabase en ese punto exacto habría quedado
+  silenciado — la pantalla de confirmación hubiera mostrado éxito aunque el
+  juego no se haya guardado, rompiendo el criterio fail-closed que ya regía
+  el resto del flujo. Ahora ambos `insert` capturan `error` y lo relanzan
+  (`if (error) throw error`), como ya hacía `Confirmacion.jsx`.
+- `src/utils/eventRules.js` sumó el reconocimiento de la violación de la
+  restricción `UNIQUE` (`errcode` `23505` de Postgres, no un marcador custom)
+  en `mapSupabaseRuleError`, con un mensaje genérico ("Ese juego ya estaba
+  registrado para esta inscripción.") — no debería poder dispararse en el
+  flujo normal (`SeleccionJuego.jsx` ya impide elegir el mismo juego dos
+  veces desde la UI), pero si aparece por cualquier motivo no se expone el
+  error crudo de SQL.
+- Pruebas SQL manuales reproducibles (edad, juegos multi-fila/multi-
+  inscripción, y concurrencia con dos sesiones reales) en
+  `supabase/tests/20260804_event_participation_rules_manual_tests.sql` —
+  archivo nuevo, no es parte de la migración y no se ejecuta automáticamente.
+- **No se tocó** ninguna decisión previa: la edad sigue siendo auto-declarada
+  sin `fecha_nacimiento`, `edad_maxima` sigue inclusive, `modo_seleccion_juegos
+  = 'clasificado'` conserva la lógica histórica sin cambios, `NULL` en
+  `max_juegos_por_participante` sigue significando ilimitado, y el bloqueo de
+  edición de estas reglas con inscripciones existentes sigue igual.

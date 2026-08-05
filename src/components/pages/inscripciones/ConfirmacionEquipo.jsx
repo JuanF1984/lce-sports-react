@@ -4,6 +4,7 @@ import supabase from "../../../utils/supabase";
 import { generateQRString } from "../../../utils/qrCodeGenerator";
 import { enviarConfirmacionEquipo } from "../../../utils/emailService";
 import { capitalizeText, normalizeEmail } from "../../../utils/validations";
+import { mapSupabaseRuleError } from "../../../utils/eventRules";
 import logoImg from "@img/logo.webp";
 
 import "@styles/Confirmacion.css";
@@ -64,9 +65,11 @@ export const ConfirmacionEquipo = ({
                 .update({ qr_code: qrStringCapitan, asistencia: false })
                 .eq("id", capitanData.id);
 
-            await supabase
+            const { error: capitanGameError } = await supabase
                 .from("games_inscriptions")
                 .insert({ id_inscription: capitanData.id, id_game: selectedGame });
+
+            if (capitanGameError) throw capitanGameError;
 
             capitanData.qr_code = qrStringCapitan;
             capitanData.id_evento = eventoId;
@@ -108,9 +111,11 @@ export const ConfirmacionEquipo = ({
                     .update({ qr_code: qrStringJugador, asistencia: false })
                     .eq("id", jugadorData.id);
 
-                await supabase
+                const { error: jugadorGameError } = await supabase
                     .from("games_inscriptions")
                     .insert({ id_inscription: jugadorData.id, id_game: selectedGame });
+
+                if (jugadorGameError) throw jugadorGameError;
 
                 jugadoresConQR.push({
                     ...jugadorNorm,
@@ -145,7 +150,10 @@ export const ConfirmacionEquipo = ({
             setEstado('ok');
         } catch (err) {
             console.error("Error al guardar inscripción de equipo:", err);
-            setErrorMsg("Hubo un error al guardar la inscripción. Intentá de nuevo.");
+            // Ver el mismo comentario en Confirmacion.jsx: mensaje específico si
+            // Supabase rechazó por una regla del evento (edad de algún
+            // integrante, límite de juegos), genérico en cualquier otro caso.
+            setErrorMsg(mapSupabaseRuleError(err) || "Hubo un error al guardar la inscripción. Intentá de nuevo.");
             setEstado('error');
         }
     };

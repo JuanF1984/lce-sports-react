@@ -44,6 +44,8 @@ export const FormularioEquipo = ({ onBack, onNext, eventoId, juegosSeleccionados
         jugadores,
         jugadoresErrors,
         setJugadoresErrors,
+        edadRangoError,
+        jugadoresEdadRangoErrors,
         selectedGame,
         setSelectedGame,
         errorMessage,
@@ -119,7 +121,7 @@ export const FormularioEquipo = ({ onBack, onNext, eventoId, juegosSeleccionados
         else if (emailRepetir !== formValues.email) repError = 'Los emails no coinciden';
         setEmailRepetirError(repError);
 
-        const isValid = validateForm();
+        const isValid = validateForm(eventoSeleccionado);
 
         if (!isValid || repError) {
             setErrorMessage("Por favor, completá todos los campos obligatorios.");
@@ -234,13 +236,16 @@ export const FormularioEquipo = ({ onBack, onNext, eventoId, juegosSeleccionados
                 <div className="fd-group">
                     <label className="fd-label">Edad<span className="fd-required">*</span></label>
                     <input
-                        className={`fd-input${fieldErrors.edad || fieldErrors.edadFormat ? ' fd-input--error' : ''}`}
+                        className={`fd-input${fieldErrors.edad || fieldErrors.edadFormat || fieldErrors.edadRango ? ' fd-input--error' : ''}`}
                         type="text" inputMode="numeric" name="edad"
                         value={formValues.edad} onChange={handleInputChange}
                         placeholder="18"
                     />
                     {fieldErrors.edad && <span className="fd-error-text">Requerido</span>}
                     {fieldErrors.edadFormat && <span className="fd-error-text">Solo números</span>}
+                    {!fieldErrors.edad && !fieldErrors.edadFormat && edadRangoError && (
+                        <span className="fd-error-text">{edadRangoError}</span>
+                    )}
                 </div>
 
                 <div className="fd-group">
@@ -344,7 +349,7 @@ export const FormularioEquipo = ({ onBack, onNext, eventoId, juegosSeleccionados
                         <div className="fd-group">
                             <label className="fd-label">Edad<span className="fd-required">*</span></label>
                             <input
-                                className={`fd-input${jugadoresErrors[index]?.edad || jugadoresErrors[index]?.edadFormat ? ' fd-input--error' : ''}`}
+                                className={`fd-input${jugadoresErrors[index]?.edad || jugadoresErrors[index]?.edadFormat || jugadoresErrors[index]?.edadRango ? ' fd-input--error' : ''}`}
                                 type="text" inputMode="numeric"
                                 value={jugador.edad}
                                 onChange={e => handleJugadorChange(index, 'edad', e.target.value)}
@@ -352,6 +357,9 @@ export const FormularioEquipo = ({ onBack, onNext, eventoId, juegosSeleccionados
                             />
                             {jugadoresErrors[index]?.edad && <span className="fd-error-text">Requerido</span>}
                             {jugadoresErrors[index]?.edadFormat && <span className="fd-error-text">Solo números</span>}
+                            {!jugadoresErrors[index]?.edad && !jugadoresErrors[index]?.edadFormat && jugadoresEdadRangoErrors[index] && (
+                                <span className="fd-error-text">{jugadoresEdadRangoErrors[index]}</span>
+                            )}
                         </div>
 
                         <div className="fd-group">

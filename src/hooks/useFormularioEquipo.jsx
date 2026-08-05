@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { validateEmail, validatePhone, validateAge } from '../utils/validations';
+import { validateParticipantAge, participantAgeErrorMessage } from '../utils/eventRules';
 
 export const useFormularioEquipo = (initialValues = {}) => {
     // Estado del formulario principal (capitán)
@@ -26,7 +27,8 @@ export const useFormularioEquipo = (initialValues = {}) => {
         team_name: false,
         selectedGame: false,
         edad: false,
-        edadFormat: false
+        edadFormat: false,
+        edadRango: false
     });
 
     // Estado para jugadores
@@ -36,11 +38,17 @@ export const useFormularioEquipo = (initialValues = {}) => {
 
     // Estado para errores de jugadores
     const [jugadoresErrors, setJugadoresErrors] = useState([
-        { nombre: false, apellido: false, celular: false, celularFormat: false, email: false, emailFormat: false, edad: false, edadFormat: false }
+        { nombre: false, apellido: false, celular: false, celularFormat: false, email: false, emailFormat: false, edad: false, edadFormat: false, edadRango: false }
     ]);
 
     // Estado para juego seleccionado
     const [selectedGame, setSelectedGame] = useState("");
+
+    // Mensajes específicos de "fuera del rango de edad del evento" (capitán y
+    // por-jugador). Son texto, no booleanos, porque el mensaje depende de
+    // edad_minima/edad_maxima del evento — ver src/utils/eventRules.js.
+    const [edadRangoError, setEdadRangoError] = useState('');
+    const [jugadoresEdadRangoErrors, setJugadoresEdadRangoErrors] = useState(['']);
 
     // Estados generales del formulario
     const [errorMessage, setErrorMessage] = useState("");
@@ -172,18 +180,30 @@ export const useFormularioEquipo = (initialValues = {}) => {
             edad: false,
             edadFormat: false
         }]);
+        setJugadoresEdadRangoErrors(prev => [...prev, '']);
     };
 
     const removeJugador = (index) => {
         if (jugadores.length > 1) {
             setJugadores(prev => prev.filter((_, i) => i !== index));
             setJugadoresErrors(prev => prev.filter((_, i) => i !== index));
+            setJugadoresEdadRangoErrors(prev => prev.filter((_, i) => i !== index));
         }
     };
 
-    // Función para validar el formulario completo
-    const validateForm = () => {
+    // Función para validar el formulario completo. `eventoSeleccionado` se
+    // pasa desde FormularioEquipo.jsx (ya lo tiene vía useEventoSeleccionado)
+    // para poder chequear edad_minima/edad_maxima del evento — el límite de
+    // edad aplica a TODOS los integrantes, incluido el capitán.
+    const validateForm = (eventoSeleccionado) => {
         const { nombre, apellido, celular, localidad, team_name, email, edad } = formValues;
+
+        let edadRangoCapitan = '';
+        if (edad && validateAge(edad)) {
+            const check = validateParticipantAge(edad, eventoSeleccionado);
+            if (!check.valid) edadRangoCapitan = participantAgeErrorMessage(check.code, eventoSeleccionado);
+        }
+        setEdadRangoError(edadRangoCapitan);
 
         // Reiniciar errores
         const newFieldErrors = {
@@ -197,24 +217,37 @@ export const useFormularioEquipo = (initialValues = {}) => {
             emailFormat: email && !validateEmail(email),
             selectedGame: !selectedGame,
             edad: !edad,
-            edadFormat: edad && !validateAge(edad)
+            edadFormat: edad && !validateAge(edad),
+            edadRango: !!edadRangoCapitan
         };
 
         setFieldErrors(newFieldErrors);
 
         // Validar jugadores
-        const newJugadoresErrors = jugadores.map(jugador => ({
-            nombre: !jugador.nombre,
-            apellido: !jugador.apellido,
-            celular: false,
-            celularFormat: jugador.celular ? !validatePhone(jugador.celular) : false,
-            email: false,
-            emailFormat: jugador.email ? !validateEmail(jugador.email) : false,
-            edad: !jugador.edad,
-            edadFormat: jugador.edad && !validateAge(jugador.edad)
-        }));
+        const newJugadoresEdadRangoErrors = [];
+        const newJugadoresErrors = jugadores.map(jugador => {
+            let edadRangoJugador = '';
+            if (jugador.edad && validateAge(jugador.edad)) {
+                const check = validateParticipantAge(jugador.edad, eventoSeleccionado);
+                if (!check.valid) edadRangoJugador = participantAgeErrorMessage(check.code, eventoSeleccionado);
+            }
+            newJugadoresEdadRangoErrors.push(edadRangoJugador);
+
+            return {
+                nombre: !jugador.nombre,
+                apellido: !jugador.apellido,
+                celular: false,
+                celularFormat: jugador.celular ? !validatePhone(jugador.celular) : false,
+                email: false,
+                emailFormat: jugador.email ? !validateEmail(jugador.email) : false,
+                edad: !jugador.edad,
+                edadFormat: jugador.edad && !validateAge(jugador.edad),
+                edadRango: !!edadRangoJugador
+            };
+        });
 
         setJugadoresErrors(newJugadoresErrors);
+        setJugadoresEdadRangoErrors(newJugadoresEdadRangoErrors);
 
         // Verificar si hay algún error en el formulario
         const hasCapitanErrors = Object.values(newFieldErrors).some(error => error);
@@ -247,7 +280,8 @@ export const useFormularioEquipo = (initialValues = {}) => {
             localidad: false,
             team_name: false,
             selectedGame: false,
-            edad: false
+            edad: false,
+            edadRango: false
         });
         setJugadoresErrors([{
             nombre: false,
@@ -257,8 +291,11 @@ export const useFormularioEquipo = (initialValues = {}) => {
             email: false,
             emailFormat: false,
             edad: false,
-            edadFormat: false
+            edadFormat: false,
+            edadRango: false
         }]);
+        setEdadRangoError('');
+        setJugadoresEdadRangoErrors(['']);
     };
 
     return {
@@ -272,6 +309,8 @@ export const useFormularioEquipo = (initialValues = {}) => {
         setJugadoresErrors,
         selectedGame,
         setSelectedGame,
+        edadRangoError,
+        jugadoresEdadRangoErrors,
         errorMessage,
         setErrorMessage,
         successMessage,

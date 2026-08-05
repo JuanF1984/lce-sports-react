@@ -43,10 +43,20 @@ export const getFAQsHtmlForEmail = (juegos) => {
     // Siempre incluir las FAQs generales
     categoriasNecesarias.add('general');
 
-    // Añadir las categorías correspondientes a los juegos
+    // Añadir las categorías correspondientes a los juegos. `juegoACategoria`
+    // es solo una tabla de enriquecimiento opcional (agrega FAQs específicas
+    // para los juegos que reconoce) — un juego nuevo o con un nombre que no
+    // matchea ninguna entrada simplemente no suma FAQs propias y sigue con
+    // las generales, nunca debe romper el armado del template. Por eso cada
+    // elemento se valida antes de operar: un juego mal formado (no-string,
+    // vacío, null/undefined) se ignora en vez de tirar un TypeError al hacer
+    // `.trim()` sobre algo que no es texto.
     juegosArray.forEach(juego => {
+        if (typeof juego !== 'string') return;
+
         // Normalizar el nombre del juego eliminando espacios extras
         const juegoNormalizado = juego.trim();
+        if (!juegoNormalizado) return;
 
         // Buscar una coincidencia en nuestro mapa
         for (const [nombreJuego, categoria] of Object.entries(juegoACategoria)) {

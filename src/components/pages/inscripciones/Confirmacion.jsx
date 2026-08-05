@@ -4,6 +4,7 @@ import supabase from "../../../utils/supabase";
 import { generateQRString } from "../../../utils/qrCodeGenerator";
 import { enviarConfirmacionIndividual } from "../../../utils/emailService";
 import { capitalizeText, normalizeEmail } from "../../../utils/validations";
+import { mapSupabaseRuleError } from "../../../utils/eventRules";
 import logoImg from "@img/logo.webp";
 
 import "@styles/Confirmacion.css";
@@ -105,7 +106,12 @@ export const Confirmacion = ({
             setEstado('ok');
         } catch (err) {
             console.error("Error al guardar inscripción:", err);
-            setErrorMsg("Hubo un error al guardar tu inscripción. Intentá de nuevo.");
+            // Si Supabase rechazó el insert por una regla del evento (edad fuera
+            // de rango, límite de juegos superado — ver los triggers en
+            // supabase/migrations/20260804_event_participation_rules.sql), se
+            // muestra el mensaje específico. Si no se reconoce el error, se usa
+            // el mensaje genérico de siempre (nunca se expone el error crudo de SQL).
+            setErrorMsg(mapSupabaseRuleError(err) || "Hubo un error al guardar tu inscripción. Intentá de nuevo.");
             setEstado('error');
         }
     };

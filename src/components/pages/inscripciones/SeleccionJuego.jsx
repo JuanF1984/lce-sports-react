@@ -6,6 +6,7 @@ import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 import { formatearHora } from "../../../utils/dateUtils";
 import { tituloEventoCorto } from "../../../utils/eventoDisplay";
 import { getGameConfig } from "../../../data/gameConfig";
+import { esModoLibre, getMaxJuegosLibre } from "../../../utils/eventRules";
 import { EventoModal } from "./common/EventoModal";
 
 import "@styles/SeleccionJuego.css";
@@ -114,8 +115,20 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
     const [juegoSeleccionado, setJuegoSeleccionado] = useState(null);
     const [juegosSecundarios, setJuegosSecundarios] = useState([]);
 
+    // Modo 'libre' (events.modo_seleccion_juegos): sin distinción principal/
+    // secundario, cualquier combinación de juegos, tope opcional por evento.
+    // En 'clasificado' (default histórico) esModoLibre siempre da false y todo
+    // el resto de este componente sigue exactamente igual que antes.
+    // Ver docs/inscripciones.md, sección "Selección libre de juegos".
+    const modoLibre = esModoLibre(eventoSeleccionado);
+    const maxJuegosLibre = getMaxJuegosLibre(eventoSeleccionado);
+    const [juegosLibresSeleccionados, setJuegosLibresSeleccionados] = useState([]);
+
     useEffect(() => {
-        if (subStep === 'principal') {
+        if (modoLibre) {
+            // Un solo paso en modo libre: no hay sub-pantallas principal/secundario.
+            setBackHandler(() => onBack);
+        } else if (subStep === 'principal') {
             setBackHandler(() => onBack);
         } else {
             setBackHandler(() => () => {
@@ -124,7 +137,7 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
             });
         }
         return () => setBackHandler(null);
-    }, [subStep, onBack]);
+    }, [modoLibre, subStep, onBack]);
 
     const juegosPrincipales = games.filter(g => g.principal === true);
     const juegosSecundariosDisponibles = games.filter(g => g.principal === false && g.id !== juegoSeleccionado?.id);
@@ -135,10 +148,20 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
     // Hay juegos secundarios disponibles en este set (ya filtrado por modalidad en SeleccionInscripcion)
     const hayJuegosSecundarios = games.some(g => g.principal === false);
 
+    const toggleLibre = (game) => {
+        setJuegosLibresSeleccionados(prev => {
+            const idx = prev.findIndex(g => g.id === game.id);
+            if (idx !== -1) return prev.filter(g => g.id !== game.id);
+            if (maxJuegosLibre != null && prev.length >= maxJuegosLibre) return prev;
+            return [...prev, game];
+        });
+    };
+
     // Paso 2 siempre. Totales dinámicos según verificaciones necesarias.
     const pasoActual = 2;
-    const needsSteam = juegoSeleccionado ? getGameConfig(juegoSeleccionado.game_name).verifyType === 'steam' : false;
-    const needsRiot  = juegoSeleccionado ? getGameConfig(juegoSeleccionado.game_name).verifyType === 'riot'  : false;
+    const juegosParaVerificacion = modoLibre ? juegosLibresSeleccionados : (juegoSeleccionado ? [juegoSeleccionado] : []);
+    const needsSteam = juegosParaVerificacion.some(g => getGameConfig(g.game_name).verifyType === 'steam');
+    const needsRiot  = juegosParaVerificacion.some(g => getGameConfig(g.game_name).verifyType === 'riot');
     const totalPasos = 4 + (needsSteam ? 1 : 0) + (needsRiot ? 1 : 0);
     const progreso = Math.round((pasoActual / totalPasos) * 100);
 
@@ -235,8 +258,60 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
                 </div>
             </div>
 
+            {/* ── Modo libre: todos los juegos en un único conjunto, sin distinción principal/secundario ── */}
+            {modoLibre && (
+                <>
+                    <h2 className="sj-titulo">Elegí tus juegos</h2>
+                    <p className="sj-subtitulo">
+                        {maxJuegosLibre
+                            ? `Podés inscribirte en hasta ${maxJuegosLibre} juego${maxJuegosLibre === 1 ? '' : 's'}.`
+                            : 'Podés inscribirte en todos los juegos que quieras.'}
+                    </p>
+
+                    {maxJuegosLibre && (
+                        <p className="sj-secundario-counter">
+                            {juegosLibresSeleccionados.length} / {maxJuegosLibre} seleccionados
+                        </p>
+                    )}
+
+                    <div className="sj-cards-grid">
+                        {games.map(game => (
+                            <GameCard
+                                key={game.id}
+                                game={game}
+                                isSelected={juegosLibresSeleccionados.some(g => g.id === game.id)}
+                                onToggle={toggleLibre}
+                                isMultiDay={isMultiDay}
+                            />
+                        ))}
+                    </div>
+
+                    {juegosLibresSeleccionados.length > 0 && (
+                        <div className="sj-resumen">
+                            {juegosLibresSeleccionados.map((j, i) => (
+                                <p key={j.id} className="sj-resumen-item">
+                                    <span className={`sj-resumen-num sj-resumen-num--${Math.min(i + 1, 3)}`}>{i + 1}</span>
+                                    <strong>{j.game_name}</strong>
+                                </p>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="sj-footer">
+                        <button
+                            className="main-button sj-btn"
+                            type="button"
+                            disabled={juegosLibresSeleccionados.length === 0}
+                            onClick={() => onNext(juegosLibresSeleccionados)}
+                        >
+                            Siguiente
+                        </button>
+                    </div>
+                </>
+            )}
+
             {/* ── Sub-pantalla: juegos principales ── */}
-            {subStep === 'principal' && (
+            {!modoLibre && subStep === 'principal' && (
                 <>
                     <h2 className="sj-titulo">Elegí tu juego</h2>
                     <p className="sj-subtitulo">Seleccioná el juego principal en el que querés participar.</p>
@@ -286,7 +361,7 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
             )}
 
             {/* ── Sub-pantalla: juegos secundarios ── */}
-            {subStep === 'secundario' && (
+            {!modoLibre && subStep === 'secundario' && (
                 <>
                     <h2 className="sj-titulo">
                         {juegoSeleccionado ? 'Juego secundario' : 'Elegí tus juegos'}
@@ -372,9 +447,13 @@ export const SeleccionJuego = ({ onBack, onNext, eventoSeleccionado, games }) =>
                     <div className="sj-modal" onClick={e => e.stopPropagation()}>
                         <h3 className="sj-modal-titulo">Selección de juegos</h3>
                         <p className="sj-modal-texto">
-                            {hayJuegosSecundarios
-                                ? 'Vas a poder elegir un juego principal. Si no elegís ninguno, podrás inscribirte en hasta 3 juegos en orden de preferencia.'
-                                : 'Seleccioná el juego en el que querés participar.'}
+                            {modoLibre
+                                ? (maxJuegosLibre
+                                    ? `Podés elegir cualquier combinación de juegos disponibles, hasta ${maxJuegosLibre}.`
+                                    : 'Podés elegir cualquier combinación de juegos disponibles, sin límite de cantidad.')
+                                : hayJuegosSecundarios
+                                    ? 'Vas a poder elegir un juego principal. Si no elegís ninguno, podrás inscribirte en hasta 3 juegos en orden de preferencia.'
+                                    : 'Seleccioná el juego en el que querés participar.'}
                         </p>
                         <button
                             className="main-button sj-modal-btn"

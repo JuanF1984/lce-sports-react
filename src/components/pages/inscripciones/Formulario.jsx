@@ -6,6 +6,7 @@ import { useEventoSeleccionado } from "./hooks/useEventoSeleccionado";
 import { useFormulario } from "../../../hooks/useFormulario";
 import { validateEmail as validateEmailStrict } from "../../../lib/email/validateEmail";
 import { validatePhone, validateAge } from "../../../utils/validations";
+import { validateParticipantAge, participantAgeErrorMessage } from "../../../utils/eventRules";
 
 import { LogoNeon } from '../../common/LogoNeon';
 import { useAuth } from "../../../context/UseAuth";
@@ -59,6 +60,7 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
     const [emailRepetir, setEmailRepetir] = useState('');
     const [emailRepetirError, setEmailRepetirError] = useState('');
     const [emailErrorMsg, setEmailErrorMsg] = useState('');
+    const [edadRangoError, setEdadRangoError] = useState('');
     const [showModal, setShowModal] = useState(false);
 
     const localidadesOptions = localidadesBuenosAires.map((l) => ({ value: l, label: l }));
@@ -109,6 +111,17 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
             setEmailErrorMsg('');
         }
 
+        // Límite de edad configurado por evento (events.edad_minima/edad_maxima).
+        // Solo tiene sentido evaluarlo si la edad ya pasó el chequeo de formato
+        // (solo dígitos) — ver src/utils/eventRules.js. Esta es solo la
+        // validación de UI: la definitiva vive en el trigger de Supabase.
+        let edadRango = '';
+        if (edad.trim() && validateAge(edad.trim())) {
+            const check = validateParticipantAge(edad.trim(), eventoSeleccionado);
+            if (!check.valid) edadRango = participantAgeErrorMessage(check.code, eventoSeleccionado);
+        }
+        setEdadRangoError(edadRango);
+
         const newErrors = {
             nombre:        !nombre.trim(),
             apellido:      !apellido.trim(),
@@ -119,6 +132,7 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
             emailFormat:   emailFormatError,
             edad:          !edad.trim(),
             edadFormat:    edad.trim() ? !validateAge(edad.trim()) : false,
+            edadRango:     !!edadRango,
             selectedGames: false,
         };
         setFieldErrors(newErrors);
@@ -245,7 +259,7 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
                         Edad<span className="fd-required">*</span>
                     </label>
                     <input
-                        className={`fd-input${fieldErrors.edad || fieldErrors.edadFormat ? ' fd-input--error' : ''}`}
+                        className={`fd-input${fieldErrors.edad || fieldErrors.edadFormat || fieldErrors.edadRango ? ' fd-input--error' : ''}`}
                         type="text"
                         inputMode="numeric"
                         name="edad"
@@ -255,6 +269,9 @@ export const Formulario = ({ onBack, onNext, eventoId, juegosSeleccionados = [] 
                     />
                     {fieldErrors.edad && <span className="fd-error-text">Requerido</span>}
                     {fieldErrors.edadFormat && <span className="fd-error-text">Solo números</span>}
+                    {!fieldErrors.edad && !fieldErrors.edadFormat && edadRangoError && (
+                        <span className="fd-error-text">{edadRangoError}</span>
+                    )}
                 </div>
 
                 {/* Email */}

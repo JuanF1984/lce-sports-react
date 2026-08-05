@@ -28,6 +28,13 @@ confirmar que la base real coincide con esto.
 | `tipo` | text, `not null default 'torneo'`, `check (tipo in ('torneo','presentacion'))` | agregada en la misma migración |
 | `fecha_cierre_inscripcion` | `timestamptz`, nullable | agregada en la misma migración |
 | `nombre` | text, nullable | **creada manualmente en Supabase** (no vino de una migración versionada en el repo) — ver "Columnas nuevas creadas manualmente" más abajo |
+| `edad_minima` | integer, nullable, `check (edad_minima is null or edad_minima >= 0)` | agregada en `20260804_event_participation_rules.sql`. `NULL` = sin mínimo. |
+| `edad_maxima` | integer, nullable, `check (edad_maxima is null or edad_maxima >= 0)` | agregada en la misma migración. `NULL` = sin máximo. Inclusive (ver `docs/inscripciones.md`). |
+| `modo_seleccion_juegos` | text, `not null default 'clasificado'`, `check in ('clasificado','libre')` | agregada en la misma migración. Gobierna `SeleccionJuego.jsx` — ver `docs/eventos.md`. |
+| `max_juegos_por_participante` | integer, nullable, `check (max_juegos_por_participante is null or max_juegos_por_participante >= 1)` | agregada en la misma migración. Solo se evalúa bajo `modo_seleccion_juegos = 'libre'`. |
+
+Constraint adicional a nivel tabla: `edad_minima is null or edad_maxima is null or edad_minima <= edad_maxima`
+(`events_edad_rango_valido`).
 
 ### `games`
 
@@ -188,6 +195,119 @@ Postgres explícito (no en silencio) — es la señal de que falta resolver algo
 forma. La restricción solo exige que no se repita ningún valor de `slug`, sin importar su formato —
 los eventos históricos siguen funcionando tal cual están.
 
+## Reglas configurables por evento: triggers de validación (edad y máximo de juegos)
+
+Migración `supabase/migrations/20260804_event_participation_rules.sql`. Agrega
+las 4 columnas de `events` de la tabla de arriba y dos triggers — es la
+**primera vez que este proyecto usa triggers de Postgres** para validar reglas
+de negocio (hasta ahora todo era `CHECK` sobre columnas enum o validación
+exclusiva de frontend). Ver `docs/inscripciones.md` para el flujo completo.
+
+### `trg_validate_participant_age` (`BEFORE INSERT ON inscriptions FOR EACH ROW`)
+
+Rechaza el insert si el evento (`NEW.id_evento`) tiene `edad_minima`/`edad_maxima`
+configuradas y la edad del participante (`NEW.edad`) no las cumple. Cubre
+individual, capitán de equipo y cada jugador del equipo por igual, porque los
+tres se insertan como filas independientes de `inscriptions` (verificado en
+`Confirmacion.jsx`/`ConfirmacionEquipo.jsx` antes de escribir el trigger, no
+asumido). Errores identificables (mensaje de la excepción + `errcode` custom):
+
+| Marcador | errcode | Cuándo |
+|---|---|---|
+| `INVALID_PARTICIPANT_AGE` | `LCE01` | `edad` ausente, no numérica, o negativa |
+| `EVENT_MINIMUM_AGE_NOT_MET` | `LCE02` | por debajo de `edad_minima` |
+| `EVENT_MAXIMUM_AGE_EXCEEDED` | `LCE03` | por encima de `edad_maxima` |
+
+**Supuesto no verificado contra la base real**: el trigger asume que
+`inscriptions.edad` es texto (así la manda siempre el frontend) y hace un
+cast defensivo (`::text` antes de `::integer`, con `BEGIN/EXCEPTION` alrededor
+para no dejar pasar un error de cast genérico). Funciona igual si la columna
+ya fuera `integer`, pero no se pudo confirmar el tipo real sin acceso directo
+a Supabase desde este entorno.
+
+### `trg_enforce_event_game_limit_insert` / `trg_enforce_event_game_limit_update`
+
+Rediseñado tras la primera versión de la migración, que usaba `BEFORE INSERT
+FOR EACH ROW` y dependía de que un trigger de fila pudiera ver, vía `SELECT`,
+las filas hermanas ya procesadas de un mismo `INSERT` multi-fila (caso real:
+la inscripción individual inserta todos sus juegos en un solo
+`.insert(gameRows)`, ver `Confirmacion.jsx`). Ese supuesto nunca se verificó
+contra una instancia real y es frágil por depender de un detalle interno de
+ejecución fila por fila.
+
+El diseño actual es un **trigger de sentencia** con **tabla de transición**
+(`REFERENCING NEW TABLE AS inserted_games`, disponible desde Postgres 10):
+en vez de mirar fila por fila durante el `INSERT`, corre una sola vez
+**después** de que toda la sentencia terminó, y evalúa el estado definitivo.
+
+**Dos triggers, no uno combinado.** Postgres no permite declarar un único
+trigger como `AFTER INSERT OR UPDATE ... REFERENCING NEW TABLE`: cuando un
+trigger lista más de un evento, no puede pedir tabla de transición — hay que
+usar un trigger separado por cada evento que la necesite (restricción
+documentada de `CREATE TRIGGER`). Por eso hay **dos triggers independientes**
+que reutilizan la misma función `enforce_event_game_limit()`:
+
+- `trg_enforce_event_game_limit_insert` — `AFTER INSERT ON games_inscriptions REFERENCING NEW TABLE AS inserted_games FOR EACH STATEMENT`.
+- `trg_enforce_event_game_limit_update` — `AFTER UPDATE ON games_inscriptions REFERENCING NEW TABLE AS inserted_games FOR EACH STATEMENT`.
+
+La función no necesita distinguir cuál de los dos la invocó (no lee
+`TG_OP`): en ambos casos recibe `inserted_games` con las filas nuevas de la
+sentencia (para un UPDATE, con los valores de destino después del cambio) y
+opera igual, sin importar cuántas filas ni a cuántas inscripciones distintas
+tocó:
+
+1. Identifica todas las inscripciones tocadas por la sentencia:
+   `select distinct id_inscription from inserted_games`.
+2. Bloquea esas inscripciones una por una, en orden ascendente por `id`
+   (`select ... for update`), antes de contar nada — el orden determinístico
+   evita deadlocks entre dos sentencias concurrentes que bloqueen el mismo
+   conjunto de inscripciones en órdenes distintos.
+3. Con los locks tomados, cuenta el total real de `games_inscriptions` por
+   cada inscripción afectada, cruzando con `events` para aplicar el filtro
+   solo donde corresponde: `modo_seleccion_juegos = 'libre'` **y**
+   `max_juegos_por_participante is not null`. Cualquier inscripción de un
+   evento `'clasificado'`, o `'libre'` sin máximo, queda afuera del cálculo
+   por el propio `JOIN`/`WHERE` — el trigger nunca puede rechazar nada para
+   esos casos.
+4. Si alguna inscripción quedó con más juegos que su máximo, lanza
+   `EVENT_GAME_LIMIT_EXCEEDED` (`errcode LCE04`) y Postgres revierte la
+   sentencia **completa** (estándar de un trigger `AFTER STATEMENT`: si
+   falla, deshace todo lo que esa sentencia había hecho) — no quedan filas
+   parciales de ningún participante ni de ninguna inscripción del lote,
+   aunque solo una de varias haya excedido el máximo.
+
+`trg_enforce_event_game_limit_update` cubre un `UPDATE` que reasigne
+`id_inscription` o `id_game` de una fila existente: la inscripción de
+DESTINO (adonde queda la relación después del cambio) es la que aparece en
+`inserted_games`, así que queda incluida en el cálculo del paso 1 igual que
+cualquier inscripción tocada por un INSERT — no hace falta lógica aparte
+para distinguir "de dónde vino" la fila. Hoy el código de la app nunca hace
+`UPDATE` sobre `games_inscriptions` — se cubre de todas formas para que la protección sea
+real contra cualquier request directa, no solo contra el `INSERT` que usa
+hoy el frontend.
+
+**Concurrencia**: dos transacciones agregando juegos a la misma inscripción
+se serializan por el `select ... for update` del paso 2 — la segunda queda
+bloqueada hasta que la primera hace commit o rollback, y recién ahí cuenta
+el total real combinado (sus propias filas + las ya committeadas de la
+otra). Esto **se probó únicamente con dos sesiones SQL manuales** (ver
+`supabase/tests/20260804_event_participation_rules_manual_tests.sql`,
+sección "Concurrencia") — no es un análisis solo estático del diseño.
+
+### Restricción UNIQUE aplicada: `games_inscriptions_inscription_game_key (id_inscription, id_game)`
+
+A diferencia de la primera versión de la migración (que dejaba esto
+**comentado**), ahora la migración misma comprueba si existen duplicados de
+`(id_inscription, id_game)` mediante un bloque `do $$ ... $$` y, si encuentra
+alguno, aborta con `raise exception` (marcador
+`GAMES_INSCRIPTIONS_DUPLICATE_ROWS_FOUND`, `errcode LCE05`) — sin borrar,
+fusionar ni modificar ninguna fila automáticamente. Como toda la migración
+corre dentro de una única transacción explícita (`begin;` / `commit;`), ese
+aborto revierte también las Secciones 1-3 (columnas, trigger de edad, trigger
+de límite de juegos): o se aplica todo el archivo, o no se aplica nada. Si no
+hay duplicados, agrega la restricción real
+`unique (id_inscription, id_game)`.
+
 ## RLS / permisos
 
 El código no incluye ningún archivo `.sql` con `create policy`, y el cliente del frontend
@@ -318,3 +438,28 @@ quiten a ciegas. Es un síntoma molesto pero seguro; si pasa, hay que revisar la
     inscripción a un juego puntual y confirmar que, al editar el evento, ese juego aparece tildado
     pero con el checkbox deshabilitado y el aviso correspondiente — e intentar guardar sin tocarlo
     (debería guardar bien) y con otro juego sin inscripciones destildado (también debería andar).
+12. **Tipo real de `inscriptions.edad`**: confirmar con `select data_type from
+    information_schema.columns where table_name = 'inscriptions' and column_name = 'edad';` que el
+    cast defensivo del trigger (`::text` antes de `::integer`) no rompe nada — debería funcionar
+    tanto si es `text` como si ya fuera `integer`, pero no se verificó contra la base real.
+13. **Probar el trigger de edad de punta a punta**: crear un evento de prueba con `edad_maxima = 17`,
+    intentar inscribirse con 18 (individual, capitán y como jugador de un equipo) y confirmar que
+    Supabase rechaza el insert con el marcador `EVENT_MAXIMUM_AGE_EXCEEDED` y que la UI muestra el
+    mensaje específico (no el genérico). Repetir con 17 y confirmar que sí se guarda.
+14. **Probar el trigger de límite de juegos bajo carga real**: crear un evento de prueba con
+    `modo_seleccion_juegos = 'libre'` y `max_juegos_por_participante = 2`, e intentar inscribirse
+    (individual) seleccionando 3 juegos en un solo submit. Confirmar que el insert completo se
+    rechaza con `EVENT_GAME_LIMIT_EXCEEDED` y que no queda ninguna fila parcial en
+    `games_inscriptions` para esa inscripción. Ver
+    `supabase/tests/20260804_event_participation_rules_manual_tests.sql` para el guion completo de
+    pruebas (edad, juegos multi-fila, multi-inscripción y concurrencia con dos sesiones reales).
+15. **Confirmar que el UNIQUE `games_inscriptions_inscription_game_key` quedó aplicado** tras correr
+    la migración: `select conname, pg_get_constraintdef(oid) from pg_constraint where conrelid =
+    'games_inscriptions'::regclass and contype = 'u';`. Si la migración abortó por duplicados
+    (marcador `GAMES_INSCRIPTIONS_DUPLICATE_ROWS_FOUND`), esta consulta no va a devolver nada —
+    señal de que faltó resolver los duplicados y volver a correr el archivo completo.
+16. **Confirmar las 4 columnas nuevas de `events`** (`edad_minima`, `edad_maxima`,
+    `modo_seleccion_juegos`, `max_juegos_por_participante`) y sus constraints con `\d events` o
+    `select conname, pg_get_constraintdef(oid) from pg_constraint where conrelid = 'events'::regclass
+    and contype = 'c';` — confirmar que `modo_seleccion_juegos` quedó con el default `'clasificado'`
+    para no alterar eventos existentes.

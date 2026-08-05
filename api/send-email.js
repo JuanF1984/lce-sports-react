@@ -131,7 +131,12 @@ export default async function handler(req, res) {
     }
 
     try {
-        const params = req.body;
+        // `req.body` puede llegar `undefined`/no-objeto si el cliente no mandó
+        // Content-Type application/json o el body vino vacío — sin esta guarda,
+        // el destructuring de `buildEmailHtml` tira un TypeError genérico en vez
+        // de un error claro, aunque en ambos casos ya queda atrapado por este
+        // try/catch y se devuelve como JSON (nunca un cuerpo vacío/no-JSON).
+        const params = req.body && typeof req.body === 'object' ? req.body : {};
         const html = buildEmailHtml(params);
 
         const response = await resend.emails.send({

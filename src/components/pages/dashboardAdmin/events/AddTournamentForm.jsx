@@ -76,6 +76,10 @@ export const AddTournamentForm = ({ onSuccess }) => {
         tipo: "torneo",
         visible_en_home: true,
         fecha_cierre_inscripcion: "",
+        edad_minima: "",
+        edad_maxima: "",
+        modo_seleccion_juegos: "clasificado",
+        max_juegos_por_participante: "",
     });
 
     const localidadesOptions = localidadesBuenosAires.map((localidad) => ({
@@ -188,7 +192,7 @@ export const AddTournamentForm = ({ onSuccess }) => {
         setSuccessMessage("");
         setSavedLink("");
 
-        const { nombre, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, ubicacion_url, tipo, visible_en_home, fecha_cierre_inscripcion } = formValues;
+        const { nombre, fecha_inicio, fecha_fin, localidad, hora_inicio, direccion, ubicacion_url, tipo, visible_en_home, fecha_cierre_inscripcion, edad_minima, edad_maxima, modo_seleccion_juegos, max_juegos_por_participante } = formValues;
 
         if (!fecha_inicio || !fecha_fin || !localidad) {
             setErrorMessage("Por favor completá todos los campos obligatorios (*).");
@@ -198,6 +202,34 @@ export const AddTournamentForm = ({ onSuccess }) => {
 
         if (!esPresentacion && selectedGames.length === 0) {
             setErrorMessage("Por favor, seleccioná al menos un juego.");
+            setSubmitting(false);
+            return;
+        }
+
+        // Reglas de edad/cantidad de juegos: validación de UI antes de mandar
+        // nada a Supabase. La validación definitiva vive igual en la base
+        // (ver supabase/migrations/20260804_event_participation_rules.sql).
+        const edadMinimaNum = edad_minima !== "" ? Number(edad_minima) : null;
+        const edadMaximaNum = edad_maxima !== "" ? Number(edad_maxima) : null;
+        const maxJuegosNum = max_juegos_por_participante !== "" ? Number(max_juegos_por_participante) : null;
+
+        if (edadMinimaNum !== null && edadMinimaNum < 0) {
+            setErrorMessage("La edad mínima no puede ser negativa.");
+            setSubmitting(false);
+            return;
+        }
+        if (edadMaximaNum !== null && edadMaximaNum < 0) {
+            setErrorMessage("La edad máxima no puede ser negativa.");
+            setSubmitting(false);
+            return;
+        }
+        if (edadMinimaNum !== null && edadMaximaNum !== null && edadMinimaNum > edadMaximaNum) {
+            setErrorMessage("La edad mínima no puede ser mayor que la edad máxima.");
+            setSubmitting(false);
+            return;
+        }
+        if (modo_seleccion_juegos === 'libre' && maxJuegosNum !== null && maxJuegosNum < 1) {
+            setErrorMessage("El máximo de juegos por participante debe ser al menos 1 (o dejarse vacío para no limitarlo).");
             setSubmitting(false);
             return;
         }
@@ -257,6 +289,14 @@ export const AddTournamentForm = ({ onSuccess }) => {
                         fecha_cierre_inscripcion: fecha_cierre_inscripcion
                             ? new Date(fecha_cierre_inscripcion).toISOString()
                             : null,
+                        edad_minima: edadMinimaNum,
+                        edad_maxima: edadMaximaNum,
+                        modo_seleccion_juegos,
+                        // El máximo de juegos solo tiene sentido bajo modo 'libre'.
+                        // Se guarda null explícito en 'clasificado' aunque haya
+                        // quedado algún valor cargado en el input mientras estaba
+                        // oculto, para que el dato persistido sea siempre consistente.
+                        max_juegos_por_participante: modo_seleccion_juegos === 'libre' ? maxJuegosNum : null,
                     })
                     .select()
                     .single();
@@ -416,6 +456,64 @@ export const AddTournamentForm = ({ onSuccess }) => {
                         className="filter-date"
                     />
                 </div>
+
+                <div className="filter-group">
+                    <label className="filter-label">Edad mínima (opcional):</label>
+                    <input
+                        type="number"
+                        min="0"
+                        name="edad_minima"
+                        value={formValues.edad_minima}
+                        onChange={handleInputChange}
+                        className="filter-select"
+                        placeholder="Sin límite"
+                    />
+                </div>
+
+                <div className="filter-group">
+                    <label className="filter-label">Edad máxima (opcional):</label>
+                    <input
+                        type="number"
+                        min="0"
+                        name="edad_maxima"
+                        value={formValues.edad_maxima}
+                        onChange={handleInputChange}
+                        className="filter-select"
+                        placeholder="Sin límite"
+                    />
+                </div>
+
+                <div className="filter-group">
+                    <label className="filter-label">Modo de selección de juegos:</label>
+                    <select
+                        name="modo_seleccion_juegos"
+                        value={formValues.modo_seleccion_juegos}
+                        onChange={handleInputChange}
+                        className="filter-select"
+                    >
+                        <option value="clasificado">Clasificado (principal / secundario)</option>
+                        <option value="libre">Libre (todos los juegos por igual)</option>
+                    </select>
+                    <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.25rem 0 0' }}>
+                        “Clasificado” mantiene el comportamiento actual (1 juego principal + secundarios).
+                        “Libre” permite inscribirse a cualquier combinación de juegos, sin distinción.
+                    </p>
+                </div>
+
+                {formValues.modo_seleccion_juegos === 'libre' && (
+                    <div className="filter-group">
+                        <label className="filter-label">Máximo de juegos por participante (opcional):</label>
+                        <input
+                            type="number"
+                            min="1"
+                            name="max_juegos_por_participante"
+                            value={formValues.max_juegos_por_participante}
+                            onChange={handleInputChange}
+                            className="filter-select"
+                            placeholder="Sin límite"
+                        />
+                    </div>
+                )}
 
                 <div className="filter-group">
                     <label className="filter-label">Localidad: *</label>

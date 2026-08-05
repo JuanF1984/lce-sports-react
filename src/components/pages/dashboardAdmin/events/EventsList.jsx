@@ -40,6 +40,21 @@ const getGamesConInscripcionesDelEvento = async (eventId) => {
     return new Set((gamesInscriptions || []).map(r => r.id_game));
 };
 
+// Chequeo autoritativo de "¿este evento ya tiene alguna inscripción?", usado
+// como defensa en profundidad al guardar (independiente de `tieneInscripciones`,
+// que es solo la foto precargada para la UI — ver el comentario en el efecto
+// que la calcula, más abajo). Mismo patrón que `handleDeleteEvent`: alcanza con
+// saber que existe al menos una fila, no hace falta contar el total.
+const eventoTieneInscripciones = async (eventId) => {
+    const { data, error } = await supabase
+        .from('inscriptions')
+        .select('id')
+        .eq('id_evento', eventId)
+        .limit(1);
+    if (error) throw error;
+    return (data?.length ?? 0) > 0;
+};
+
 const EditEventModal = ({
     event,
     initialGames,
@@ -53,6 +68,7 @@ const EditEventModal = ({
     gamesConInscripciones,
     verificandoInscripciones,
     errorVerificandoInscripciones,
+    tieneInscripcionesEvento,
 }) => {
     const [form, setForm] = useState({
         nombre: event.nombre || '',
@@ -64,11 +80,23 @@ const EditEventModal = ({
         tipo: event.tipo || 'torneo',
         visible_en_home: event.visible_en_home ?? true,
         fecha_cierre_inscripcion: isoToDatetimeLocal(event.fecha_cierre_inscripcion),
+        edad_minima: event.edad_minima ?? '',
+        edad_maxima: event.edad_maxima ?? '',
+        modo_seleccion_juegos: event.modo_seleccion_juegos || 'clasificado',
+        max_juegos_por_participante: event.max_juegos_por_participante ?? '',
     });
     const [selectedGames, setSelectedGames] = useState(initialGames);
     const [gameModes, setGameModes] = useState(initialGameModes);
+    const [reglasError, setReglasError] = useState('');
 
     const esPresentacion = form.tipo === 'presentacion';
+    // Los 4 campos de reglas (edad mín/máx, modo de selección, máximo de
+    // juegos) quedan de solo lectura una vez que el evento tiene alguna
+    // inscripción — mismo criterio conservador ya usado para `tipo` y
+    // `registration_mode`: cambiar estas reglas después de que alguien ya se
+    // inscribió podría invalidar datos ya cargados (p. ej. bajar la edad
+    // máxima por debajo de la edad de alguien que ya se anotó).
+    const reglasBloqueadas = tieneInscripcionesEvento === true;
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -76,6 +104,33 @@ const EditEventModal = ({
         // 'tipo' es inmutable una vez creado el evento: no tiene campo editable
         // (ver el <select disabled> más abajo), así que nunca llega acá.
         setForm(prev => ({ ...prev, [name]: newValue }));
+    };
+
+    const validarReglas = () => {
+        if (reglasBloqueadas) return true; // los campos están disabled, no hay nada que validar
+
+        const edadMinimaNum = form.edad_minima !== '' ? Number(form.edad_minima) : null;
+        const edadMaximaNum = form.edad_maxima !== '' ? Number(form.edad_maxima) : null;
+        const maxJuegosNum = form.max_juegos_por_participante !== '' ? Number(form.max_juegos_por_participante) : null;
+
+        if (edadMinimaNum !== null && edadMinimaNum < 0) {
+            setReglasError('La edad mínima no puede ser negativa.');
+            return false;
+        }
+        if (edadMaximaNum !== null && edadMaximaNum < 0) {
+            setReglasError('La edad máxima no puede ser negativa.');
+            return false;
+        }
+        if (edadMinimaNum !== null && edadMaximaNum !== null && edadMinimaNum > edadMaximaNum) {
+            setReglasError('La edad mínima no puede ser mayor que la edad máxima.');
+            return false;
+        }
+        if (form.modo_seleccion_juegos === 'libre' && maxJuegosNum !== null && maxJuegosNum < 1) {
+            setReglasError('El máximo de juegos por participante debe ser al menos 1 (o dejarse vacío para no limitarlo).');
+            return false;
+        }
+        setReglasError('');
+        return true;
     };
 
     const toggleGame = (gameId) => {
@@ -206,6 +261,75 @@ const EditEventModal = ({
                         </div>
                     </div>
 
+                    {/* Reglas de participación: edad y modo de selección de juegos */}
+                    <div className="event-edit-section">
+                        <div className="event-edit-field">
+                            <label className="event-edit-label">Edad mínima (opcional)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                name="edad_minima"
+                                value={form.edad_minima}
+                                onChange={handleChange}
+                                disabled={reglasBloqueadas}
+                                className="event-edit-input"
+                                placeholder="Sin límite"
+                            />
+                        </div>
+                        <div className="event-edit-field">
+                            <label className="event-edit-label">Edad máxima (opcional)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                name="edad_maxima"
+                                value={form.edad_maxima}
+                                onChange={handleChange}
+                                disabled={reglasBloqueadas}
+                                className="event-edit-input"
+                                placeholder="Sin límite"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="event-edit-section">
+                        <div className="event-edit-field">
+                            <label className="event-edit-label">Modo de selección de juegos</label>
+                            <select
+                                name="modo_seleccion_juegos"
+                                value={form.modo_seleccion_juegos}
+                                onChange={handleChange}
+                                disabled={reglasBloqueadas}
+                                className="event-edit-select"
+                            >
+                                <option value="clasificado">Clasificado (principal / secundario)</option>
+                                <option value="libre">Libre (todos los juegos por igual)</option>
+                            </select>
+                        </div>
+                        {form.modo_seleccion_juegos === 'libre' && (
+                            <div className="event-edit-field">
+                                <label className="event-edit-label">Máximo de juegos por participante</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    name="max_juegos_por_participante"
+                                    value={form.max_juegos_por_participante}
+                                    onChange={handleChange}
+                                    disabled={reglasBloqueadas}
+                                    className="event-edit-input"
+                                    placeholder="Sin límite"
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {reglasBloqueadas && (
+                        <p className="event-edit-hint">
+                            Este evento ya tiene inscripciones asociadas: la edad mínima/máxima, el modo de
+                            selección de juegos y el máximo de juegos por participante no se pueden modificar.
+                        </p>
+                    )}
+                    {reglasError && <p className="event-edit-error">{reglasError}</p>}
+
                     {/* Juegos */}
                     {!esPresentacion ? (
                         <div className="event-edit-field event-edit-field--full">
@@ -288,7 +412,7 @@ const EditEventModal = ({
                     </button>
                     <button
                         className="export-button"
-                        onClick={() => onSave(form, selectedGames, gameModes)}
+                        onClick={() => { if (validarReglas()) onSave(form, selectedGames, gameModes); }}
                         disabled={isSaving}
                     >
                         {isSaving ? 'Guardando…' : 'Guardar cambios'}
@@ -383,6 +507,41 @@ export const EventsList = () => {
         setIsSaving(true);
 
         try {
+            // Reglas de edad / modo de selección de juegos / máximo de juegos:
+            // si el evento ya tiene inscripciones, estos 4 campos no se pueden
+            // tocar. Chequeo autoritativo e independiente de lo que ya haya
+            // bloqueado la UI (mismo patrón de defensa en profundidad que el
+            // resto de este archivo) — se repite acá porque puede haber pasado
+            // tiempo entre abrir el modal y guardar.
+            const normalizar = (v) => (v === '' || v === undefined ? null : v);
+            const reglasCambiaron =
+                normalizar(form.edad_minima) != normalizar(editingEvent.edad_minima) ||
+                normalizar(form.edad_maxima) != normalizar(editingEvent.edad_maxima) ||
+                (form.modo_seleccion_juegos || 'clasificado') !== (editingEvent.modo_seleccion_juegos || 'clasificado') ||
+                normalizar(form.max_juegos_por_participante) != normalizar(editingEvent.max_juegos_por_participante);
+
+            if (reglasCambiaron) {
+                let tieneInscripcionesAhora;
+                try {
+                    tieneInscripcionesAhora = await eventoTieneInscripciones(editingEvent.id);
+                } catch (err) {
+                    console.error('Error al verificar inscripciones antes de guardar reglas del evento:', err);
+                    // Fail-closed: si no se puede confirmar que el evento NO
+                    // tiene inscripciones, se trata como si las tuviera.
+                    tieneInscripcionesAhora = true;
+                }
+
+                if (tieneInscripcionesAhora) {
+                    setMessage({
+                        type: 'error',
+                        text: 'No se pueden modificar la edad mínima/máxima, el modo de selección de juegos ni el máximo de juegos porque el evento ya tiene inscripciones asociadas.',
+                    });
+                    setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+                    setIsSaving(false);
+                    return;
+                }
+            }
+
             // Freno de seguridad, independiente de lo que ya haya filtrado la UI del
             // modal (gamesConInscripcionesEditar): puede haber pasado tiempo entre
             // abrir el modal y guardar, así que se vuelve a comprobar acá, en el
@@ -443,6 +602,11 @@ export const EventsList = () => {
                 nombre: form.nombre?.trim() ? form.nombre.trim() : '',
                 fecha_cierre_inscripcion: form.fecha_cierre_inscripcion
                     ? new Date(form.fecha_cierre_inscripcion).toISOString()
+                    : null,
+                edad_minima: form.edad_minima !== '' ? Number(form.edad_minima) : null,
+                edad_maxima: form.edad_maxima !== '' ? Number(form.edad_maxima) : null,
+                max_juegos_por_participante: form.modo_seleccion_juegos === 'libre' && form.max_juegos_por_participante !== ''
+                    ? Number(form.max_juegos_por_participante)
                     : null,
             };
 
@@ -739,6 +903,7 @@ export const EventsList = () => {
                     gamesConInscripciones={gamesConInscripcionesEditar}
                     verificandoInscripciones={verificandoInscripciones}
                     errorVerificandoInscripciones={errorVerificandoInscripciones}
+                    tieneInscripcionesEvento={tieneInscripciones[editingEvent.id]}
                 />
             )}
 

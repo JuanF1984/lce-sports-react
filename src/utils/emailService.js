@@ -8,8 +8,34 @@ const enviarConResend = async (templateParams) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(templateParams),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error al enviar con Resend');
+
+    // No asumir que el cuerpo existe ni que es JSON válido: un crash de la
+    // función serverless (timeout, error no manejado antes de llegar al
+    // handler, etc.) puede devolver un cuerpo vacío o HTML de error de la
+    // plataforma. Leer como texto primero evita que `res.json()` tape ese
+    // problema real detrás de "Unexpected end of JSON input".
+    const rawText = await res.text();
+    let data = null;
+    if (rawText) {
+        try {
+            data = JSON.parse(rawText);
+        } catch {
+            throw new Error(
+                `Error al enviar con Resend (HTTP ${res.status} ${res.statusText}): la respuesta no fue JSON válido.`
+            );
+        }
+    }
+
+    if (!res.ok) {
+        throw new Error(
+            data?.error || `Error al enviar con Resend (HTTP ${res.status} ${res.statusText}).`
+        );
+    }
+
+    if (!data) {
+        throw new Error(`Error al enviar con Resend (HTTP ${res.status}): respuesta vacía.`);
+    }
+
     return data;
 };
 
@@ -39,11 +65,27 @@ const calcularFechasMail = (diasJuegos, fechaInicioEvento) => {
 };
 
 
+// No depende de una lista fija de juegos conocidos: cualquier juego nuevo
+// pasa igual, siempre que tenga (o se le pueda asignar) un `game_name` en
+// forma de string — evita que un juego con forma inesperada (objeto sin
+// `game_name`, `null`, etc.) propague `undefined` hacia `getFAQsHtmlForEmail`
+// más abajo en la cadena. No se descarta la entrada aunque falte
+// `game_name`: el participante sí seleccionó ese juego, así que se cae a
+// cualquier otra propiedad de texto disponible (mismo criterio que ya usa
+// `ConfirmacionEquipo.jsx` para el juego de equipo) antes de perderlo del
+// email de confirmación.
 const normalizarJuegos = (juegos) => {
     if (!Array.isArray(juegos)) return [];
-    return juegos.map(j =>
-        typeof j === 'string' ? { game_name: j, dias: [] } : { game_name: j.game_name, dias: j.dias ?? [] }
-    );
+    return juegos
+        .filter(j => j !== null && j !== undefined)
+        .map(j => {
+            if (typeof j === 'string') return { game_name: j, dias: [] };
+            if (typeof j.game_name === 'string' && j.game_name.trim()) {
+                return { game_name: j.game_name, dias: j.dias ?? [] };
+            }
+            const propiedadTexto = Object.values(j).find(val => val && typeof val === 'string');
+            return { game_name: propiedadTexto || 'Juego seleccionado', dias: j.dias ?? [] };
+        });
 };
 
 /**

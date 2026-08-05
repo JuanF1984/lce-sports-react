@@ -246,6 +246,49 @@ etc.) — no encontramos en el código ni en el esquema documentado ninguna raz�
 inscripción como "descartable" (todas representan a alguien que se anotó), así que no se afinó esa
 regla más allá de "existe al menos una fila".
 
+## Reglas configurables por evento: edad y modo de selección de juegos
+
+Agregado en esta revisión, pensado para torneos con requisitos particulares
+(p. ej. un torneo exclusivo para menores de 18 con inscripción libre a
+cualquier juego) sin acoplar la regla al evento puntual — todo se resuelve
+leyendo columnas de `events`, así que cualquier evento presente o futuro puede
+activarlas o no. Ver el detalle completo (validación, triggers, mensajes de
+error) en `docs/inscripciones.md`, sección "Reglas configurables por evento".
+
+Columnas nuevas en `events` (todas nullable o con default que preserva el
+comportamiento histórico — ver `docs/supabase.md` para el detalle de tipos y
+constraints):
+
+- `edad_minima` (`integer`, nullable) — edad mínima inclusive para inscribirse.
+  `NULL` = sin mínimo.
+- `edad_maxima` (`integer`, nullable) — edad máxima inclusive. `NULL` = sin
+  máximo. Ejemplo: `edad_maxima = 17` admite a alguien de 17 pero no a alguien
+  de 18.
+- `modo_seleccion_juegos` (`text`, `not null default 'clasificado'`, check
+  `in ('clasificado', 'libre')`) — gobierna cómo se comporta el paso "Elegí tu
+  juego" del wizard (`SeleccionJuego.jsx`):
+  - `'clasificado'` (default histórico): comportamiento de siempre, sin
+    cambios — un juego principal + hasta 1 secundario, o hasta 3 secundarios
+    sin principal, según `games.principal`.
+  - `'libre'`: se ignora `games.principal` por completo, todos los juegos del
+    evento se muestran en un único conjunto y se puede elegir cualquier
+    combinación.
+- `max_juegos_por_participante` (`integer`, nullable, `>= 1` si no es `NULL`)
+  — solo se evalúa bajo `modo_seleccion_juegos = 'libre'`. `NULL` = sin
+  límite de cantidad. Bajo `'clasificado'` esta columna se ignora
+  completamente (el tope sigue siendo el hardcodeado de siempre).
+
+**No se tocó `games.principal` ni `event_games`.** La clasificación global de
+juegos sigue existiendo tal cual estaba; el modo `'libre'` simplemente la
+ignora para ese evento puntual.
+
+**Edición con inscripciones existentes**: igual que `tipo`/`registration_mode`,
+estos 4 campos quedan de solo lectura en `EditEventModal` en cuanto el evento
+tiene al menos una inscripción, con el mismo criterio fail-closed ya usado en
+el resto del admin (si no se puede confirmar que el evento no tiene
+inscripciones, se bloquea la edición de estos campos igual). Ver
+`docs/inscripciones.md` para el detalle del chequeo autoritativo al guardar.
+
 ## Quitar un juego de un evento (distinto de eliminar el evento entero)
 
 **Regla:** un juego asociado a un evento no puede quitarse si existen inscripciones de ese juego
