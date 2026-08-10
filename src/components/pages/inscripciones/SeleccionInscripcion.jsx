@@ -259,7 +259,7 @@ export const SeleccionInscripcion = () => {
                     eventoId={eventoSeleccionado.id}
                     eventoSeleccionado={eventoSeleccionado}
                     equipoFormData={equipoFormData}
-                    todosLosJuegosEvento={games}
+                    juegosSeleccionados={juegosSeleccionados}
                     steamUsername={steamUsername}
                     riotId={riotId}
                 />
@@ -271,7 +271,6 @@ export const SeleccionInscripcion = () => {
                 eventoSeleccionado={eventoSeleccionado}
                 formData={formData}
                 juegosSeleccionados={juegosSeleccionados}
-                todosLosJuegosEvento={games}
                 steamUsername={steamUsername}
                 riotId={riotId}
             />

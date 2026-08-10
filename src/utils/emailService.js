@@ -76,15 +76,15 @@ const nombresDeJuegos = (juegos) => {
 
 /**
  * Envía un correo de confirmación de inscripción individual sin código QR.
- * El correo informa solo los datos básicos del evento (fecha, hora, lugar,
- * ubicación y los videojuegos disponibles en el evento) — no datos del
- * participante ni de los juegos que haya elegido.
+ * El correo informa los datos básicos del evento (fecha, hora, lugar,
+ * ubicación) y el/los juego(s) de esta inscripción puntual — no datos del
+ * participante ni el resto de los juegos configurados para el evento.
  * @param {Object} inscripcion - Datos de la inscripción
  * @param {Object} evento - Datos del evento
- * @param {Array} todosLosJuegosEvento - Todos los juegos configurados para el evento
+ * @param {Array} juegosInscripcion - Juego(s) elegidos en esta inscripción puntual
  * @returns {Promise} - Promesa con respuesta del envío
  */
-export const enviarConfirmacionIndividual = async (inscripcion, evento, todosLosJuegosEvento) => {
+export const enviarConfirmacionIndividual = async (inscripcion, evento, juegosInscripcion) => {
     // 1. Generar la URL única para el QR (mantener para base de datos)
     const qrUrl = generateQRString(inscripcion);
 
@@ -105,8 +105,8 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, todosLos
         console.error("Error de conexión con la base de datos:", dbError);
     }
 
-    // 3. Todos los juegos configurados para el evento (no solo los que eligió el participante)
-    const juegosTexto = nombresDeJuegos(todosLosJuegosEvento).join(', ');
+    // 3. Juego(s) de esta inscripción puntual (no todos los del evento)
+    const juegosTexto = nombresDeJuegos(juegosInscripcion).join(', ');
 
     // 4. Configurar parámetros para la plantilla de email (sin QR)
     const ubicacionHtml = evento.ubicacion_url
@@ -130,16 +130,16 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, todosLos
 
 /**
  * Envía correos de confirmación para inscripción de equipo sin códigos QR.
- * El correo informa solo los datos básicos del evento (fecha, hora, lugar,
- * ubicación y los videojuegos disponibles en el evento) — no datos del
- * participante, del equipo ni del juego que hayan elegido.
+ * El correo informa los datos básicos del evento (fecha, hora, lugar,
+ * ubicación) y el juego de esta inscripción de equipo — no datos del
+ * participante ni del equipo.
  * @param {Object} capitan - Datos del capitán
  * @param {Array} jugadores - Datos de los jugadores
  * @param {Object} evento - Datos del evento
- * @param {Array} todosLosJuegosEvento - Todos los juegos configurados para el evento
+ * @param {Array} juegoInscripcion - Juego elegido por el equipo en esta inscripción
  * @returns {Promise} - Promesa con respuesta del envío al capitán
  */
-export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, todosLosJuegosEvento) => {
+export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juegoInscripcion) => {
     // 1. Generar URL única para el QR del capitán (mantener para base de datos)
     const qrUrlCapitan = generateQRString(capitan);
 
@@ -160,8 +160,8 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, todos
         console.error("Error de conexión con la base de datos:", dbError);
     }
 
-    // 3. Todos los juegos configurados para el evento (no solo el que eligió el equipo)
-    const juegosTexto = nombresDeJuegos(todosLosJuegosEvento).join(', ');
+    // 3. Juego elegido por el equipo en esta inscripción puntual (no todos los del evento)
+    const juegosTexto = nombresDeJuegos(juegoInscripcion).join(', ');
 
     // 4. Asegurarse de que los miembros del equipo sean un array
     const jugadoresArray = Array.isArray(jugadores) ? jugadores : [];

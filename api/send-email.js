@@ -25,7 +25,7 @@ const buildEmailHtml = (params) => {
 
     const juegosRow = juegos_lista_texto ? `
         <tr>
-          <td style="padding:5px 0;color:#6b7280;font-size:13px;width:90px;vertical-align:top;">Juegos disponibles</td>
+          <td style="padding:5px 0;color:#6b7280;font-size:13px;width:90px;vertical-align:top;">Juego</td>
           <td style="padding:5px 0;color:#3b6cb4;font-size:14px;font-weight:600;vertical-align:top;">${juegos_lista_texto}</td>
         </tr>` : '';
 

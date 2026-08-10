@@ -427,12 +427,16 @@ confirmación (ver la sección siguiente); no tenía otro uso.
 
 ## Email de confirmación de inscripción
 
-Contenido simplificado en esta revisión al mínimo indispensable — antes incluía además FAQs
-específicas por juego (armadas con `faqData`/`faqEmail`, ver sección anterior), la lista de juegos
-que el participante eligió, y (en equipos) el nombre del equipo y el nombre del capitán en el
-correo de cada jugador.
+Contenido simplificado en una revisión anterior al mínimo indispensable — antes incluía además
+FAQs específicas por juego (armadas con `faqData`/`faqEmail`, ver sección anterior), y (en equipos)
+el nombre del equipo y el nombre del capitán en el correo de cada jugador.
 
-El correo ahora informa únicamente:
+**Corrección aplicada en esta revisión**: una revisión previa había hecho que la fila de juegos
+mostrara **todos** los juegos configurados para el evento (`event_games`), en vez del juego al que
+se inscribió esa persona/equipo puntual — interpretación incorrecta del pedido original. Se
+revirtió: la fila ahora vuelve a mostrar únicamente el/los juego(s) de la inscripción.
+
+El correo informa únicamente:
 
 - **Fecha** del evento (`evento_fecha`) — fecha del **evento**, no del participante ni de los
   juegos que haya elegido. Se arma con `formatearFechaEventoParaMail(evento)`
@@ -443,19 +447,34 @@ El correo ahora informa únicamente:
 - **Lugar** (`evento_lugar` = `evento.localidad`).
 - **Ubicación** (`evento_direccion` = `evento.direccion`, más un link a Google Maps si
   `evento.ubicacion_url` está cargado).
-- **Videojuegos disponibles** (`juegos_lista_texto`) — **todos** los juegos configurados para ese
-  evento (`event_games`), no los que el participante seleccionó. Se obtienen del mismo array
-  `games` que ya calculaba `SeleccionInscripcion.jsx` vía `useEventGames(...)` para el paso "Elegí
-  tu juego" — no se agregó ninguna consulta nueva a Supabase. Ese array se pasa hacia abajo como
-  prop `todosLosJuegosEvento` a `Confirmacion.jsx` y `ConfirmacionEquipo.jsx`, y de ahí a
-  `enviarConfirmacionIndividual` / `enviarConfirmacionEquipo` (tercer parámetro, en reemplazo de
-  `juegosSeleccionados`, que solo tenía los juegos elegidos por esa persona/equipo puntual).
+- **Juego** (`juegos_lista_texto`, fila con label "Juego" en `api/send-email.js`) — el/los juego(s)
+  de **esa inscripción puntual**, no el resto de los juegos configurados para el evento. No se
+  agregó ninguna consulta nueva a Supabase; en ambos flujos se reutiliza información que el wizard
+  ya tenía calculada:
+  - **Individual** (`Confirmacion.jsx`): se reutiliza directamente la prop `juegosSeleccionados`
+    que ya recibía el componente — el mismo array que se usa para el `insert` en
+    `games_inscriptions` (`guardarInscripcion`), así que el email siempre coincide exactamente con
+    lo que se guardó (puede tener más de un juego: principal + secundario, o varios en modo
+    `'libre'`). Se pasa como tercer parámetro a `enviarConfirmacionIndividual`.
+  - **Equipo** (`ConfirmacionEquipo.jsx`): el flujo de equipo guarda un único juego por inscripción
+    (`equipoFormData.selectedGame`, un `id`, no un objeto con `game_name`). El componente recibe
+    además la prop `juegosSeleccionados` (los juegos ofrecidos en el paso "juego", con
+    `id`/`game_name`) y arma `juegoInscripcion = juegosSeleccionados.filter(j => j.id ===
+    selectedGame)` — el objeto completo del juego realmente guardado — antes de pasarlo como
+    tercer parámetro a `enviarConfirmacionEquipo`. Ambas props (`equipoFormData` y
+    `juegosSeleccionados`) ya existían/se calculaban en `SeleccionInscripcion.jsx`; no hizo falta
+    ningún fetch adicional.
+  - En `SeleccionInscripcion.jsx`, la prop `todosLosJuegosEvento={games}` que se pasaba a
+    `Confirmacion.jsx`/`ConfirmacionEquipo.jsx` se eliminó (junto con el parámetro homónimo en
+    `enviarConfirmacionIndividual`/`enviarConfirmacionEquipo`, renombrado a
+    `juegosInscripcion`/`juegoInscripcion`) — ya no se usaba nada del array completo de juegos del
+    evento para el email.
 
 Se mantienen: un encabezado breve ("Confirmación de Inscripción"), el saludo con el nombre del
 destinatario (`to_name` — es una personalización del saludo hacia esa misma persona, no un dato
-que se le "informa" de otro participante) y una despedida simple. Se sacó del cuerpo: los juegos
-elegidos por el participante, el nombre del equipo, el nombre del capitán (aparecía en el correo de
-cada jugador del equipo), y el bloque de FAQs por juego.
+que se le "informa" de otro participante) y una despedida simple. Se mantiene fuera del cuerpo: el
+nombre del equipo, el nombre del capitán (aparecía en el correo de cada jugador del equipo), y el
+bloque de FAQs por juego.
 
 **Sin cambios**: qué dispara el envío (`Confirmacion.jsx` / `ConfirmacionEquipo.jsx`, best-effort,
 se omite para `tipo = 'presentacion'`), el guardado de la inscripción, las validaciones, los

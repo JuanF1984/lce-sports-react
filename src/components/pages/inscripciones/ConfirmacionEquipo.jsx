@@ -24,7 +24,7 @@ export const ConfirmacionEquipo = ({
     eventoId,
     eventoSeleccionado,
     equipoFormData, // { formValues, jugadores, selectedGame }
-    todosLosJuegosEvento,
+    juegosSeleccionados, // juegos elegidos en el paso "juego" (para resolver el nombre de selectedGame)
     steamUsername,
     riotId,
 }) => {
@@ -128,6 +128,10 @@ export const ConfirmacionEquipo = ({
             // 3. Email de confirmación (best-effort) — las presentaciones no llevan mail de confirmación de torneo
             if (formValues.email && eventoSeleccionado?.tipo !== 'presentacion') {
                 try {
+                    // El equipo se inscribe a un único juego (`selectedGame`, ver arriba); se
+                    // busca su nombre en `juegosSeleccionados` (juegos ofrecidos en el paso
+                    // "juego") en vez de listar todos los juegos del evento.
+                    const juegoInscripcion = (juegosSeleccionados || []).filter(j => j.id === selectedGame);
                     await enviarConfirmacionEquipo(
                         capitanData,
                         jugadoresConQR,
@@ -139,7 +143,7 @@ export const ConfirmacionEquipo = ({
                             direccion:     eventoSeleccionado.direccion,
                             ubicacion_url: eventoSeleccionado.ubicacion_url,
                         },
-                        todosLosJuegosEvento
+                        juegoInscripcion
                     );
                 } catch (emailError) {
                     console.error("Error al enviar confirmación por email:", emailError);
