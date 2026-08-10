@@ -410,6 +410,67 @@ archivo:
 | `ConfirmacionEquipo` | `inscriptions` (una fila por capitán + una por jugador), `games_inscriptions` | `insert` + `update` por cada fila |
 | `Confirmacion` / `ConfirmacionEquipo` | — | Envío de email best-effort vía `enviarConfirmacionIndividual` / `enviarConfirmacionEquipo` (`src/utils/emailService.js`) — **se omite si `eventoSeleccionado.tipo === 'presentacion'`** |
 
+## Sección pública de "Preguntas Frecuentes" — eliminada
+
+La Home (`Main.jsx`) tenía una sección `<FAQ />` entre `ProximoEvento` y `CarruselTextAndImage`,
+con su propio componente (`src/components/layout/main/FAQ.jsx`), estilos
+(`src/styles/FAQ.css`) y datos (`src/utils/faqData.js`). Se eliminó por completo en esta revisión:
+el componente, el import y el render en `Main.jsx`, y los tres archivos (`FAQ.jsx`, `FAQ.css`,
+`faqData.js`) — ninguno tenía otro consumidor en el código. No existía ningún link de navbar,
+menú o footer apuntando a esta sección (`Header.jsx`/`NavBar.jsx`/`Footer.jsx` no tienen ningún
+`#faq` ni referencia a preguntas frecuentes), así que no hubo que tocar navegación. El resto de la
+Home (evento próximo, carrusel, redes sociales) no se modificó.
+
+`src/utils/faqEmail.js` (`getFAQsHtmlForEmail`) también se eliminó — era exclusivamente el
+adaptador que usaba `emailService.js` para insertar FAQs por juego dentro del correo de
+confirmación (ver la sección siguiente); no tenía otro uso.
+
+## Email de confirmación de inscripción
+
+Contenido simplificado en esta revisión al mínimo indispensable — antes incluía además FAQs
+específicas por juego (armadas con `faqData`/`faqEmail`, ver sección anterior), la lista de juegos
+que el participante eligió, y (en equipos) el nombre del equipo y el nombre del capitán en el
+correo de cada jugador.
+
+El correo ahora informa únicamente:
+
+- **Fecha** del evento (`evento_fecha`) — fecha del **evento**, no del participante ni de los
+  juegos que haya elegido. Se arma con `formatearFechaEventoParaMail(evento)`
+  (`src/utils/emailService.js`): `fecha_inicio` formateado y, si el evento dura más de un día
+  (`fecha_fin` presente y distinto de `fecha_inicio`), también `fecha_fin` — mismo criterio que ya
+  usa `EventoModal.jsx` para mostrar el rango de fechas en la UI.
+- **Hora** (`evento_hora` = `evento.hora_inicio`).
+- **Lugar** (`evento_lugar` = `evento.localidad`).
+- **Ubicación** (`evento_direccion` = `evento.direccion`, más un link a Google Maps si
+  `evento.ubicacion_url` está cargado).
+- **Videojuegos disponibles** (`juegos_lista_texto`) — **todos** los juegos configurados para ese
+  evento (`event_games`), no los que el participante seleccionó. Se obtienen del mismo array
+  `games` que ya calculaba `SeleccionInscripcion.jsx` vía `useEventGames(...)` para el paso "Elegí
+  tu juego" — no se agregó ninguna consulta nueva a Supabase. Ese array se pasa hacia abajo como
+  prop `todosLosJuegosEvento` a `Confirmacion.jsx` y `ConfirmacionEquipo.jsx`, y de ahí a
+  `enviarConfirmacionIndividual` / `enviarConfirmacionEquipo` (tercer parámetro, en reemplazo de
+  `juegosSeleccionados`, que solo tenía los juegos elegidos por esa persona/equipo puntual).
+
+Se mantienen: un encabezado breve ("Confirmación de Inscripción"), el saludo con el nombre del
+destinatario (`to_name` — es una personalización del saludo hacia esa misma persona, no un dato
+que se le "informa" de otro participante) y una despedida simple. Se sacó del cuerpo: los juegos
+elegidos por el participante, el nombre del equipo, el nombre del capitán (aparecía en el correo de
+cada jugador del equipo), y el bloque de FAQs por juego.
+
+**Sin cambios**: qué dispara el envío (`Confirmacion.jsx` / `ConfirmacionEquipo.jsx`, best-effort,
+se omite para `tipo = 'presentacion'`), el guardado de la inscripción, las validaciones, los
+triggers/RLS, la estructura de tablas, la configuración de Resend, los destinatarios, ni el manejo
+de errores de `enviarConResend` (`src/utils/emailService.js`) y del handler de
+`api/send-email.js` (ambos conservan el mismo try/catch y los mismos mensajes de error que ya
+tenían).
+
+**Único ajuste de flujo de datos necesario**: en `ConfirmacionEquipo.jsx`, el objeto `evento` que se
+arma a mano para pasarle a `enviarConfirmacionEquipo` no incluía `fecha_fin` ni `ubicacion_url`
+(sí los incluía la versión individual en `Confirmacion.jsx`) — se agregaron ambos, tomados de
+`eventoSeleccionado` (que ya los tenía, por venir de `select('*')`), para que el correo de equipo
+también pueda mostrar el rango de fechas de eventos multi-día y el link de ubicación, igual que el
+correo individual. No se agregó ninguna columna nueva ni una consulta nueva a Supabase.
+
 ## Validaciones
 
 - Email: formato estricto (`src/lib/email/validateEmail.js`) + bloqueo de local-parts no ASCII +

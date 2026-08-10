@@ -23,6 +23,7 @@ export const Confirmacion = ({
     eventoSeleccionado,
     formData,
     juegosSeleccionados,
+    todosLosJuegosEvento,
     steamUsername,
     riotId,
 }) => {
@@ -96,7 +97,7 @@ export const Confirmacion = ({
                             direccion:     eventoSeleccionado?.direccion,
                             ubicacion_url: eventoSeleccionado?.ubicacion_url,
                         },
-                        juegosSeleccionados
+                        todosLosJuegosEvento
                     );
                 } catch (emailErr) {
                     console.error("Error al enviar email:", emailErr);

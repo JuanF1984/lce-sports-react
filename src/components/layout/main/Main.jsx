@@ -6,8 +6,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { ProximoEvento } from './ProximoEvento'
 // Importación de Redes Sociales
 import { RedesSociales } from './redes-sociales/RedesSociales'
-// Importación de FAQ
-import { FAQ } from './FAQ'
 // Importación de hook para controlar carga de imagenes
 import { useImageLoading } from '../../../hooks/useImageLoading'
 // Importación para carrusel de imagenes y texto
@@ -83,7 +81,6 @@ export const Main = ({ onLoadComplete }) => {
     <main>
       <ProximoEvento onLoadComplete={handleHeroLoad} />
 
-      <FAQ />
       <CarruselTextAndImage
         imagesAndText={textImageItems}
         title="MEGAEVENTO"

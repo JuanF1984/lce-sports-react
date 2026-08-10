@@ -1,4 +1,3 @@
-import { getFAQsHtmlForEmail } from './faqEmail'
 import { generateQRString } from './qrCodeGenerator'
 import supabase from './supabase'
 
@@ -41,14 +40,6 @@ const enviarConResend = async (templateParams) => {
 
 const DIAS_EMAIL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-const formatearDiasEmail = (dias) => {
-    if (!dias || dias.length === 0) return '';
-    return dias.map(d => {
-        const [y, m, day] = d.split('-').map(Number);
-        return DIAS_EMAIL[new Date(y, m - 1, day).getDay()];
-    }).join(' y ');
-};
-
 // Formatea una fecha ISO "YYYY-MM-DD" como "Domingo 06/07"
 const formatearFechaParaMail = (fechaStr) => {
     const [y, m, d] = fechaStr.split('-').map(Number);
@@ -56,46 +47,44 @@ const formatearFechaParaMail = (fechaStr) => {
     return `${DIAS_EMAIL[fecha.getDay()]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 };
 
-// Devuelve la(s) fecha(s) relevantes para el jugador según los días específicos de sus juegos.
-// Si los juegos no tienen días asignados, cae al inicio del evento.
-const calcularFechasMail = (diasJuegos, fechaInicioEvento) => {
-    const diasUnicos = [...new Set(diasJuegos.filter(Boolean))].sort();
-    const fechas = diasUnicos.length > 0 ? diasUnicos : [fechaInicioEvento];
-    return fechas.map(formatearFechaParaMail).join(' y ');
+// Fecha del evento para el mail: inicio, y también fin si el evento dura más
+// de un día (mismo criterio que EventoModal.jsx: solo se muestra el fin si
+// es distinto del inicio). Es la fecha del evento, no la del participante.
+const formatearFechaEventoParaMail = (evento) => {
+    const inicio = formatearFechaParaMail(evento.fecha_inicio);
+    const fin = evento.fecha_fin && evento.fecha_fin !== evento.fecha_inicio
+        ? formatearFechaParaMail(evento.fecha_fin)
+        : null;
+    return fin ? `${inicio} – ${fin}` : inicio;
 };
-
 
 // No depende de una lista fija de juegos conocidos: cualquier juego nuevo
 // pasa igual, siempre que tenga (o se le pueda asignar) un `game_name` en
 // forma de string — evita que un juego con forma inesperada (objeto sin
-// `game_name`, `null`, etc.) propague `undefined` hacia `getFAQsHtmlForEmail`
-// más abajo en la cadena. No se descarta la entrada aunque falte
-// `game_name`: el participante sí seleccionó ese juego, así que se cae a
-// cualquier otra propiedad de texto disponible (mismo criterio que ya usa
-// `ConfirmacionEquipo.jsx` para el juego de equipo) antes de perderlo del
-// email de confirmación.
-const normalizarJuegos = (juegos) => {
+// `game_name`, `null`, etc.) propague `undefined` al email.
+const nombresDeJuegos = (juegos) => {
     if (!Array.isArray(juegos)) return [];
     return juegos
         .filter(j => j !== null && j !== undefined)
         .map(j => {
-            if (typeof j === 'string') return { game_name: j, dias: [] };
-            if (typeof j.game_name === 'string' && j.game_name.trim()) {
-                return { game_name: j.game_name, dias: j.dias ?? [] };
-            }
+            if (typeof j === 'string') return j;
+            if (typeof j.game_name === 'string' && j.game_name.trim()) return j.game_name;
             const propiedadTexto = Object.values(j).find(val => val && typeof val === 'string');
-            return { game_name: propiedadTexto || 'Juego seleccionado', dias: j.dias ?? [] };
+            return propiedadTexto || 'Juego';
         });
 };
 
 /**
- * Envía un correo de confirmación de inscripción individual sin código QR
+ * Envía un correo de confirmación de inscripción individual sin código QR.
+ * El correo informa solo los datos básicos del evento (fecha, hora, lugar,
+ * ubicación y los videojuegos disponibles en el evento) — no datos del
+ * participante ni de los juegos que haya elegido.
  * @param {Object} inscripcion - Datos de la inscripción
  * @param {Object} evento - Datos del evento
- * @param {Array} juegosSeleccionados - Objetos de juego (con game_name y dias) o strings
+ * @param {Array} todosLosJuegosEvento - Todos los juegos configurados para el evento
  * @returns {Promise} - Promesa con respuesta del envío
  */
-export const enviarConfirmacionIndividual = async (inscripcion, evento, juegosSeleccionados) => {
+export const enviarConfirmacionIndividual = async (inscripcion, evento, todosLosJuegosEvento) => {
     // 1. Generar la URL única para el QR (mantener para base de datos)
     const qrUrl = generateQRString(inscripcion);
 
@@ -116,32 +105,10 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegosSe
         console.error("Error de conexión con la base de datos:", dbError);
     }
 
-    // 3. Normalizar juegos a objetos {game_name, dias}
-    const juegos = normalizarJuegos(juegosSeleccionados);
-    const nombresJuegos = juegos.map(j => j.game_name);
+    // 3. Todos los juegos configurados para el evento (no solo los que eligió el participante)
+    const juegosTexto = nombresDeJuegos(todosLosJuegosEvento).join(', ');
 
-    // Fecha(s) relevantes: los días específicos de los juegos del jugador,
-    // o la fecha de inicio del evento si no hay días asignados
-    const diasJuegos = juegos.flatMap(j => j.dias?.length ? j.dias : []);
-    const fechasParaMail = calcularFechasMail(diasJuegos, evento.fecha_inicio);
-
-    // 4. Construir texto de juegos: en eventos multi-día, siempre muestra los días
-    //    específicos del juego para evitar confusión (aunque sea solo el día de inicio).
-    //    En eventos de un día, omite el día si coincide con el inicio (es obvio).
-    const esEventoMultiDia = Boolean(evento.fecha_fin && evento.fecha_fin !== evento.fecha_inicio);
-    const juegosTexto = juegos.map(j => {
-        if (!j.dias || j.dias.length === 0) return j.game_name;
-        if (!esEventoMultiDia && j.dias.length === 1 && j.dias[0] === evento.fecha_inicio) return j.game_name;
-        const diasTexto = formatearDiasEmail(j.dias);
-        if (!diasTexto) return j.game_name;
-        const prefijo = j.dias.length === 1 ? 'sólo ' : '';
-        return `${j.game_name} (${prefijo}${diasTexto})`;
-    }).join(', ');
-
-    // 4. Generar HTML de FAQs específicas para estos juegos
-    const faqsHtml = getFAQsHtmlForEmail(nombresJuegos);
-
-    // 5. Configurar parámetros para la plantilla de email (sin QR)
+    // 4. Configurar parámetros para la plantilla de email (sin QR)
     const ubicacionHtml = evento.ubicacion_url
         ? `<a href="${evento.ubicacion_url}" target="_blank" rel="noopener noreferrer" style="color:#3b6cb4;font-weight:600;">📍 Ver ubicación en Google Maps</a>`
         : '';
@@ -149,30 +116,30 @@ export const enviarConfirmacionIndividual = async (inscripcion, evento, juegosSe
     const templateParams = {
         to_email: inscripcion.email || '',
         to_name: `${inscripcion.nombre || ''} ${inscripcion.apellido || ''}`,
-        evento_fecha: fechasParaMail,
+        evento_fecha: formatearFechaEventoParaMail(evento),
         evento_lugar: evento.localidad || '',
         evento_direccion: evento.direccion || '',
         evento_hora: evento.hora_inicio || '',
         evento_ubicacion_html: ubicacionHtml,
         juegos_lista_texto: juegosTexto,
-        faqs_html: faqsHtml,
-        qr_code_html: ''
     };
 
-    // 6. Enviar con Resend
+    // 5. Enviar con Resend
     return enviarConResend(templateParams);
 };
 
 /**
- * Envía correos de confirmación para inscripción de equipo sin códigos QR
+ * Envía correos de confirmación para inscripción de equipo sin códigos QR.
+ * El correo informa solo los datos básicos del evento (fecha, hora, lugar,
+ * ubicación y los videojuegos disponibles en el evento) — no datos del
+ * participante, del equipo ni del juego que hayan elegido.
  * @param {Object} capitan - Datos del capitán
  * @param {Array} jugadores - Datos de los jugadores
  * @param {Object} evento - Datos del evento
- * @param {Object} juego - Datos del juego seleccionado
- * @param {String} nombreEquipo - Nombre del equipo
+ * @param {Array} todosLosJuegosEvento - Todos los juegos configurados para el evento
  * @returns {Promise} - Promesa con respuesta del envío al capitán
  */
-export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego, nombreEquipo) => {
+export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, todosLosJuegosEvento) => {
     // 1. Generar URL única para el QR del capitán (mantener para base de datos)
     const qrUrlCapitan = generateQRString(capitan);
 
@@ -193,32 +160,13 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
         console.error("Error de conexión con la base de datos:", dbError);
     }
 
-    // 3. Extraer el nombre del juego como string
-    let juegoTexto = '';
-    if (typeof juego === 'string') {
-        juegoTexto = juego;
-    } else if (juego && juego.game_name) {
-        juegoTexto = juego.game_name;
-    } else if (juego) {
-        // Intenta extraer un nombre de cualquier propiedad disponible
-        const propiedades = Object.values(juego).filter(val => val && typeof val === 'string');
-        juegoTexto = propiedades.length > 0 ? propiedades[0] : 'Juego seleccionado';
-    }
+    // 3. Todos los juegos configurados para el evento (no solo el que eligió el equipo)
+    const juegosTexto = nombresDeJuegos(todosLosJuegosEvento).join(', ');
 
-    // 4. Generar HTML de FAQs específicas para este juego
-    const faqsHtml = getFAQsHtmlForEmail([juegoTexto]);
-
-    // Fecha(s) relevantes según días específicos del juego de equipo
-    const diasJuegoEquipo = typeof juego === 'object' ? (juego?.dias ?? []) : [];
-    const fechasParaMailEquipo = calcularFechasMail(diasJuegoEquipo, evento?.fecha_inicio);
-
-    // . Asegurarse de que los miembros del equipo sean un array
+    // 4. Asegurarse de que los miembros del equipo sean un array
     const jugadoresArray = Array.isArray(jugadores) ? jugadores : [];
 
-    // 6. Información adicional para incluir en el correo
-    const infoEquipo = `Equipo: ${nombreEquipo || 'Sin nombre'}`;
-
-    // 7. Crear parámetros para el template del email del capitán (sin QR)
+    // 5. Crear parámetros para el template del email del capitán (sin QR)
     const ubicacionHtmlEquipo = evento?.ubicacion_url
         ? `<a href="${evento.ubicacion_url}" target="_blank" rel="noopener noreferrer" style="color:#3b6cb4;font-weight:600;">📍 Ver ubicación en Google Maps</a>`
         : '';
@@ -226,20 +174,18 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
     const templateParamsCapitan = {
         to_email: capitan.email || '',
         to_name: `${capitan.nombre || ''} ${capitan.apellido || ''}`,
-        evento_fecha: fechasParaMailEquipo,
+        evento_fecha: formatearFechaEventoParaMail(evento),
         evento_lugar: evento?.localidad || '',
         evento_direccion: evento?.direccion || '',
         evento_hora: evento?.hora_inicio || '',
         evento_ubicacion_html: ubicacionHtmlEquipo,
-        juegos_lista_texto: `${juegoTexto} (${infoEquipo})`,
-        faqs_html: faqsHtml,
-        qr_code_html: ''
+        juegos_lista_texto: juegosTexto,
     };
 
-    // 8. Enviar correo al capitán
+    // 6. Enviar correo al capitán
     const resultadoCapitan = await enviarConResend(templateParamsCapitan);
 
-    // 9. Enviar correos a todos los demás miembros del equipo que tengan email
+    // 7. Enviar correos a todos los demás miembros del equipo que tengan email
     const promesasJugadores = jugadoresArray
         .filter(jugador => jugador.email) // Solo a los que tienen email
         .map(async jugador => {
@@ -262,24 +208,22 @@ export const enviarConfirmacionEquipo = async (capitan, jugadores, evento, juego
             const templateParamsJugador = {
                 to_email: jugador.email || '',
                 to_name: `${jugador.nombre || ''} ${jugador.apellido || ''}`,
-                evento_fecha: fechasParaMailEquipo,
+                evento_fecha: formatearFechaEventoParaMail(evento),
                 evento_lugar: evento?.localidad || '',
                 evento_direccion: evento?.direccion || '',
                 evento_hora: evento?.hora_inicio || '',
                 evento_ubicacion_html: ubicacionHtmlEquipo,
-                juegos_lista_texto: `${juegoTexto} (${infoEquipo} - Capitán: ${capitan.nombre || ''} ${capitan.apellido || ''})`,
-                faqs_html: faqsHtml,
-                qr_code_html: ''
+                juegos_lista_texto: juegosTexto,
             };
 
             return enviarConResend(templateParamsJugador);
         });
 
-    // 10. Enviar todos los correos en paralelo, pero no esperar a que terminen
+    // 8. Enviar todos los correos en paralelo, pero no esperar a que terminen
     Promise.all(promesasJugadores).catch(error => {
         console.error('Error enviando emails a jugadores:', error);
     });
 
-    // 11. Devolver el resultado del envío al capitán
+    // 9. Devolver el resultado del envío al capitán
     return resultadoCapitan;
 };

@@ -9,7 +9,6 @@ const buildEmailHtml = (params) => {
         evento_hora = '',
         evento_ubicacion_html = '',
         juegos_lista_texto = '',
-        faqs_html = '',
     } = params;
 
     const row = (label, value) => value ? `
@@ -26,7 +25,7 @@ const buildEmailHtml = (params) => {
 
     const juegosRow = juegos_lista_texto ? `
         <tr>
-          <td style="padding:5px 0;color:#6b7280;font-size:13px;width:90px;vertical-align:top;">Juegos</td>
+          <td style="padding:5px 0;color:#6b7280;font-size:13px;width:90px;vertical-align:top;">Juegos disponibles</td>
           <td style="padding:5px 0;color:#3b6cb4;font-size:14px;font-weight:600;vertical-align:top;">${juegos_lista_texto}</td>
         </tr>` : '';
 
@@ -88,9 +87,6 @@ const buildEmailHtml = (params) => {
                 </tr>
                 <tr><td style="height:12px;"></td></tr>
               </table>
-
-              <!-- FAQs -->
-              ${faqs_html}
 
               <!-- Cierre -->
               <p style="margin:24px 0 4px;color:#374151;font-size:14px;">

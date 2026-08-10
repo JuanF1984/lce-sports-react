@@ -24,7 +24,7 @@ export const ConfirmacionEquipo = ({
     eventoId,
     eventoSeleccionado,
     equipoFormData, // { formValues, jugadores, selectedGame }
-    juegosSeleccionados,
+    todosLosJuegosEvento,
     steamUsername,
     riotId,
 }) => {
@@ -128,19 +128,18 @@ export const ConfirmacionEquipo = ({
             // 3. Email de confirmación (best-effort) — las presentaciones no llevan mail de confirmación de torneo
             if (formValues.email && eventoSeleccionado?.tipo !== 'presentacion') {
                 try {
-                    const juegoSeleccionado = juegosSeleccionados.find(g => g.id === selectedGame);
                     await enviarConfirmacionEquipo(
                         capitanData,
                         jugadoresConQR,
                         {
-                            nombre:       eventoSeleccionado.nombre,
-                            fecha_inicio: eventoSeleccionado.fecha_inicio,
-                            hora_inicio:  eventoSeleccionado.hora_inicio,
-                            localidad:    eventoSeleccionado.localidad,
-                            direccion:    eventoSeleccionado.direccion,
+                            fecha_inicio:  eventoSeleccionado.fecha_inicio,
+                            fecha_fin:     eventoSeleccionado.fecha_fin,
+                            hora_inicio:   eventoSeleccionado.hora_inicio,
+                            localidad:     eventoSeleccionado.localidad,
+                            direccion:     eventoSeleccionado.direccion,
+                            ubicacion_url: eventoSeleccionado.ubicacion_url,
                         },
-                        juegoSeleccionado,
-                        formValues.team_name
+                        todosLosJuegosEvento
                     );
                 } catch (emailError) {
                     console.error("Error al enviar confirmación por email:", emailError);
