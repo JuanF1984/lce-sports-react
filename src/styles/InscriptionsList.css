@@ -1399,3 +1399,51 @@ aside .export-button:active {
     gap: 0.5rem;
     flex-wrap: wrap;
 }
+
+/* ============================================================
+   Juegos (dashboard admin) — GamesList.jsx
+   ============================================================ */
+
+.games-thumb {
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 6px;
+    display: block;
+}
+
+.games-thumb--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: #f8fafc;
+    border: 1px dashed #d7e0f0;
+    color: #9ca3af;
+    font-size: 0.7rem;
+    padding: 4px;
+}
+
+.games-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.games-badge--neutral {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.games-badge--active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.games-badge--inactive {
+    background: #f8d7da;
+    color: #721c24;
+}

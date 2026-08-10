@@ -26,7 +26,8 @@ export const useEventGames = (eventIds) => {
                             id,
                             game_name,
                             team_option,
-                            principal
+                            principal,
+                            image_path
                         )
                     `)
                     .in("event_id", eventIds);
@@ -69,6 +70,7 @@ export const useEventGames = (eventIds) => {
                             game_name: item.games.game_name,
                             team_option: item.games.team_option,
                             principal: item.games.principal,
+                            image_path: item.games.image_path,
                             registration_mode: item.registration_mode,
                             dias: daysMap[item.id] ?? [],
                         });

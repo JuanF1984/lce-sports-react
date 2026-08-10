@@ -9,11 +9,12 @@ import InscriptionsList from './InsciptionList/InscriptionsList'
 import EmailMasivo from './emailMasivo/EmailMasivo'
 import EmailsInvalidos from './emailsInvalidos/EmailsInvalidos'
 import { GalleryList } from './gallery/GalleryList'
+import { GamesList } from './games/GamesList'
 
 export const DashboardAdmin = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [view, setView] = useState(null) // 'inscriptions' | 'events' | 'emailMasivo' | 'emailsInvalidos' | 'gallery'
+    const [view, setView] = useState(null) // 'inscriptions' | 'events' | 'emailMasivo' | 'emailsInvalidos' | 'gallery' | 'games'
 
     const setView_ = (v) => setView(v)
 
@@ -31,6 +32,7 @@ export const DashboardAdmin = () => {
                 <button onClick={() => setView_('emailMasivo')} className='export-button'>Email Masivo</button>
                 <button onClick={() => setView_('emailsInvalidos')} className='export-button'>Emails Inválidos</button>
                 <button onClick={() => setView_('gallery')} className='export-button'>Galería</button>
+                <button onClick={() => setView_('games')} className='export-button'>Juegos</button>
             </aside>
             <LineaNeon />
             <main>
@@ -45,6 +47,7 @@ export const DashboardAdmin = () => {
                 {view === 'emailMasivo' && <EmailMasivo />}
                 {view === 'emailsInvalidos' && <EmailsInvalidos />}
                 {view === 'gallery' && <GalleryList />}
+                {view === 'games' && <GamesList />}
             </main>
         </>
     )

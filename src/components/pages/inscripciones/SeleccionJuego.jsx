@@ -6,6 +6,7 @@ import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 import { formatearHora } from "../../../utils/dateUtils";
 import { tituloEventoCorto } from "../../../utils/eventoDisplay";
 import { getGameConfig } from "../../../data/gameConfig";
+import { getGameImageUrl } from "../../../utils/gameImage";
 import { esModoLibre, getMaxJuegosLibre } from "../../../utils/eventRules";
 import { EventoModal } from "./common/EventoModal";
 
@@ -36,7 +37,7 @@ const formatearBadgeDias = (dias) => {
 
 const GameCard = ({ game, isSelected, onToggle, isMultiDay, selectedOrder, isMultiSelect }) => {
     const [imgError, setImgError] = useState(false);
-    const config = getGameConfig(game.game_name);
+    const imageUrl = getGameImageUrl(game.image_path);
     const isCompleto = game.cupos === 0;
     const isUltimosCupos = game.cupos != null && game.cupos > 0 && game.cupos <= 5;
 
@@ -48,17 +49,22 @@ const GameCard = ({ game, isSelected, onToggle, isMultiDay, selectedOrder, isMul
             type="button"
         >
             <div className="sj-card-img">
-                {!imgError ? (
+                {imageUrl && !imgError ? (
                     <img
-                        src={`/assets/img/games/${config.slug}-card.webp`}
+                        src={imageUrl}
                         alt={game.game_name}
                         onError={() => setImgError(true)}
                     />
                 ) : (
-                    <div
-                        className="sj-card-placeholder"
-                        style={{ backgroundColor: config.color }}
-                    />
+                    // Placeholder neutro — el juego todavía no tiene imagen
+                    // cargada desde el panel admin (o la de Storage falló al
+                    // cargar). A propósito NO se vuelve a
+                    // src/data/gameConfig.js/los assets hardcodeados de
+                    // public/assets/img/games/ como fallback — ver
+                    // docs/games.md, "Implementado etapa 2".
+                    <div className="sj-card-placeholder">
+                        <span className="sj-card-placeholder-text">Sin imagen</span>
+                    </div>
                 )}
 
                 <div className="sj-card-overlay">
