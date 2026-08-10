@@ -4,7 +4,10 @@
       "Bash(node --input-type=module)",
       "Bash(npx eslint *)",
       "Bash(npm run *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(npx vite *)",
+      "Bash(git status *)",
+      "Bash(echo \"exit:$?\")"
     ]
   }
 }

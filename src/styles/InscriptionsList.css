@@ -1334,3 +1334,68 @@ aside .export-button:active {
 .event-edit-footer .cancel-button {
     margin: 0;
 }
+
+/* ============================================================
+   Galería (dashboard admin) — GalleryList.jsx
+   ============================================================ */
+
+.gallery-counter {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a2744;
+    margin-bottom: 14px;
+}
+
+.gallery-counter--limit {
+    color: #e74c3c;
+}
+
+.gallery-add-panel {
+    background: #ffffff;
+    border: 1px solid #d7e0f0;
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    max-width: 480px;
+}
+
+.gallery-thumb {
+    width: 90px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 6px;
+    display: block;
+}
+
+.gallery-order-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.gallery-order-btn {
+    background: #1a2744;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.gallery-order-btn:hover:not(:disabled) {
+    background: #3b6cb4;
+}
+
+.gallery-order-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.gallery-row-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}

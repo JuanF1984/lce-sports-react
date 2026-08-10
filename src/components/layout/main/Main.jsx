@@ -8,18 +8,27 @@ import { ProximoEvento } from './ProximoEvento'
 import { RedesSociales } from './redes-sociales/RedesSociales'
 // Importación de hook para controlar carga de imagenes
 import { useImageLoading } from '../../../hooks/useImageLoading'
+// Importación del hook de galería (gallery_items, administrable desde el panel admin)
+import { useGalleryItems } from '../../../hooks/useGalleryItems'
 // Importación para carrusel de imagenes y texto
 import { CarruselTextAndImage } from '../../common/carrusel/carruselTextAndImages/CarruselTextAndImage'
+import supabase from '../../../utils/supabase'
 
 // Importación de estilos
 import '@styles/Main.css'
 
-// Importación de imagenes de los torneos
-import brandsenImg from '@img/torneos/brandsen.webp';
-import colonImg from '@img/torneos/colon.webp';
-import hurlinghamImg from '@img/torneos/hurlingham.webp';
-import laPlataImg from '@img/torneos/laPlata.webp';
-import sanAndresDeGilesImg from '@img/torneos/sanAndresDeGiles.webp';
+// NOTA: `images`/carrousel-buscate/* (código muerto detectado en el
+// relevamiento de docs/galeria.md) se deja tal cual — ya estaba sin uso
+// antes de este cambio, no es un import que haya quedado muerto como
+// consecuencia de reemplazar `textImageItems`. Queda fuera de alcance acá.
+
+const GALLERY_STORAGE_BUCKET = 'galeria';
+
+// URL pública en runtime a partir del path guardado en gallery_items — nunca
+// se persiste la URL en base, se deriva siempre así (mismo helper que ya usa
+// GalleryList.jsx en el admin).
+const getGalleryPublicUrl = (imagePath) =>
+  supabase.storage.from(GALLERY_STORAGE_BUCKET).getPublicUrl(imagePath).data.publicUrl;
 
 // Componente Main
 export const Main = ({ onLoadComplete }) => {
@@ -39,33 +48,38 @@ export const Main = ({ onLoadComplete }) => {
     loadImages();
   }, []);
 
-  const textImageItems = [
-    {
-      title: 'Brandsen',
-      description: 'Fecha del torneo: 12 de octubre de 2024',
-      image: brandsenImg,
-    },
-    {
-      title: 'Colón',
-      description: 'Fecha del torneo: 28 de septiembre de 2024',
-      image: colonImg,
-    },
-    {
-      title: 'Hurlingham',
-      description: 'Fecha del torneo: 4 de mayo de 2024',
-      image: hurlinghamImg,
-    },
-    {
-      title: 'La Plata',
-      description: 'Fecha del torneo: 21 de septiembre de 2024',
-      image: laPlataImg,
-    },
-    {
-      title: 'San Andrés de Giles',
-      description: 'Fecha del torneo: 27 de julio de 2024',
-      image: sanAndresDeGilesImg,
-    },
-  ];
+  // Fuente real de datos del carrusel de texto+imagen: gallery_items, ya
+  // ordenados por sort_order ASC (useGalleryItems hace el .order en la
+  // query). Se convierte cada fila a la forma que ya consumía
+  // CarruselTextAndImage (title/description/image) — title -> title,
+  // subtitle -> description, image_path -> URL pública del bucket `galeria`.
+  const { galleryItems, galleryError, galleryLoading } = useGalleryItems();
+
+  const textImageItems = (galleryItems || []).map(item => ({
+    title: item.title,
+    description: item.subtitle,
+    image: getGalleryPublicUrl(item.image_path),
+  }));
+
+  const hayImagenesDeGaleria = textImageItems.length > 0;
+
+  useEffect(() => {
+    if (galleryError) {
+      console.error('Error al cargar la galería para el carrusel de la Home:', galleryError);
+    }
+  }, [galleryError]);
+
+  // Si la galería ya terminó de cargar pero no hay nada para mostrar (vacía
+  // o falló la consulta), el carrusel no se renderiza y ninguna <img> va a
+  // disparar handleImageLoad. Sin esto, carouselLoading quedaría en true
+  // para siempre y la Home nunca terminaría de cargar (ver App.jsx,
+  // handleMainLoad depende de este gate). Se "completa" manualmente ese
+  // caso puntual.
+  useEffect(() => {
+    if (!galleryLoading && !hayImagenesDeGaleria) {
+      handleImageLoad();
+    }
+  }, [galleryLoading, hayImagenesDeGaleria, handleImageLoad]);
 
   const handleHeroLoad = useCallback(() => {
     setHeroLoaded(true);
@@ -81,11 +95,14 @@ export const Main = ({ onLoadComplete }) => {
     <main>
       <ProximoEvento onLoadComplete={handleHeroLoad} />
 
-      <CarruselTextAndImage
-        imagesAndText={textImageItems}
-        title="MEGAEVENTO"
-        onImageLoad={handleImageLoad}
-      />
+      {hayImagenesDeGaleria && (
+        <CarruselTextAndImage
+          imagesAndText={textImageItems}
+          title="MEGAEVENTO"
+          onImageLoad={handleImageLoad}
+        />
+      )}
+
       <RedesSociales />
     </main>
   )
