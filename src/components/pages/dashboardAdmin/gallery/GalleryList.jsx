@@ -102,6 +102,10 @@ export const GalleryList = () => {
             // sube nada.
             const { file: optimizedFile } = await optimizeImage(imageFile);
             const path = `${Date.now()}-${sanitizeFileName(optimizedFile.name)}`;
+            // TEMP DEBUG — sacar después de confirmar en consola qué llega a .upload().
+            console.log('[GalleryList upload debug] original:', imageFile.name, imageFile.size, imageFile.type);
+            console.log('[GalleryList upload debug] optimizado:', optimizedFile.name, optimizedFile.size, optimizedFile.type);
+            console.log('[GalleryList upload debug] path final:', path);
             const { error: uploadError } = await supabase.storage
                 .from(STORAGE_BUCKET)
                 .upload(path, optimizedFile, { upsert: false, contentType: optimizedFile.type });
