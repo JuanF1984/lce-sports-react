@@ -4,6 +4,7 @@ import 'react-quill-new/dist/quill.snow.css'
 import supabase from '../../../../utils/supabase'
 import { validateEmail } from '../../../../lib/email/validateEmail'
 import { apiAdminFetch } from '../../../../lib/apiAdminFetch'
+import { validateImageFile } from '../../../../utils/imageUpload'
 
 // Registrar el attributor de tamaño con inline styles en lugar de clases CSS
 // para que los tamaños funcionen en clientes de email
@@ -305,6 +306,13 @@ const EmailMasivo = () => {
         if (!file) return
 
         setErrorImagen('')
+
+        const validationError = validateImageFile(file)
+        if (validationError) {
+            setErrorImagen(validationError)
+            e.target.value = ''
+            return
+        }
 
         // Preview local inmediato con FileReader (sin esperar el upload)
         const reader = new FileReader()
@@ -810,7 +818,7 @@ const EmailMasivo = () => {
                                         <input
                                             ref={fileInputRef}
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/jpeg,image/png,image/webp"
                                             className="email-masivo-file-input"
                                             onChange={handleArchivoImagen}
                                             disabled={uploadingImage}

@@ -215,7 +215,7 @@ export const ProximoEvento = ({ onLoadComplete }) => {
 
     if (loading) {
         return (
-            <section className="proximo-evento">
+            <section className="proximo-evento" id="reloj">
                 <p className="pe-loading">Cargando eventos...</p>
             </section>
         );
@@ -223,7 +223,7 @@ export const ProximoEvento = ({ onLoadComplete }) => {
 
     if (!proximosEventos.length) {
         return (
-            <section className="proximo-evento">
+            <section className="proximo-evento" id="reloj">
                 <h2 className="pe-titulo">Próximos eventos</h2>
                 <div className="pe-card">
                     <div className="pe-imagen-wrap">
@@ -250,7 +250,7 @@ export const ProximoEvento = ({ onLoadComplete }) => {
     }
 
     return (
-        <section className="proximo-evento">
+        <section className="proximo-evento" id="reloj">
             <h2 className="pe-titulo">Próximos eventos</h2>
 
             {proximosEventos.map((evento) => (

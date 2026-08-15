@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useBackHandler } from "../../../context/BackHandlerContext";
 import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
@@ -37,9 +37,27 @@ const formatearBadgeDias = (dias) => {
 
 const GameCard = ({ game, isSelected, onToggle, isMultiDay, selectedOrder, isMultiSelect }) => {
     const [imgError, setImgError] = useState(false);
+    // Skeleton por card, independiente entre juegos. `imgRef.complete` cubre
+    // la imagen ya cacheada por el navegador (el evento `load` puede no
+    // llegar a dispararse, o haberlo hecho antes de que React conecte el
+    // listener); `naturalWidth > 0` evita confundir eso con una imagen ya
+    // resuelta pero rota.
+    const [imgLoaded, setImgLoaded] = useState(false);
+    const imgRef = useRef(null);
     const imageUrl = getGameImageUrl(game.image_path);
     const isCompleto = game.cupos === 0;
     const isUltimosCupos = game.cupos != null && game.cupos > 0 && game.cupos <= 5;
+
+    useEffect(() => {
+        if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+            setImgLoaded(true);
+        }
+    }, []);
+
+    const handleImgError = () => {
+        console.error('Error al cargar imagen de juego:', game.game_name, imageUrl);
+        setImgError(true);
+    };
 
     return (
         <button
@@ -50,11 +68,19 @@ const GameCard = ({ game, isSelected, onToggle, isMultiDay, selectedOrder, isMul
         >
             <div className="sj-card-img">
                 {imageUrl && !imgError ? (
-                    <img
-                        src={imageUrl}
-                        alt={game.game_name}
-                        onError={() => setImgError(true)}
-                    />
+                    <>
+                        {!imgLoaded && <div className="sj-card-skeleton" aria-hidden="true" />}
+                        <img
+                            ref={imgRef}
+                            src={imageUrl}
+                            alt={game.game_name}
+                            loading="lazy"
+                            decoding="async"
+                            onLoad={() => setImgLoaded(true)}
+                            onError={handleImgError}
+                            className={`sj-card-image${imgLoaded ? ' sj-card-image--loaded' : ''}`}
+                        />
+                    </>
                 ) : (
                     // Placeholder neutro — el juego todavía no tiene imagen
                     // cargada desde el panel admin (o la de Storage falló al

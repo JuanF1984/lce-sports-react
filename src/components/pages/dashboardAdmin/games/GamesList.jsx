@@ -2,11 +2,23 @@ import { useRef, useState } from 'react';
 import supabase from '../../../../utils/supabase';
 import { useGamesAdmin } from '../../../../hooks/useGamesAdmin';
 import { mapGamesRuleError } from '../../../../utils/gamesRules';
+import { optimizeImage, ImageOptimizationError } from '../../../../utils/optimizeImage';
 
 const STORAGE_BUCKET = 'juegos';
 
 const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+// Máximo específico para imágenes de juego — más chico que el default de
+// optimizeImage.js (1600px, pensado para banners de eventos). La card de
+// SeleccionJuego.jsx nunca la muestra a más de 220px de ancho CSS en NINGÚN
+// breakpoint (.sj-cards-grid usa `minmax(0, 220px)` desde 768px en adelante,
+// y en mobile el grid de 2 columnas dentro de .sj-page —max-width:480px—
+// nunca supera esos ~220px tampoco; no hay ningún lightbox ni vista que la
+// agrande más). 220px × 2 (para pantallas de alta densidad/Retina, criterio
+// pedido) = 440px de necesidad real; se redondea a 600px para dejar margen
+// y cubrir parte de pantallas 3x sin sumar peso de más. Ver docs/games.md.
+const GAME_IMAGE_MAX_DIMENSION = 600;
 
 const getPublicUrl = (path) =>
     supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl;
@@ -126,10 +138,14 @@ export const GamesList = () => {
 
         try {
             if (imageFile) {
-                uploadedPath = `${Date.now()}-${sanitizeFileName(imageFile.name)}`;
+                // Redimensiona + convierte a WebP antes de subir — ver
+                // src/utils/optimizeImage.js. Si falla, no se sube nada (ni
+                // el original ni un archivo parcial).
+                const { file: optimizedFile } = await optimizeImage(imageFile, { maxDimension: GAME_IMAGE_MAX_DIMENSION });
+                uploadedPath = `${Date.now()}-${sanitizeFileName(optimizedFile.name)}`;
                 const { error: uploadError } = await supabase.storage
                     .from(STORAGE_BUCKET)
-                    .upload(uploadedPath, imageFile, { upsert: false, contentType: imageFile.type });
+                    .upload(uploadedPath, optimizedFile, { upsert: false, contentType: optimizedFile.type });
                 if (uploadError) throw uploadError;
             }
 
@@ -162,7 +178,10 @@ export const GamesList = () => {
             showMessage('success', 'Juego creado correctamente.');
         } catch (err) {
             console.error('Error al crear juego:', err);
-            showMessage('error', mapGamesRuleError(err) || 'Hubo un error al crear el juego. Intentá de nuevo.');
+            const mensaje = err instanceof ImageOptimizationError
+                ? err.message
+                : (mapGamesRuleError(err) || 'Hubo un error al crear el juego. Intentá de nuevo.');
+            showMessage('error', mensaje);
         } finally {
             setSubmitting(false);
         }
@@ -183,15 +202,16 @@ export const GamesList = () => {
         if (replacingId) return;
         setReplacingId(game.id);
 
-        const newPath = `${Date.now()}-${sanitizeFileName(file.name)}`;
-
         try {
             // 1-3. Subir la imagen nueva con un path nuevo — nunca se pisa el
             // path viejo (upsert: false), así que la imagen anterior sigue
-            // intacta y sirviéndose mientras dure este upload.
+            // intacta y sirviéndose mientras dure este upload. Se optimiza
+            // (resize + WebP) antes de subir, igual que en el alta.
+            const { file: optimizedFile } = await optimizeImage(file, { maxDimension: GAME_IMAGE_MAX_DIMENSION });
+            const newPath = `${Date.now()}-${sanitizeFileName(optimizedFile.name)}`;
             const { error: uploadError } = await supabase.storage
                 .from(STORAGE_BUCKET)
-                .upload(newPath, file, { upsert: false, contentType: file.type });
+                .upload(newPath, optimizedFile, { upsert: false, contentType: optimizedFile.type });
             if (uploadError) throw uploadError;
 
             // 4. UPDATE solamente de image_path.
@@ -234,7 +254,9 @@ export const GamesList = () => {
             showMessage('success', 'Imagen actualizada correctamente.');
         } catch (err) {
             console.error('Error al reemplazar la imagen del juego:', err);
-            showMessage('error', 'Hubo un error al actualizar la imagen. Intentá de nuevo.');
+            showMessage('error', err instanceof ImageOptimizationError
+                ? err.message
+                : 'Hubo un error al actualizar la imagen. Intentá de nuevo.');
         } finally {
             setReplacingId(null);
             setReplacingGame(null);
@@ -365,6 +387,7 @@ export const GamesList = () => {
                                             src={getPublicUrl(game.image_path)}
                                             alt={game.game_name}
                                             className="games-thumb"
+                                            loading="lazy"
                                         />
                                     ) : (
                                         <div className="games-thumb games-thumb--empty">Sin imagen</div>

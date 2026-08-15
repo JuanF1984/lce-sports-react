@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import supabase from '../../../../utils/supabase';
 import { useGalleryItems } from '../../../../hooks/useGalleryItems';
 import { GALLERY_MAX_ITEMS, mapGalleryRuleError } from '../../../../utils/galleryRules';
+import { optimizeImage, ImageOptimizationError } from '../../../../utils/optimizeImage';
 
 const STORAGE_BUCKET = 'galeria';
 
@@ -95,13 +96,15 @@ export const GalleryList = () => {
         setSubmitting(true);
         setErrorImagen('');
 
-        const path = `${Date.now()}-${sanitizeFileName(imageFile.name)}`;
-
         try {
-            // 3. Subir a Storage
+            // 3. Redimensionar + convertir a WebP y subir a Storage — ver
+            // src/utils/optimizeImage.js. Si la optimización falla no se
+            // sube nada.
+            const { file: optimizedFile } = await optimizeImage(imageFile);
+            const path = `${Date.now()}-${sanitizeFileName(optimizedFile.name)}`;
             const { error: uploadError } = await supabase.storage
                 .from(STORAGE_BUCKET)
-                .upload(path, imageFile, { upsert: false, contentType: imageFile.type });
+                .upload(path, optimizedFile, { upsert: false, contentType: optimizedFile.type });
             if (uploadError) throw uploadError;
 
             // 4-5. Insertar la fila con el path (no la URL)
@@ -135,7 +138,10 @@ export const GalleryList = () => {
             showMessage('success', 'Imagen agregada a la galería.');
         } catch (err) {
             console.error('Error al agregar imagen a la galería:', err);
-            showMessage('error', mapGalleryRuleError(err) || 'Hubo un error al agregar la imagen. Intentá de nuevo.');
+            const mensaje = err instanceof ImageOptimizationError
+                ? err.message
+                : (mapGalleryRuleError(err) || 'Hubo un error al agregar la imagen. Intentá de nuevo.');
+            showMessage('error', mensaje);
         } finally {
             setSubmitting(false);
         }
@@ -379,6 +385,7 @@ export const GalleryList = () => {
                                         src={getPublicUrl(item.image_path)}
                                         alt={item.title || 'Imagen de galería'}
                                         className="gallery-thumb"
+                                        loading="lazy"
                                     />
                                 </td>
                                 {editingId === item.id ? (

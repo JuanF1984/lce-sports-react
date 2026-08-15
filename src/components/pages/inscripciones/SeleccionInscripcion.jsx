@@ -12,7 +12,6 @@ import { Confirmacion } from "./Confirmacion";
 import { ConfirmacionEquipo } from "./ConfirmacionEquipo";
 import { EventoModal } from "./common/EventoModal";
 import { getGameConfig } from "../../../data/gameConfig";
-import { getGameImageUrl } from "../../../utils/gameImage";
 import { useEventGames } from "../../../hooks/useEventGames";
 import { LogoNeon } from "../../common/LogoNeon";
 import supabase from "../../../utils/supabase";
@@ -100,22 +99,24 @@ export const SeleccionInscripcion = () => {
     const hayJuegosEquipo = games.some(permiteEquipo);
     const hayJuegosIndividual = games.some(permiteIndividual);
 
+    // useEventGames() arranca con su propio `loading` en `false` y recién lo
+    // pone en `true` dentro de su useEffect — un render después de que
+    // `eventoSeleccionado` pasa de null a un evento real. Sin este flag, ese
+    // render intermedio (loadingGames todavía false, games todavía []) deja
+    // pasar el gate de abajo y pinta el paso "tipo" sin botones
+    // Individual/Equipo durante un frame, antes de que loadingGames se ponga
+    // en true y vuelva a tapar todo con el spinner. juegosListos arranca en
+    // false y solo pasa a true cuando useEventGames ya terminó (con o sin
+    // resultados) para el evento actual, así que ese render intermedio queda
+    // cubierto igual que el resto.
+    const [juegosListos, setJuegosListos] = useState(false);
     useEffect(() => {
-        if (games.length === 0) return;
-        // Precarga la imagen de Storage de cada juego (games.image_path) para
-        // que el paso "Elegí tu juego" no tenga que esperar la descarga. Los
-        // juegos sin image_path no tienen nada que precargar (muestran un
-        // placeholder puramente CSS en SeleccionJuego.jsx) — a propósito no
-        // se vuelve a gameConfig.js/los assets hardcodeados como fallback acá.
-        games.forEach(game => {
-            const imageUrl = getGameImageUrl(game.image_path);
-            if (!imageUrl) return;
-            const img = new window.Image();
-            img.src = imageUrl;
-        });
-    }, [games]);
+        if (eventoSeleccionado?.id && !loadingGames) {
+            setJuegosListos(true);
+        }
+    }, [eventoSeleccionado?.id, loadingGames]);
 
-    if (loading || loadingGames) {
+    if (loading || loadingGames || (eventoSeleccionado?.id && !juegosListos)) {
         return <LogoNeon />;
     }
 

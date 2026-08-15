@@ -15,6 +15,18 @@
     justify-content: center;
 }
 
+/* Ocupa el lugar del Swiper mientras el carrusel todavía no entró en el
+   rootMargin del IntersectionObserver (ver CarruselCommon.jsx) — mismo
+   aspect-ratio/skeleton que usan las cards reales para que el cambio de
+   placeholder a Swiper no salte. */
+.carrousel-placeholder {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+    padding: 0.5em;
+    box-sizing: border-box;
+}
+
 /* .carrusel-image {
     width: '100%';
     height: '100%';
@@ -28,6 +40,15 @@
 }
 
 .imgTxtContainer {
+    /* Ancho explícito: antes lo aportaba el <img> (elemento reemplazado, con
+       tamaño intrínseco propio incluso sin cargar) dentro de este contenedor
+       sin width propio. El <div> del skeleton no tiene ese tamaño intrínseco,
+       así que sin este width:100% el ancho queda indefinido dentro de
+       .swiper-slide (justify-content/align-items: center, sin stretch) y el
+       aspect-ratio de .carrusel-img-wrap colapsa a 0 hasta que la imagen
+       carga. Ver CarruselTextAndImage.jsx. */
+    width: 100%;
+    box-sizing: border-box;
     font-size: 1em;
     color: #4b5563;
     display: flex;
@@ -37,11 +58,61 @@
     padding-bottom: 0.25em;
 }
 
-.imgTxtContainer img {
+/* Wrapper que reserva el espacio final de la imagen (mismo aspect-ratio que
+   antes tenía el <img> directamente) — evita layout shift tanto para el
+   skeleton como para la imagen real, que se posicionan uno sobre otro acá
+   adentro. */
+.carrusel-img-wrap {
+    position: relative;
     width: 100%;
     aspect-ratio: 4/3;
-    object-fit: cover;
     border-radius: 4px;
+    overflow: hidden;
+    background: #e5e7eb;
+}
+
+/* Mismo nivel de especificidad (class + class) en las dos reglas de abajo a
+   propósito: antes era ".carrusel-img-wrap img" (class + tipo) vs
+   ".carrusel-img--loaded" (una sola class) — la primera es MÁS específica,
+   así que "opacity:1" de --loaded nunca le ganaba a "opacity:0" y la imagen
+   quedaba invisible para siempre aunque `loaded` pasara a true y el
+   skeleton ya se hubiera sacado del DOM (por eso se veía como "gris
+   infinito": el fondo gris de .carrusel-img-wrap quedaba a la vista detrás
+   de una <img> con opacity:0). */
+.carrusel-img-wrap .carrusel-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+}
+
+.carrusel-img-wrap .carrusel-img--loaded {
+    opacity: 1;
+}
+
+/* Skeleton shimmer — gris neutro, sin spinner ni texto. Se retira apenas
+   la imagen dispara onLoad (o ya está cacheada, ver CarruselTextAndImage.jsx). */
+.carrusel-img-skeleton {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #e5e7eb 25%, #f0f2f5 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: carrusel-img-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes carrusel-img-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .carrusel-img-skeleton {
+        animation: none;
+        background: #e5e7eb;
+    }
 }
 
 /* Estilos para cuando se maximiza la imagen */

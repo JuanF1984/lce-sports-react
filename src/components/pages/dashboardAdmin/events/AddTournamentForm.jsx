@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import supabase from '../../../../utils/supabase'
 import { localidadesBuenosAires } from '../../../../data/localidades'
 import { useGames } from '../../../../hooks/useGames'
+import { validateImageFile } from '../../../../utils/imageUpload'
+import { optimizeImage } from '../../../../utils/optimizeImage'
 
 const BASE_URL = 'https://lcesports.com.ar';
 
@@ -168,8 +170,18 @@ export const AddTournamentForm = ({ onSuccess }) => {
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        setImageFile(file);
         setErrorImagen('');
+
+        const validationError = validateImageFile(file);
+        if (validationError) {
+            setErrorImagen(validationError);
+            setImageFile(null);
+            setImagenPreview('');
+            e.target.value = '';
+            return;
+        }
+
+        setImageFile(file);
         const reader = new FileReader();
         reader.onload = (ev) => setImagenPreview(ev.target.result);
         reader.readAsDataURL(file);
@@ -245,19 +257,33 @@ export const AddTournamentForm = ({ onSuccess }) => {
             }
         }
 
+        if (imageFile) {
+            const validationError = validateImageFile(imageFile);
+            if (validationError) {
+                setErrorImagen(validationError);
+                setSubmitting(false);
+                return;
+            }
+        }
+
         try {
             let imagen_url = null;
             if (imageFile) {
                 setUploadingImage(true);
-                const safeName = imageFile.name
+                // Redimensiona + convierte a WebP antes de subir — ver
+                // src/utils/optimizeImage.js. Si falla, lanza
+                // ImageOptimizationError y cae al catch general de abajo
+                // (que ya muestra err.message tal cual).
+                const { file: optimizedFile } = await optimizeImage(imageFile);
+                const safeName = optimizedFile.name
                     .replace(/\s+/g, '_')
                     .replace(/[^a-zA-Z0-9._-]/g, '');
                 const path = `${Date.now()}-${safeName}`;
                 const { error: uploadError } = await supabase.storage
                     .from('eventos')
-                    .upload(path, imageFile, {
+                    .upload(path, optimizedFile, {
                         upsert: true,
-                        contentType: imageFile.type,
+                        contentType: optimizedFile.type,
                     });
                 if (uploadError) throw uploadError;
                 const { data: urlData } = supabase.storage.from('eventos').getPublicUrl(path);
@@ -561,7 +587,7 @@ export const AddTournamentForm = ({ onSuccess }) => {
                     <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp"
                         onChange={handleImageChange}
                         className="email-masivo-file-input"
                         disabled={uploadingImage}
