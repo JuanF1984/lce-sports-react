@@ -4,10 +4,10 @@ import { localidadesBuenosAires } from '../../../../data/localidades'
 import { useGames } from '../../../../hooks/useGames'
 import { validateImageFile } from '../../../../utils/imageUpload'
 import { optimizeImage } from '../../../../utils/optimizeImage'
+import { getDatesInRange } from '../../../../utils/eventDays'
+import { GameDaysSelector } from './GameDaysSelector'
 
 const BASE_URL = 'https://lcesports.com.ar';
-
-const DIAS_NOMBRES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 // Slug base: lugar + fecha + tipo (p. ej. "chascomus-2026-08-22-torneo").
 // No incluye correlativo: eso lo resuelve generateUniqueSlug contra los slugs existentes.
@@ -45,25 +45,6 @@ const generateUniqueSlug = async (localidad, fecha, tipo) => {
         n += 1;
     }
     return `${base}-${n}`;
-};
-
-const getDatesInRange = (startStr, endStr) => {
-    const dates = [];
-    const [sy, sm, sd] = startStr.split('-').map(Number);
-    const [ey, em, ed] = endStr.split('-').map(Number);
-    const cur = new Date(sy, sm - 1, sd);
-    const end = new Date(ey, em - 1, ed);
-    while (cur <= end) {
-        dates.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`);
-        cur.setDate(cur.getDate() + 1);
-    }
-    return dates;
-};
-
-const formatDiaLabel = (fechaStr) => {
-    const [y, m, d] = fechaStr.split('-').map(Number);
-    const fecha = new Date(y, m - 1, d);
-    return `${DIAS_NOMBRES[fecha.getDay()]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 };
 
 export const AddTournamentForm = ({ onSuccess }) => {
@@ -689,21 +670,11 @@ export const AddTournamentForm = ({ onSuccess }) => {
                                             )}
 
                                             {isSelected && isMultiDay && (
-                                                <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                                                    <span style={{ fontSize: '0.78rem', color: '#6b7280', marginBottom: '0.1rem' }}>
-                                                        ¿Qué días se juega?
-                                                    </span>
-                                                    {eventDates.map(date => (
-                                                        <label key={date} className="checkbox-label" style={{ fontSize: '0.83rem' }}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={effectiveDays.includes(date)}
-                                                                onChange={() => handleDayToggle(game.id, date)}
-                                                            />
-                                                            {formatDiaLabel(date)}
-                                                        </label>
-                                                    ))}
-                                                </div>
+                                                <GameDaysSelector
+                                                    eventDates={eventDates}
+                                                    selectedDays={effectiveDays}
+                                                    onToggle={(date) => handleDayToggle(game.id, date)}
+                                                />
                                             )}
                                         </div>
                                     );

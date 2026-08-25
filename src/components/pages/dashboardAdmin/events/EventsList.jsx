@@ -7,6 +7,8 @@ import { AddTournamentForm } from './AddTournamentForm';
 import { localidadesBuenosAires } from '../../../../data/localidades';
 import { getEffectiveRegistrationMode } from '../../../../utils/registrationMode';
 import { fetchEventGameCupos } from '../../../../utils/eventGameCupos';
+import { getDatesInRange } from '../../../../utils/eventDays';
+import { GameDaysSelector } from './GameDaysSelector';
 
 const BASE_URL = 'https://lcesports.com.ar';
 
@@ -48,6 +50,7 @@ const EditEventModal = ({
     initialGames,
     initialGameModes,
     initialGameCupos,
+    initialGameDays,
     ocupadosPorJuego,
     games,
     loadingGames,
@@ -83,9 +86,38 @@ const EditEventModal = ({
     // "Reducción del cupo" en docs/inscripciones.md) — bajar el cupo no
     // borra ni invalida a nadie, solo cierra el paso a inscripciones nuevas.
     const [gameCupos, setGameCupos] = useState(initialGameCupos);
+    // Día(s) del evento en que se juega cada juego (event_games_days) —
+    // mismo estado y misma convención que AddTournamentForm.jsx: si un
+    // gameId no tiene entrada acá, se asume que juega todos los días del
+    // evento (ver getEffectiveDays). Se inicializa con lo ya persistido para
+    // los juegos existentes (initialGameDays, calculado en EventsList a
+    // partir de `dias` de useEventGames); los juegos que se agreguen nuevos
+    // durante esta edición caen en ese mismo default de "todos los días".
+    const [gameDays, setGameDays] = useState(initialGameDays);
     const [reglasError, setReglasError] = useState('');
 
     const esPresentacion = form.tipo === 'presentacion';
+
+    // Mismo criterio que AddTournamentForm.jsx: se recalcula sobre las fechas
+    // actuales del formulario (no las originales del evento), así que si se
+    // cambian las fechas en esta misma edición el selector de días reacciona
+    // igual que en la carga inicial.
+    const isMultiDay = Boolean(
+        form.fecha_inicio &&
+        form.fecha_fin &&
+        form.fecha_inicio !== form.fecha_fin
+    );
+    const eventDates = isMultiDay ? getDatesInRange(form.fecha_inicio, form.fecha_fin) : [];
+    const getEffectiveDays = (gameId) => gameDays[gameId] ?? eventDates;
+
+    const handleDayToggle = (gameId, date) => {
+        const current = getEffectiveDays(gameId);
+        const next = current.includes(date)
+            ? current.filter(d => d !== date)
+            : [...current, date].sort();
+        setGameDays(prev => ({ ...prev, [gameId]: next }));
+    };
+
     // Los 4 campos de reglas (edad mín/máx, modo de selección, máximo de
     // juegos) quedan de solo lectura una vez que el evento tiene alguna
     // inscripción — mismo criterio conservador ya usado para `tipo` y
@@ -155,6 +187,20 @@ const EditEventModal = ({
             if (!Number.isInteger(n) || n < 0) {
                 const nombreJuego = games.find(g => g.id === gameId)?.game_name || 'un juego';
                 setReglasError(`El cupo de "${nombreJuego}" debe ser un número entero mayor o igual a 0 (o vacío para sin límite).`);
+                return false;
+            }
+        }
+        return true;
+    };
+
+    // Mismo chequeo que AddTournamentForm.jsx: en un evento de varios días,
+    // todo juego seleccionado tiene que tener al menos un día marcado.
+    const validarDias = () => {
+        if (!isMultiDay) return true;
+        for (const gameId of selectedGames) {
+            if (getEffectiveDays(gameId).length === 0) {
+                const nombreJuego = games.find(g => g.id === gameId)?.game_name || 'un juego';
+                setReglasError(`El juego "${nombreJuego}" no tiene ningún día seleccionado.`);
                 return false;
             }
         }
@@ -445,6 +491,13 @@ const EditEventModal = ({
                                                         </>
                                                     );
                                                 })()}
+                                                {isSelected && isMultiDay && (
+                                                    <GameDaysSelector
+                                                        eventDates={eventDates}
+                                                        selectedDays={getEffectiveDays(game.id)}
+                                                        onToggle={(date) => handleDayToggle(game.id, date)}
+                                                    />
+                                                )}
                                             </div>
                                         );
                                     })}
@@ -464,7 +517,7 @@ const EditEventModal = ({
                     </button>
                     <button
                         className="export-button"
-                        onClick={() => { if (validarReglas() && validarCupos()) onSave(form, selectedGames, gameModes, gameCupos); }}
+                        onClick={() => { if (validarReglas() && validarCupos() && validarDias()) onSave(form, selectedGames, gameModes, gameCupos, gameDays); }}
                         disabled={isSaving}
                     >
                         {isSaving ? 'Guardando…' : 'Guardar cambios'}
@@ -525,6 +578,28 @@ export const EventsList = () => {
         )
         : new Set();
 
+    // Días por juego ya persistidos (event_games_days, vía `dias` de
+    // useEventGames) para precargar el selector de días de EditEventModal.
+    // `dias` vacío significa "juega todos los días" (mismo criterio que la
+    // carga inicial en AddTournamentForm.jsx: ausencia de filas en
+    // event_games_days = todos los días del evento) — se traduce acá a la
+    // lista completa de fechas del evento para que los checkboxes arranquen
+    // todos tildados, igual que en la carga inicial.
+    const initialGameDaysEditar = editingEvent
+        ? (() => {
+            const esMultiDia = editingEvent.fecha_inicio !== editingEvent.fecha_fin;
+            const fechasEvento = esMultiDia
+                ? getDatesInRange(editingEvent.fecha_inicio, editingEvent.fecha_fin)
+                : [];
+            return Object.fromEntries(
+                (localEventGames[editingEvent.id] || []).map(g => [
+                    g.id,
+                    (g.dias && g.dias.length > 0) ? g.dias : fechasEvento,
+                ])
+            );
+        })()
+        : {};
+
     useEffect(() => {
         if (eventGames && Object.keys(eventGames).length > 0) {
             setLocalEventGames(eventGames);
@@ -579,7 +654,7 @@ export const EventsList = () => {
         fetchInscripcionesFlags();
     }, [JSON.stringify(eventIds)]);
 
-    const saveChanges = async (form, selectedGames, gameModes, gameCupos) => {
+    const saveChanges = async (form, selectedGames, gameModes, gameCupos, gameDays) => {
         if (isSaving || !editingEvent) return;
         setIsSaving(true);
 
@@ -719,8 +794,17 @@ export const EventsList = () => {
                 .eq('event_id', editingEvent.id);
             if (deleteError) throw deleteError;
 
+            // Días del evento editado, para reinsertar event_games_days —
+            // mismo criterio que la carga inicial en AddTournamentForm.jsx:
+            // se calcula sobre las fechas que se están guardando (form), no
+            // las originales del evento.
+            const eventoEditadoEsMultiDia = form.fecha_inicio !== form.fecha_fin;
+            const eventDatesGuardado = eventoEditadoEsMultiDia
+                ? getDatesInRange(form.fecha_inicio, form.fecha_fin)
+                : [];
+
             if (form.tipo !== 'presentacion' && selectedGames.length > 0) {
-                const { error: insertError } = await supabase
+                const { data: insertedGames, error: insertError } = await supabase
                     .from('event_games')
                     .insert(selectedGames.map(gameId => {
                         const game = games.find(g => g.id === gameId);
@@ -737,8 +821,37 @@ export const EventsList = () => {
                             // registration_mode).
                             cupo_maximo: rawCupo === '' || rawCupo == null ? null : Number(rawCupo),
                         };
-                    }));
+                    }))
+                    .select();
                 if (insertError) throw insertError;
+
+                // event_games_days también se borra en cascada junto con el
+                // delete de event_games de arriba (event_game_id FK) — hay que
+                // reinsertarlo acá para cada event_games recién creado, con la
+                // misma convención que AddTournamentForm.jsx: si el juego
+                // juega TODOS los días del evento no se inserta ninguna fila
+                // (ausencia de filas = "juega todos los días", ver `dias` en
+                // useEventGames.jsx). Esto es lo que hace que el selector de
+                // días de un juego agregado durante la edición (o de uno ya
+                // existente) efectivamente quede guardado.
+                if (eventoEditadoEsMultiDia && insertedGames?.length > 0) {
+                    const daysToInsert = [];
+                    insertedGames.forEach(eg => {
+                        const selectedDays = gameDays?.[eg.game_id] ?? eventDatesGuardado;
+                        const playsAllDays = eventDatesGuardado.every(d => selectedDays.includes(d));
+                        if (!playsAllDays) {
+                            selectedDays.forEach(date => {
+                                daysToInsert.push({ event_game_id: eg.id, date });
+                            });
+                        }
+                    });
+                    if (daysToInsert.length > 0) {
+                        const { error: daysError } = await supabase
+                            .from('event_games_days')
+                            .insert(daysToInsert);
+                        if (daysError) throw daysError;
+                    }
+                }
             }
 
             setEventsData(prev => prev.map(e => e.id === editingEvent.id ? { ...e, ...payload } : e));
@@ -749,12 +862,15 @@ export const EventsList = () => {
                     .filter(g => selectedGames.includes(g.id))
                     .map(g => {
                         const rawCupo = gameCupos?.[g.id];
+                        const selectedDays = gameDays?.[g.id] ?? eventDatesGuardado;
+                        const playsAllDays = eventoEditadoEsMultiDia && eventDatesGuardado.every(d => selectedDays.includes(d));
                         return {
                             id: g.id,
                             game_name: g.game_name,
                             team_option: g.team_option,
                             registration_mode: g.team_option ? (gameModes[g.id] ?? 'both') : 'individual',
                             cupo_maximo: rawCupo === '' || rawCupo == null ? null : Number(rawCupo),
+                            dias: eventoEditadoEsMultiDia && !playsAllDays ? selectedDays : [],
                         };
                     }),
             }));
@@ -994,6 +1110,7 @@ export const EventsList = () => {
                     initialGameCupos={Object.fromEntries(
                         (localEventGames[editingEvent.id] || []).map(g => [g.id, g.cupo_maximo ?? ''])
                     )}
+                    initialGameDays={initialGameDaysEditar}
                     ocupadosPorJuego={Object.fromEntries(
                         (localEventGames[editingEvent.id] || []).map(g => [g.id, g.ocupados ?? 0])
                     )}
