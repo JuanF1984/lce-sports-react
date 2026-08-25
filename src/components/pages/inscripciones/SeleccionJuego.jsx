@@ -121,11 +121,16 @@ const GameCard = ({ game, isSelected, onToggle, isMultiDay, selectedOrder, isMul
             </div>
 
             {!isCompleto ? (
-                game.cupos != null
-                    ? <p className="sj-card-cupos">Quedan {game.cupos}</p>
-                    : null
+                game.cupos != null ? (
+                    <p className="sj-card-cupos">
+                        Quedan {game.cupos}
+                        {game.cupo_maximo != null && (
+                            <span className="sj-card-cupos-total"> ({game.ocupados}/{game.cupo_maximo})</span>
+                        )}
+                    </p>
+                ) : null
             ) : (
-                <p className="sj-card-espera">Sumarme a lista de espera</p>
+                <p className="sj-card-espera">Cupo completo</p>
             )}
 
             {isSelected && (

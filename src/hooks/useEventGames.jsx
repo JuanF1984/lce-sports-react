@@ -22,6 +22,7 @@ export const useEventGames = (eventIds) => {
                         event_id,
                         game_id,
                         registration_mode,
+                        cupo_maximo,
                         games (
                             id,
                             game_name,
@@ -38,6 +39,29 @@ export const useEventGames = (eventIds) => {
 
                 if (!data) {
                     throw new Error("No se recibieron datos");
+                }
+
+                // Cupos ocupados/disponibles por (event_id, game_id) — un solo
+                // RPC de solo lectura para todos los eventos pedidos, en vez de
+                // un count() por juego desde el cliente. Ver
+                // supabase/migrations/20260824_event_game_cupos.sql,
+                // get_event_game_cupos(). Si falla (red, RPC no aplicado
+                // todavía), no bloquea el resto de la pantalla: los juegos se
+                // siguen mostrando, solo sin info de cupo (mismo criterio que
+                // ya usa este hook para event_games_days más abajo) — la
+                // protección real ante sobre-inscripción sigue viviendo en el
+                // trigger de la base, no depende de que este dato llegue bien.
+                const cuposMap = {};
+                const { data: cuposData, error: cuposError } = await supabase.rpc(
+                    "get_event_game_cupos",
+                    { p_event_ids: eventIds }
+                );
+                if (cuposError) {
+                    console.error("Error obteniendo cupos de juegos:", cuposError);
+                } else {
+                    (cuposData || []).forEach(row => {
+                        cuposMap[`${row.event_id}-${row.game_id}`] = row;
+                    });
                 }
 
                 // Query opcional: días específicos por event_game
@@ -64,6 +88,7 @@ export const useEventGames = (eventIds) => {
                 const gamesByEvent = data.reduce((acc, item) => {
                     if (item.games) {
                         if (!acc[item.event_id]) acc[item.event_id] = [];
+                        const cupoInfo = cuposMap[`${item.event_id}-${item.game_id}`];
                         acc[item.event_id].push({
                             id: item.game_id,
                             event_game_id: item.id,
@@ -73,6 +98,20 @@ export const useEventGames = (eventIds) => {
                             image_path: item.games.image_path,
                             registration_mode: item.registration_mode,
                             dias: daysMap[item.id] ?? [],
+                            // cupo_maximo: valor crudo configurado (null = sin límite).
+                            // ocupados: personas ya inscriptas a este juego en este evento.
+                            // cupos: DISPONIBLES — nombre que ya espera SeleccionJuego.jsx
+                            // (GameCard: "Quedan {game.cupos}", isCompleto = cupos === 0).
+                            // Si cupo_maximo es null, `cupos` queda null a propósito (sin
+                            // límite artificial, ver docs/games.md). Si el RPC de cupos
+                            // falló, se usa el cupo_maximo crudo como fallback optimista
+                            // (fail-open a nivel de UI — la autoridad real es el trigger
+                            // de la base, que igual rechaza cualquier exceso real).
+                            cupo_maximo: item.cupo_maximo,
+                            ocupados: cupoInfo?.ocupados ?? 0,
+                            cupos: item.cupo_maximo == null
+                                ? null
+                                : (cupoInfo?.disponibles ?? item.cupo_maximo),
                         });
                     }
                     return acc;

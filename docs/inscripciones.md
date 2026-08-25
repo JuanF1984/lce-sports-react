@@ -153,6 +153,231 @@ evento no puede cambiar de modalidad ni quitarse del evento. Sí puede seguir ag
 libremente cualquier juego **sin** inscripciones, y el resto de los campos del evento (fecha,
 localidad, `visible_en_home`, etc.) se editan sin restricciones nuevas.
 
+## Cupos máximos por evento+juego (`event_games.cupo_maximo`)
+
+Agregado en `supabase/migrations/20260824_event_game_cupos.sql`. Permite configurar, por cada
+combinación evento+juego (no por juego en general — mismo criterio que `registration_mode`), una
+cantidad máxima de participantes.
+
+**El cupo cuenta PERSONAS, no equipos ni inscripciones "de equipo".** Un equipo de 5 (capitán + 4
+jugadores) consume 5 cupos del juego al que se anota, exactamente igual que si esas 5 personas se
+hubieran anotado una por una en modo individual. Esto es una decisión funcional explícita del
+cliente, no una interpretación técnica — la unidad de conteo es siempre "filas de
+`games_inscriptions` de ese evento+juego, unidas a `inscriptions`", sin distinguir si la fila
+corresponde a un capitán, a un jugador o a una inscripción individual.
+
+- **`NULL`** (default, comportamiento histórico): sin límite. Ningún evento/juego existente cambia
+  de comportamiento hasta que un admin configure un cupo explícito.
+- **`0`**: el juego queda cerrado a nuevas inscripciones en ese evento — cualquier alta se rechaza,
+  incluida la primera.
+- **Entero positivo**: cantidad máxima de personas. Al llegar exactamente a ese número, el juego
+  queda "completo" y deja de aceptar altas nuevas (llegar exacto no rechaza esa última persona — el
+  cupo se completa CON ella, no antes).
+
+### Cómo se calcula ocupados/disponibles
+
+```sql
+select count(*)
+from games_inscriptions gi
+join inscriptions i on i.id = gi.id_inscription
+where i.id_evento = :event_id
+  and gi.id_game = :game_id;
+```
+
+`disponibles = cupo_maximo - ocupados` (nunca negativo en lo que se muestra: ver "RPC de lectura"
+más abajo). No cuenta inscripciones de otros eventos, aunque compartan el mismo juego —
+`event_games.cupo_maximo` es por combinación evento+juego, así que dos eventos con el mismo juego
+tienen cupos completamente independientes.
+
+No existe ningún estado de "inscripción cancelada/anulada" en este proyecto (ver "Relación evento ↔
+inscripción" más abajo y `docs/eventos.md`, "Eliminación de eventos" — ninguna pantalla borra
+inscripciones): toda fila de `games_inscriptions` que exista cuenta para el cupo, sin excepciones.
+La única forma de "liberar" un cupo hoy es borrar la fila directamente en Supabase (fuera de la
+app), o que el evento en cuestión sea eliminado (lo cual, de todos modos, ya está bloqueado si tiene
+inscripciones — ver `docs/eventos.md`).
+
+### Protección definitiva: trigger de sentencia sobre `games_inscriptions`
+
+Igual que el resto de las reglas de este documento, el frontend solo anticipa/muestra — la
+protección real contra sobre-inscripción (incluida la concurrencia: dos personas anotándose al
+mismo tiempo cuando queda un solo cupo) vive en la base, con el mismo patrón de trigger de
+**sentencia** (no de fila) con tabla de transición que ya usa
+`trg_enforce_event_game_limit_insert/_update` (ver más abajo, "Selección libre de juegos", y
+`docs/supabase.md`). El detalle completo del diseño (bloqueo de la fila de `event_games`
+correspondiente antes de contar, `SECURITY DEFINER` y por qué) está en `docs/supabase.md`, sección
+"Cupos máximos por evento+juego" — acá solo el resumen funcional:
+
+- `trg_enforce_event_game_cupo_insert` / `_update` sobre `games_inscriptions`.
+- Antes de contar, bloquea (`select ... for update`) la fila de `event_games` del par
+  (evento, juego) afectado — serializa altas concurrentes a ese mismo juego+evento.
+- Cuenta el total definitivo de personas después de la sentencia y compara contra `cupo_maximo`
+  (si es `NULL`, no evalúa nada).
+- Si se excede, `EVENT_GAME_CUPO_EXCEEDED` (`errcode LCE06`) y Postgres revierte toda la sentencia.
+
+### Reducción del cupo por debajo de la cantidad ya inscripta
+
+Permitido explícitamente. Bajar `cupo_maximo` (desde `EditEventModal`, ver más abajo) a un valor
+menor a los ya ocupados:
+
+- **No borra ni invalida a nadie.** Las personas ya inscriptas siguen existiendo tal cual, sin
+  ningún cambio.
+- **Guarda el nuevo límite igual.** No hay ningún bloqueo para guardar un cupo "insuficiente" — el
+  admin puede hacerlo a propósito (p. ej. si se decidió reducir el aforo de un juego).
+- **El juego queda sobre-ocupado**: cualquier intento de sumar una persona más se rechaza (el
+  trigger de arriba compara ocupados contra el nuevo `cupo_maximo`, sin importar cómo se llegó a esa
+  situación), hasta que la cantidad de ocupados vuelva a estar por debajo del cupo (algo que hoy solo
+  puede pasar borrando inscripciones directamente en Supabase, ver arriba) o el cupo se vuelva a
+  subir.
+- `EditEventModal` muestra una advertencia inline cuando el cupo que se está por guardar es menor a
+  los ocupados actuales (ver "Administración" más abajo) — es solo informativa, no bloquea el
+  guardado.
+
+### Frontend: `SeleccionJuego.jsx`
+
+Este componente **ya tenía la UI de cupos armada antes de esta revisión, pero sin datos reales
+detrás** (`game.cupos` siempre llegaba `undefined`: badges "Completo"/"Últimos cupos", el texto
+"Quedan N" y el bloqueo de la card ya existían en el código, pero ningún hook los alimentaba). Esta
+revisión conecta esa UI existente, no la rediseña:
+
+- `useEventGames(eventIds)` agrega `cupo_maximo` al `select` de `event_games` y trae
+  `ocupados`/`disponibles` por `(event_id, game_id)` con el RPC de lectura `get_event_game_cupos`
+  (una sola llamada para todos los eventos pedidos, no un `count()` por juego desde el cliente — ver
+  `docs/supabase.md`). Cada juego queda con `cupo_maximo`, `ocupados` y `cupos` (= disponibles, el
+  nombre que ya esperaba `GameCard`).
+- Si `cupo_maximo` es `NULL`, `cupos` queda `NULL` a propósito — `GameCard` no muestra ningún límite
+  artificial (sin badge, sin "Quedan N"), exactamente el comportamiento de siempre.
+- Si `cupo_maximo` no es `NULL`, además de "Quedan N" se muestra "(ocupados/cupo_maximo)" —p. ej.
+  "Quedan 12 (18/30)".
+- Con `cupos === 0`, `GameCard` ya deshabilitaba el botón (`disabled={isCompleto}`, el `onClick`
+  interno tampoco llama a `onToggle`) y mostraba el badge "Completo" — eso ya estaba. El único
+  cambio de texto: el párrafo que antes decía "Sumarme a lista de espera" (una funcionalidad de
+  lista de espera que nunca se implementó — el botón ya estaba deshabilitado, ese texto era
+  puramente decorativo y potencialmente confuso) ahora dice **"Cupo completo"**.
+- Si el RPC de cupos falla (red, o la migración todavía no se aplicó), el hook no rompe la pantalla:
+  loguea el error y sigue mostrando los juegos sin info de cupo (fail-open a nivel de UI). La
+  protección real sigue siendo el trigger de la base, que rechaza cualquier exceso real sin importar
+  qué haya mostrado la pantalla.
+
+### Administración
+
+`AddTournamentForm.jsx` (alta de evento) y `EventsList.jsx` → `EditEventModal` (edición) agregan un
+input "Cupo máximo" junto a cada juego seleccionado, en el mismo lugar donde ya se configura
+`registration_mode` — pero, a diferencia de ese selector, el cupo se ofrece para **cualquier** juego
+seleccionado (no solo los que admiten equipo) y **no** se bloquea cuando el juego ya tiene
+inscripciones (ver "Reducción del cupo" arriba: reducirlo con inscripciones existentes está
+permitido a propósito, es un caso distinto de "cambiar la modalidad" o "quitar el juego", que sí
+siguen bloqueados con inscripciones — ver más abajo). Vacío = sin límite, `0` = cerrado, cualquier
+otro valor debe ser un entero `>= 0` (validado en el cliente antes de guardar; la validación
+definitiva es el constraint de la base).
+
+`EditEventModal` muestra, junto al input, cuántas personas ya están inscriptas a ese juego en ese
+evento (`ocupados`, mismo dato que ya trae `useEventGames`) y, si el valor que se está por guardar
+queda por debajo de esa cantidad, una advertencia inline en rojo (no bloqueante) explicando que no
+se van a aceptar inscripciones nuevas hasta regularizarse.
+
+**Igual que `registration_mode`, `event_games` se borra y se reinserta completo en cada guardado de
+`saveChanges`** (ver "Restricción para editar la modalidad..." más abajo) — `cupo_maximo` viaja
+siempre en ese mismo payload de reinserción, tomado del estado del formulario (`gameCupos`), para
+que no se pierda al editar cualquier otro campo del evento sin haber tocado el cupo a propósito.
+
+## Inscripción atómica de equipos
+
+**Problema que resuelve.** Antes de esta revisión, `ConfirmacionEquipo.jsx` insertaba al capitán y a
+cada jugador con llamadas HTTP separadas (una por integrante), cada una su propia transacción
+implícita de Supabase. Si el cupo del juego se agotaba a mitad de esa secuencia (ej.: quedan 3
+cupos, se anota un equipo de 5), el resultado era un equipo **parcialmente registrado**: capitán +
+2 jugadores guardados, el 4to rechazado, el 5to nunca intentado — tres personas "adentro" de un
+equipo que en los hechos nunca se completó, consumiendo cupo real sin que el capitán lo supiera
+resuelto. Este riesgo ya existía en menor medida con el trigger de edad (si el jugador 4/5 no
+cumple la edad mínima, los primeros 3 quedaban guardados igual), pero con cupos es mucho más
+probable que se dispare — es justamente el escenario típico de "el evento se llena sobre el final".
+
+**Solución: RPC `register_team_inscription`** (`supabase/migrations/20260824_event_game_cupos.sql`).
+Reemplaza la secuencia de inserts sueltos por una única llamada
+(`supabase.rpc('register_team_inscription', {...})`) que inserta capitán, jugadores y las filas de
+`games_inscriptions` correspondientes **dentro de una sola función de PostgreSQL** — y por lo tanto
+una sola transacción implícita. Si cualquier paso falla (el trigger de edad sobre cualquier
+integrante, o el trigger de cupo al insertar `games_inscriptions`), Postgres revierte **todo** lo
+que la función llevaba hecho: no queda ningún integrante guardado, ni siquiera el capitán.
+
+**Por qué no reimplementa las reglas de negocio dentro del RPC**: la función no vuelve a validar
+edad ni cupo con lógica propia — los dispara de la misma forma que ya lo hace el flujo directo:
+
+- Cada `insert` en `inscriptions` (capitán, luego cada jugador) dispara
+  `trg_validate_participant_age` (ya existente, sin cambios) exactamente igual que si viniera del
+  frontend.
+- El `insert` final en `games_inscriptions` inserta **una sola sentencia multi-fila** (capitán + N
+  jugadores juntos, con el mismo `id_game`), lo que dispara
+  `trg_enforce_event_game_cupo_insert` **una sola vez** — evaluando el equipo completo contra el
+  cupo disponible, no jugador por jugador. Esto es clave: si se insertaran uno por uno, el 4to
+  jugador de un equipo de 5 con 3 cupos libres podría "pasar" si el trigger contara de a uno; al
+  insertarse los 5 juntos en la misma sentencia, el trigger ve el resultado final (3 ocupados + 5
+  nuevos = 8) y rechaza todo de una vez.
+
+Esto evita duplicar la misma regla de negocio en dos lugares (RPC y trigger) — el trigger sigue
+siendo la única autoridad, tanto para el flujo individual como para el de equipo.
+
+**Qué NO cubre la atomicidad del RPC**: el `qr_code` de cada inscripción se sigue generando en el
+cliente (`generateQRString`) y guardando con un `update` puntual por fila **después** de que el RPC
+devuelve los IDs — igual que ya pasaba antes (incluso el flujo individual actual hace insert +
+update separados para el QR). No se consideró necesario mover esto a SQL: perder un QR de una
+inscripción ya guardada es recuperable con un `update` posterior; perder el cupo de un equipo
+completo no lo es. Es una decisión deliberada, no un descuido.
+
+**Seguridad**: el RPC corre `SECURITY INVOKER` (ver `docs/supabase.md`) — los mismos privilegios que
+ya tiene hoy el rol `anon`/`authenticated` para insertar directo en `inscriptions`/
+`games_inscriptions`, ningún permiso nuevo. El trigger de cupo que dispara por dentro sí es
+`SECURITY DEFINER` (necesita bloquear una fila de `event_games`, ver más arriba), pero eso no le da
+al RPC ninguna capacidad de escritura adicional — solo permite que la validación de cupo funcione
+sin depender de RLS sobre `event_games`.
+
+**Auditoría de seguridad (previa a aplicar la migración)**: se revisó esta función como si fuera
+alguien llamándola directo desde la consola del navegador (`supabase.rpc(...)` es una request HTTP
+normal con la `anon key`, que ya es pública — cualquiera puede armarla a mano). Encontró y corrigió
+dos problemas reales antes de que la migración se aplicara a ninguna base real:
+
+1. **Suplantación de usuario.** La primera versión de la función recibía `p_user_id uuid` como
+   parámetro y lo insertaba tal cual en `inscriptions.user_id` (mismo patrón que ya usaba
+   `ConfirmacionEquipo.jsx`, `user_id: user.id` desde el estado de React) — nada ataba ese valor a
+   la sesión real, así que cualquiera podía mandar el UUID de otra persona y asociarle una
+   inscripción sin su contraseña ni su sesión. **Corregido**: el parámetro se eliminó; la función
+   ahora usa `auth.uid()` internamente, que Postgres resuelve del JWT real de la sesión que hizo la
+   request (se confirmó primero que el proyecto usa el cliente estándar de Supabase Auth con sesión
+   persistida — `src/utils/supabase.js`, `src/context/AuthProvider.jsx` — antes de aplicar este
+   cambio). `ConfirmacionEquipo.jsx` ya no manda ningún id de usuario en la llamada al RPC.
+2. **Bypass de cupo con un juego que no corresponde al evento.** La primera versión no verificaba
+   que `p_game_id` estuviera asociado a `p_event_id` — alguien podía mandar el `id` de un juego de
+   OTRO evento (o de ninguno), que no tuviera ningún cupo configurado para ese par, y el trigger de
+   cupo simplemente no tenía nada que hacer cumplir ahí. **Corregido**: tanto la función como el
+   trigger de cupo ahora rechazan cualquier par `(event_id, game_id)` sin fila real en
+   `event_games` (`EVENT_GAME_NOT_CONFIGURED`, `errcode LCE10`) — esto también cierra, de paso,
+   "inscribir en un evento inexistente" y "un `event_id`/`game_id` que no correspondan entre sí".
+   De la misma auditoría salió una tercera verificación nueva: la función ahora confirma que el
+   `registration_mode` efectivo del par no sea `'individual'` antes de crear un equipo
+   (`TEAM_NOT_ALLOWED_FOR_GAME`, `errcode LCE11`) — esta regla no tenía ninguna protección de base
+   para ningún flujo antes de la auditoría (solo se filtraba en el frontend).
+
+**Verificado y ya estaba bien** (fabricar IDs, introducir columnas que el cliente no debería poder
+setear como `qr_code`/`asistencia`, estructuras inválidas de `p_players`) — ver el detalle completo,
+incluido lo que se revisó y se decidió NO tocar (duplicar participantes, evento cerrado/vencido — es
+un hueco preexistente que afecta por igual al flujo individual, fuera de alcance de esta tarea), en
+`docs/supabase.md`, sección `register_team_inscription`.
+
+**Flujo individual**: no se tocó `Confirmacion.jsx` — sigue con el mismo patrón de siempre (insert
+en `inscriptions`, luego insert batch en `games_inscriptions`). Una sola inscripción no tiene el
+problema de "integrantes parciales" (es una sola fila), así que no se justificó introducir un RPC
+ahí — el trigger de cupo la protege igual ante concurrencia sin ningún cambio de código, y el nuevo
+marcador `EVENT_GAME_CUPO_EXCEEDED` ya se traduce solo a través de `mapSupabaseRuleError` (ver más
+abajo). El único riesgo residual conocido: si el cupo se agota justo entre el insert de
+`inscriptions` y el de `games_inscriptions`, la persona queda con una fila de inscripción sin ningún
+juego asociado (no un equipo a medias — un solo registro incompleto). Se documenta como
+riesgo aceptado y no corregido en esta revisión — a diferencia del equipo, acá una sola persona
+queda con un registro incompleto (no varias personas creyendo estar en un equipo que no se
+completó), severidad mucho menor, y arreglarlo requeriría el mismo tipo de RPC que ya se hizo para
+equipos solo para este caso puntual. Mitigación mínima ya presente sin cambios de código: el mensaje
+de error que ve la persona (`mapSupabaseRuleError`, ver más abajo) es claro sobre que el problema es
+de cupo, aunque su registro individual haya quedado a medias.
+
 ## Reglas configurables por evento (edad y modo de selección de juegos)
 
 Agregado en esta revisión. Cuatro columnas nuevas en `events` —
@@ -369,8 +594,26 @@ marcadores del trigger a mensajes de usuario:
 | `EVENT_MINIMUM_AGE_NOT_MET` | "No se cumple la edad mínima requerida para este evento." |
 | `EVENT_MAXIMUM_AGE_EXCEEDED` | "Se superó la edad máxima permitida para este evento." |
 | `EVENT_GAME_LIMIT_EXCEEDED` | "Se superó la cantidad máxima de juegos permitida por participante en este evento." |
+| `EVENT_GAME_CUPO_EXCEEDED` (inscripción individual) | "Ya no quedan cupos disponibles para este juego." |
+| `EVENT_GAME_CUPO_EXCEEDED` (inscripción de equipo) | "No quedan suficientes cupos para inscribir a todo el equipo." |
+| `EVENT_GAME_NOT_CONFIGURED` | "Este juego ya no está disponible para este evento. Volvé a intentar desde el principio." |
+| `TEAM_NOT_ALLOWED_FOR_GAME` | "Este juego no admite inscripción de equipos en este evento." |
 
-Además de estos cuatro marcadores custom, `mapSupabaseRuleError` también
+El marcador `EVENT_GAME_CUPO_EXCEEDED` es el mismo en ambos casos (lo lanza el mismo trigger,
+`enforce_event_game_cupo()`, sin importar si el insert vino del flujo individual o del RPC de
+equipo) — `mapSupabaseRuleError(error, context)` acepta un segundo parámetro opcional `context:
+'team'` para elegir el mensaje de equipo; `ConfirmacionEquipo.jsx` lo pasa, `Confirmacion.jsx` no
+(usa el mensaje genérico). Ver `docs/supabase.md` para el detalle del trigger y
+`errcode LCE06`.
+
+`EVENT_GAME_NOT_CONFIGURED` (`errcode LCE10`) y `TEAM_NOT_ALLOWED_FOR_GAME` (`errcode LCE11`) se
+agregaron en la auditoría de seguridad de `register_team_inscription` (ver "Inscripción atómica de
+equipos" más arriba y `docs/supabase.md`) — en el flujo normal no deberían poder dispararse (el
+frontend nunca ofrece un juego no asociado al evento ni arma un equipo para un juego
+individual-only), pero si el evento se editó justo entre que alguien abrió el wizard y confirmó, o
+si alguien llama al RPC directo, corresponde un mensaje entendible en vez del error crudo de SQL.
+
+Además de estos siete marcadores custom, `mapSupabaseRuleError` también
 reconoce la violación de la restricción `UNIQUE`
 `games_inscriptions_inscription_game_key` (`errcode` estándar de Postgres
 `23505`, no un marcador propio) y la traduce a "Ese juego ya estaba
@@ -722,3 +965,112 @@ antes de aplicar la migración por primera vez contra Supabase:
   = 'clasificado'` conserva la lógica histórica sin cambios, `NULL` en
   `max_juegos_por_participante` sigue significando ilimitado, y el bloqueo de
   edición de estas reglas con inscripciones existentes sigue igual.
+
+### Cambios de esta sexta revisión (cupos máximos por evento+juego + inscripción atómica de equipos)
+
+- `event_games.cupo_maximo` (integer, nullable, `>= 0`) — ver "Cupos máximos por evento+juego" más
+  arriba y `docs/supabase.md`. `NULL` = sin límite, `0` = cerrado, cuenta personas (no equipos).
+- `UNIQUE(event_id, game_id)` sobre `event_games` — no existía, necesaria para que el conteo de
+  cupo no duplique filas.
+- Trigger de sentencia `enforce_event_game_cupo()` (`trg_enforce_event_game_cupo_insert/_update`
+  sobre `games_inscriptions`), `SECURITY DEFINER`, mismo patrón de tabla de transición que
+  `enforce_event_game_limit()` pero bloqueando la fila de `event_games` del par afectado en vez de
+  la fila de `inscriptions`. Marcador `EVENT_GAME_CUPO_EXCEEDED`, `errcode LCE06`.
+- RPC `register_team_inscription` — reemplaza los inserts sueltos de `ConfirmacionEquipo.jsx` por
+  una alta atómica de equipo completo (capitán + jugadores + `games_inscriptions`) dentro de una
+  sola transacción. Ver "Inscripción atómica de equipos" más arriba.
+- RPC de lectura `get_event_game_cupos` — cupo/ocupados/disponibles por lote de eventos, usado por
+  `useEventGames`, evita un `count()` por juego desde el cliente.
+- `SeleccionJuego.jsx`: se conectó la UI de cupos que ya existía pero no tenía datos reales
+  (`game.cupos`) — sin rediseño. Único cambio de texto: "Sumarme a lista de espera" → "Cupo
+  completo".
+- `AddTournamentForm.jsx`/`EventsList.jsx` → `EditEventModal`: input de cupo por juego junto al
+  selector de `registration_mode`, con advertencia (no bloqueante) al reducir el cupo por debajo de
+  los ya ocupados. `cupo_maximo` viaja siempre en el ciclo de borrado+reinserción de `event_games`
+  que ya hacía `saveChanges`, igual que `registration_mode`.
+- `mapSupabaseRuleError` (`src/utils/eventRules.js`) acepta un segundo parámetro opcional `context`
+  para dar un mensaje distinto de `EVENT_GAME_CUPO_EXCEEDED` según sea inscripción individual o de
+  equipo.
+- **No se tocó** `Confirmacion.jsx` (flujo individual) — sigue con el mismo patrón de inserts que
+  ya tenía, protegido por el trigger nuevo sin cambios de código; ver "Inscripción atómica de
+  equipos" para el riesgo residual conocido y por qué no se lo consideró necesario de corregir acá.
+  Tampoco se tocó `games.principal`, `registration_mode` en sí, el modo `'clasificado'`/`'libre'`,
+  ni ninguna regla de edad — todo eso sigue funcionando exactamente igual que antes de esta
+  revisión.
+
+### Cambios de esta séptima revisión (auditoría de seguridad, antes de aplicar la migración)
+
+Auditoría de `supabase/migrations/20260824_event_game_cupos.sql` como si fuera un usuario
+malicioso llamando `register_team_inscription`/`get_event_game_cupos` directo desde el navegador,
+hecha **antes de aplicar la migración a ninguna base real** (ni de prueba ni de producción). Ver el
+detalle completo en `docs/supabase.md`, sección `register_team_inscription`.
+
+- **Corregido — suplantación de usuario**: `register_team_inscription` ya NO recibe `p_user_id`
+  como parámetro (el cliente podía mandar cualquier UUID y asociarle la inscripción a otra persona).
+  Ahora usa `auth.uid()` internamente, resuelto del JWT real de la sesión — `ConfirmacionEquipo.jsx`
+  ya no manda ningún id de usuario en la llamada.
+- **Corregido — bypass de cupo con juego no asociado al evento**: tanto la función como el trigger
+  `enforce_event_game_cupo()` ahora rechazan cualquier `(event_id, game_id)` sin fila real en
+  `event_games` (`EVENT_GAME_NOT_CONFIGURED`, `errcode LCE10`) — antes, un par sin configurar
+  simplemente no activaba ningún chequeo de cupo. Cierra de paso "evento inexistente" e
+  "`event_id`/`game_id` que no correspondan".
+- **Agregado — modalidad de equipo**: `register_team_inscription` verifica que el `registration_mode`
+  efectivo del juego no sea `'individual'` antes de crear el equipo (`TEAM_NOT_ALLOWED_FOR_GAME`,
+  `errcode LCE11`) — esta regla no tenía ninguna protección de base para ningún flujo antes de esta
+  revisión.
+- **Verificado sin necesidad de cambios**: no se pueden fabricar IDs (la función nunca lee `id` del
+  JSON de entrada), no se pueden colar columnas fuera de las esperadas (`qr_code`/`asistencia`
+  siguen fuera del alcance del payload), el locking sigue siendo por `(event_id, game_id)` con orden
+  determinístico (sin riesgo de deadlock), y el trigger de `UPDATE` no cuenta dos veces una fila
+  movida (confirmado con pruebas nuevas, ver más abajo).
+- **Revisado y dejado deliberadamente sin corregir, documentado como pendiente**: ni el flujo
+  individual ni el de equipo validan `inscripciones_abiertas`/`fecha_cierre_inscripcion`/evento
+  vencido a nivel de base — es una exposición preexistente compartida por ambos flujos, no
+  introducida por esta migración, y cerrarla es una decisión de producto que excede el alcance de
+  "cupos" (afectaría a `Confirmacion.jsx`, fuera del pedido de esta tarea).
+- `src/utils/eventRules.js` suma los dos marcadores nuevos a `SUPABASE_RULE_ERROR_MESSAGES`.
+- `supabase/tests/20260824_event_game_cupos_manual_tests.sql` suma las pruebas 16 (UPDATE +
+  ausencia de doble conteo, tres variantes), 17 (bypass de cupo, individual y RPC) y 18 (equipo
+  contra juego individual-only), más la 19 (confirma que no sobrevive la firma vieja con
+  `p_user_id`).
+- **No se tocó** nada del diseño de cupo en sí (`cupo_maximo`, conteo, locking por evento+juego) —
+  esta revisión es exclusivamente de superficie de ataque de la RPC nueva y del trigger, sobre la
+  base ya implementada en la sexta revisión.
+
+### Cambios de esta octava revisión (corrección de tipos de ID: `uuid`, no `bigint`)
+
+Un intento real de aplicar `supabase/migrations/20260824_event_game_cupos.sql` contra Supabase
+falló con `ERROR: 42883: operator does not exist: uuid = bigint` en
+`get_event_game_cupos`. Confirmó que el supuesto de esquema heredado por todo este repo
+(`bigint identity` para los IDs de `events`/`games`/`inscriptions`/`event_games`/
+`games_inscriptions`, nunca verificado contra la base real) era incorrecto: el esquema real usa
+`uuid`. Ver el detalle completo del razonamiento (qué está probado vs. inferido, columna por
+columna) en `docs/supabase.md`, sección "Tipo real de las columnas de ID", y en el encabezado de la
+migración.
+
+- `register_team_inscription`: `p_event_id`/`p_game_id` pasaron de `bigint` a `uuid`. La variable
+  local `v_participant_ids` pasó de `bigint[]` fijo a `inscriptions.id%TYPE[]` (se auto-adapta al
+  tipo real en vez de volver a asumir — es una variable interna, no aparece en ningún `GRANT`, así
+  que no había motivo para no usar `%TYPE` acá).
+- `get_event_game_cupos`: `p_event_ids` pasó de `bigint[]` a `uuid[]`. Las columnas de
+  `returns table` (`event_id`, `game_id`, `cupo_maximo`) pasaron a `%TYPE` contra las columnas
+  reales de `event_games` (el tipo de retorno no aparece en ningún `GRANT`, así que tampoco había
+  motivo para fijarlo a mano).
+- `DROP FUNCTION`/`GRANT EXECUTE` de ambas funciones actualizados para coincidir exactamente con las
+  firmas nuevas.
+- **`enforce_event_game_cupo()` (el trigger de cupo) no necesitó ningún cambio** — ya usaba
+  `record`/comparaciones columna-contra-columna en toda su lógica, nunca un tipo fijo, así que ya
+  era agnóstico al tipo real de los IDs. Es la prueba de que diseñar ese trigger así (en vez de con
+  parámetros/variables de tipo fijo) fue la decisión correcta desde el principio.
+- No se agregó ningún cast artificial (`::text` ni similar): donde antes había una comparación
+  `uuid = bigint` rota, ahora hay `uuid = uuid` real.
+- `supabase/tests/20260824_event_game_cupos_manual_tests.sql` suma una prueba 0 (introspección de
+  `information_schema.columns`) para confirmar los tipos reales ANTES de correr el resto de las
+  pruebas, y corrige el texto de la prueba 19 (mencionaba `bigint` en el resultado esperado).
+- `docs/games.md` corrigió dos referencias a `bigint identity` para `games.id` (una asunción nunca
+  confirmada, igual que el resto) y una afirmación imprecisa ("`id` numérico" basada en
+  comparaciones `===` de JavaScript, que en realidad no distinguen number de string).
+- **No se tocó** ningún tipo de tabla existente (pedido explícito) — la migración se adapta al
+  esquema real, no al revés. Tampoco se tocó ninguna decisión funcional de cupos (semántica de
+  `NULL`/`0`, conteo, locking, atomicidad de equipos, las correcciones de seguridad de la séptima
+  revisión) — esta revisión es exclusivamente de tipos de datos.

@@ -69,7 +69,31 @@ export const SUPABASE_RULE_ERROR_MESSAGES = {
     EVENT_MINIMUM_AGE_NOT_MET: 'No se cumple la edad mínima requerida para este evento.',
     EVENT_MAXIMUM_AGE_EXCEEDED: 'Se superó la edad máxima permitida para este evento.',
     EVENT_GAME_LIMIT_EXCEEDED: 'Se superó la cantidad máxima de juegos permitida por participante en este evento.',
+    // Cupo máximo por evento+juego (event_games.cupo_maximo), ver
+    // supabase/migrations/20260824_event_game_cupos.sql. El mismo marcador lo
+    // puede disparar tanto una inscripción individual (Confirmacion.jsx) como
+    // el RPC register_team_inscription (ConfirmacionEquipo.jsx) — para el
+    // caso de equipo se usa un mensaje distinto, más específico, ver
+    // TEAM_CUPO_EXCEEDED_MESSAGE y el segundo parámetro `context` de
+    // mapSupabaseRuleError más abajo.
+    EVENT_GAME_CUPO_EXCEEDED: 'Ya no quedan cupos disponibles para este juego.',
+    // Agregados en la auditoría de seguridad de register_team_inscription
+    // (ver supabase/migrations/20260824_event_game_cupos.sql): en el flujo
+    // normal no deberían poder dispararse — el frontend nunca ofrece un
+    // juego que no esté asociado al evento, ni permite armar un equipo para
+    // un juego individual-only — pero si el evento se editó (se sacó el
+    // juego, o se le cambió la modalidad) justo entre que alguien abrió el
+    // wizard y confirmó, o si alguien llama al RPC directo, hace falta un
+    // mensaje entendible en vez del error crudo de SQL.
+    EVENT_GAME_NOT_CONFIGURED: 'Este juego ya no está disponible para este evento. Volvé a intentar desde el principio.',
+    TEAM_NOT_ALLOWED_FOR_GAME: 'Este juego no admite inscripción de equipos en este evento.',
 };
+
+// Mensaje específico para EVENT_GAME_CUPO_EXCEEDED cuando lo dispara una
+// inscripción de EQUIPO: el problema no es "no hay cupo en absoluto" (podría
+// quedar 1 cupo libre y el equipo tener 5 integrantes) sino "no entra el
+// equipo completo" — se lo distingue para no confundir al capitán.
+const TEAM_CUPO_EXCEEDED_MESSAGE = 'No quedan suficientes cupos para inscribir a todo el equipo.';
 
 // Restricción UNIQUE (id_inscription, id_game) — ver Sección 4 de la
 // migración. No es un marcador custom como los de arriba: es el
@@ -85,12 +109,20 @@ const DUPLICATE_GAME_INSCRIPTION_MESSAGE = 'Ese juego ya estaba registrado para 
 
 // Devuelve el mensaje específico si el error de Supabase coincide con alguno
 // de los marcadores conocidos, o null si no se reconoce (para que quien llama
-// pueda aplicar su propio mensaje genérico de fallback).
-export const mapSupabaseRuleError = (error) => {
+// pueda aplicar su propio mensaje genérico de fallback). `context: 'team'`
+// selecciona el mensaje específico de equipo para EVENT_GAME_CUPO_EXCEEDED
+// (ver el comentario junto a TEAM_CUPO_EXCEEDED_MESSAGE); se ignora para
+// cualquier otro marcador.
+export const mapSupabaseRuleError = (error, context) => {
     if (!error) return null;
     const haystack = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
     for (const code of Object.keys(SUPABASE_RULE_ERROR_MESSAGES)) {
-        if (haystack.includes(code)) return SUPABASE_RULE_ERROR_MESSAGES[code];
+        if (haystack.includes(code)) {
+            if (code === 'EVENT_GAME_CUPO_EXCEEDED' && context === 'team') {
+                return TEAM_CUPO_EXCEEDED_MESSAGE;
+            }
+            return SUPABASE_RULE_ERROR_MESSAGES[code];
+        }
     }
     if (error.code === '23505' && haystack.includes(DUPLICATE_GAME_INSCRIPTION_CONSTRAINT)) {
         return DUPLICATE_GAME_INSCRIPTION_MESSAGE;

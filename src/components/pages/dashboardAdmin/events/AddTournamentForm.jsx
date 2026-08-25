@@ -97,6 +97,12 @@ export const AddTournamentForm = ({ onSuccess }) => {
     // arranca en 'both' (igual que el comportamiento histórico de team_option=true);
     // si no, queda forzado en 'individual' y no se ofrece el selector.
     const [gameModes, setGameModes] = useState({});
+    // Cupo máximo por juego (event_games.cupo_maximo). Independiente de
+    // team_option/registration_mode — se ofrece para cualquier juego
+    // seleccionado, sea individual, equipo o ambos. Valor de texto tal cual
+    // lo tipea el admin ('' = sin límite); se convierte a entero recién al
+    // armar el payload de inserción. Ver docs/games.md.
+    const [gameCupos, setGameCupos] = useState({});
     const [successMessage, setSuccessMessage] = useState("");
     const [savedLink, setSavedLink] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
@@ -126,6 +132,10 @@ export const AddTournamentForm = ({ onSuccess }) => {
 
     const handleModeChange = (gameId, mode) => {
         setGameModes(prev => ({ ...prev, [gameId]: mode }));
+    };
+
+    const handleCupoChange = (gameId, value) => {
+        setGameCupos(prev => ({ ...prev, [gameId]: value }));
     };
 
     const esPresentacion = formValues.tipo === 'presentacion';
@@ -246,6 +256,25 @@ export const AddTournamentForm = ({ onSuccess }) => {
             return;
         }
 
+        // Cupo máximo por juego (event_games.cupo_maximo): validación de UI,
+        // la definitiva es el constraint `cupo_maximo >= 0` de la base (ver
+        // supabase/migrations/20260824_event_game_cupos.sql). Vacío = sin
+        // límite, 0 = juego cerrado desde el alta, cualquier otro entero
+        // negativo se rechaza acá.
+        if (!esPresentacion) {
+            for (const gameId of selectedGames) {
+                const raw = gameCupos[gameId];
+                if (raw === '' || raw == null) continue;
+                const n = Number(raw);
+                if (!Number.isInteger(n) || n < 0) {
+                    const game = games.find(g => g.id === gameId);
+                    setErrorMessage(`El cupo de "${game?.game_name || 'un juego'}" debe ser un número entero mayor o igual a 0 (o vacío para sin límite).`);
+                    setSubmitting(false);
+                    return;
+                }
+            }
+        }
+
         if (!esPresentacion && isMultiDay) {
             for (const gameId of selectedGames) {
                 if (getEffectiveDays(gameId).length === 0) {
@@ -357,6 +386,9 @@ export const AddTournamentForm = ({ onSuccess }) => {
                             // Un juego sin team_option solo puede jugarse individual,
                             // sin importar qué haya quedado seleccionado en el UI.
                             registration_mode: game?.team_option ? (gameModes[gameId] ?? 'both') : 'individual',
+                            cupo_maximo: gameCupos[gameId] === '' || gameCupos[gameId] == null
+                                ? null
+                                : Number(gameCupos[gameId]),
                         };
                     }))
                     .select();
@@ -638,6 +670,22 @@ export const AddTournamentForm = ({ onSuccess }) => {
                                                     <option value="team">Solo equipos</option>
                                                     <option value="both">Individual o equipos</option>
                                                 </select>
+                                            )}
+
+                                            {isSelected && (
+                                                <label style={{ marginLeft: '1.5rem', fontSize: '0.83rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    Cupo máximo:
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="1"
+                                                        value={gameCupos[game.id] ?? ''}
+                                                        onChange={(e) => handleCupoChange(game.id, e.target.value)}
+                                                        className="filter-select"
+                                                        style={{ width: '90px' }}
+                                                        placeholder="Sin límite"
+                                                    />
+                                                </label>
                                             )}
 
                                             {isSelected && isMultiDay && (

@@ -13,9 +13,13 @@ hooks distintos, cada uno con un propósito puntual:
 
 Los "juegos" asociados a un evento están en la tabla intermedia `event_games` (y opcionalmente
 `event_games_days` para eventos de varios días), y se leen con `src/hooks/useEventGames.jsx`. Desde
-esta revisión, `event_games` también carga `registration_mode` (modalidad de inscripción individual/
-equipo/ambas para ese juego en ESE evento puntual) — ver el detalle completo en
-`docs/inscripciones.md`.
+una revisión anterior, `event_games` también carga `registration_mode` (modalidad de inscripción
+individual/equipo/ambas para ese juego en ESE evento puntual) — ver el detalle completo en
+`docs/inscripciones.md`. Desde esta revisión también carga `cupo_maximo` (cantidad máxima de
+personas para ese juego en ESE evento — `NULL` = sin límite, `0` = cerrado) y, vía el RPC
+`get_event_game_cupos`, `ocupados`/`disponibles` — ver "Cupos máximos por evento+juego" en
+`docs/inscripciones.md`. `AddTournamentForm.jsx` y `EventsList.jsx` → `EditEventModal` configuran el
+cupo por juego en el mismo lugar donde ya se configura `registration_mode`.
 
 ## Tipos de evento (`events.tipo`)
 

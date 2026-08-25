@@ -327,6 +327,12 @@
     padding: 0 0.5rem;
 }
 
+/* "(18/30)" junto a "Quedan N" — mismo tono, un poco más chico/apagado */
+.sj-card-cupos-total {
+    font-size: 0.72rem;
+    color: #9ca3af;
+}
+
 .sj-card-espera {
     font-size: 0.75rem;
     color: #6b7280;

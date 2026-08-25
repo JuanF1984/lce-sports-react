@@ -16,19 +16,27 @@ No hay ninguna migración versionada en el repo que cree la tabla `games` (mismo
 
 | Columna | Tipo asumido | Dónde se ve |
 |---|---|---|
-| `id` | numérico (comparaciones `g.id === game.id` en todo el código, mismo patrón que `events.id`) | todo el módulo |
+| `id` | `uuid` (inferido por consistencia de esquema — ver "Tipo real..." abajo; las comparaciones `g.id === game.id` que hay en todo el código no prueban numérico, `===` de JS compara igual dos strings) | todo el módulo |
 | `game_name` | `text` | todo el módulo |
 | `team_option` | `boolean` | `useGames`, `useEventGames`, `registrationMode.js`, `EventsList.jsx`, `AddTournamentForm.jsx` |
 | `principal` | `boolean` | `useEventGames`, `SeleccionJuego.jsx` |
 | `active` | `boolean` | `useGames` (único lugar que la lee) |
 
-**No verificable desde código/repositorio**: tipo real de cada columna, si `id` es
-`bigint identity` o algo distinto, constraint `UNIQUE` sobre `game_name`, FKs formales
+**Actualizado** (ver `docs/supabase.md`, sección "Tipo real de las columnas de ID"): un intento real
+de aplicar `supabase/migrations/20260824_event_game_cupos.sql` contra Supabase falló con
+`operator does not exist: uuid = bigint` — confirmó que `event_games.event_id` es `uuid`, no
+`bigint` como se asumía acá antes. `games.id` no tiene una prueba tan directa (no hay ningún error
+real que lo confirme puntualmente), pero se infiere `uuid` por consistencia de esquema — no hay
+evidencia en contra en ningún lado de `src/` (cero usos de `parseInt`/`Number()`/aritmética sobre
+`game.id` en todo el proyecto) y un esquema mixto `uuid`/`bigint` dentro del mismo proyecto sería
+inusual sin motivo documentado.
+
+**Sigue sin poder verificarse desde código/repositorio**: constraint `UNIQUE` sobre `game_name` más
+allá del índice case-insensitive agregado en la etapa 1 (ver abajo), FKs formales
 `event_games.game_id → games.id` y `games_inscriptions.id_game → games.id` (se documentan en
 `docs/supabase.md` como asumidas por las queries, no como confirmadas contra la base real), RLS de
-`games` (no aparece mencionada en la sección "RLS / permisos" de `docs/supabase.md`, a diferencia de
-`events`/`inscriptions`/`profiles`/`invalid_emails` — es un vacío total, ni siquiera hay un dato
-indirecto).
+`games` fuera de lo que agrega `20260810_games_admin.sql` (SELECT público, INSERT/UPDATE admin — ver
+abajo).
 
 ### No existe ningún código que escriba en `games`
 
@@ -192,8 +200,15 @@ campo puramente manual hoy.
 
 ## Tablas que relacionan `games` con eventos/inscripciones
 
-- **`event_games`** (`id`, `event_id → events.id`, `game_id → games.id`, `registration_mode`): la
-  asociación evento↔juego. Un juego "existe" para un evento puntual solo a través de esta tabla.
+- **`event_games`** (`id`, `event_id → events.id`, `game_id → games.id`, `registration_mode`,
+  `cupo_maximo`): la asociación evento↔juego. Un juego "existe" para un evento puntual solo a
+  través de esta tabla. `cupo_maximo` (agregada en `supabase/migrations/20260824_event_game_cupos.sql`)
+  sigue el mismo criterio que `registration_mode`: es de la combinación evento+juego, no un
+  atributo de `games` — el mismo juego puede tener 40 cupos en un evento y 25 en otro. Cuenta
+  personas, no equipos. El detalle completo (semántica de `NULL`/`0`, cálculo de ocupados,
+  protección ante concurrencia, inscripción atómica de equipos) vive en `docs/inscripciones.md`
+  ("Cupos máximos por evento+juego" e "Inscripción atómica de equipos") y `docs/supabase.md` — no
+  se repite acá, mismo criterio que ya usa este archivo para `registration_mode`.
 - **`event_games_days`** (`id`, `event_game_id → event_games.id`, `date`): días específicos de un
   `event_games` en eventos de varios días — no depende de `games` directamente, solo de
   `event_games.id`.
@@ -478,8 +493,9 @@ criterio de "cubrir la operación aunque el frontend hoy no la use" que ya se us
    mayúsculas/espacios) y confirmar que se bloquea tanto por el mensaje de cliente como, si se
    fuerza una request directa saltando el frontend, por el índice UNIQUE
    (`mapGamesRuleError`/`23505`).
-6. **Confirmar el tipo de PK real** de `games.id` si se quiere verificar la asunción
-   `bigint identity`: `select column_name, data_type from information_schema.columns where
+6. **Confirmar el tipo de PK real** de `games.id` (inferido como `uuid`, no confirmado con un error
+   real como sí pasó con `event_games.event_id` — ver `docs/supabase.md`, "Tipo real de las columnas
+   de ID"): `select column_name, data_type from information_schema.columns where
    table_name = 'games' and column_name = 'id';`.
 
 ## Implementado etapa 2 (uso público de `image_path`)

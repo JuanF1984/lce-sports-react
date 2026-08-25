@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../../../context/UseAuth";
 import supabase from "../../../utils/supabase";
 import { generateQRString } from "../../../utils/qrCodeGenerator";
 import { enviarConfirmacionEquipo } from "../../../utils/emailService";
@@ -28,7 +27,6 @@ export const ConfirmacionEquipo = ({
     steamUsername,
     riotId,
 }) => {
-    const { user } = useAuth();
     const [estado, setEstado] = useState('guardando'); // 'guardando' | 'ok' | 'error'
     const [errorMsg, setErrorMsg] = useState('');
 
@@ -42,68 +40,63 @@ export const ConfirmacionEquipo = ({
         try {
             const { formValues, jugadores, selectedGame } = equipoFormData;
 
-            // 1. Inscribir al capitán
-            const { data: capitanData, error: capitanError } = await supabase
-                .from("inscriptions")
-                .insert({
-                    ...(user ? { user_id: user.id } : {}),
-                    ...formValues,
-                    id_evento: eventoId,
-                    team_name: formValues.team_name,
-                    ...(steamUsername ? { steam_username: steamUsername } : {}),
-                    ...(riotId        ? { riot_id: riotId }               : {}),
-                })
-                .select()
-                .single();
+            // 1-2. Alta atómica de capitán + jugadores + games_inscriptions.
+            // Antes esto eran N inserts sueltos (uno por integrante, cada uno
+            // su propia request) — si el cupo se agotaba a mitad de camino,
+            // el equipo quedaba parcialmente registrado (ver docs/inscripciones.md,
+            // "Inscripción atómica de equipos"). El RPC corre todo dentro de
+            // una única transacción de Postgres: si el trigger de cupo
+            // (o el de edad, sobre cualquier integrante) rechaza el alta, no
+            // queda NINGÚN integrante guardado — ver
+            // supabase/migrations/20260824_event_game_cupos.sql,
+            // register_team_inscription(). No se manda ningún id de usuario:
+            // el RPC resuelve `user_id` con `auth.uid()` del lado del
+            // servidor (sesión real de quien llama), no de un parámetro del
+            // cliente — evita que alguien pueda asociar una inscripción a la
+            // cuenta de otra persona llamando al RPC directo (ver el
+            // comentario de seguridad en la migración).
+            const jugadoresNorm = jugadores.map(jugador => ({
+                nombre:   capitalizeText(jugador.nombre),
+                apellido: capitalizeText(jugador.apellido),
+                edad:     jugador.edad || null,
+                email:    jugador.email ? normalizeEmail(jugador.email) : null,
+                celular:  jugador.celular,
+            }));
 
-            if (capitanError) throw capitanError;
+            const { data: rpcData, error: rpcError } = await supabase.rpc(
+                "register_team_inscription",
+                {
+                    p_event_id: eventoId,
+                    p_game_id: selectedGame,
+                    p_captain: {
+                        ...formValues,
+                        steam_username: steamUsername || null,
+                        riot_id: riotId || null,
+                    },
+                    p_players: jugadoresNorm,
+                }
+            );
 
+            if (rpcError) throw rpcError;
+
+            const capitanData = rpcData.captain;
+            const jugadoresData = rpcData.players; // ya vienen normalizados (mismo insert que se mandó)
+
+            // QR: se genera y guarda en el cliente, igual que antes — no es
+            // parte de la atomicidad que garantiza el RPC (perder un QR es
+            // recuperable con un update puntual; perder el cupo del equipo
+            // no lo es).
             const qrStringCapitan = generateQRString({ ...capitanData, id_evento: eventoId });
-
             await supabase
                 .from("inscriptions")
                 .update({ qr_code: qrStringCapitan, asistencia: false })
                 .eq("id", capitanData.id);
 
-            const { error: capitanGameError } = await supabase
-                .from("games_inscriptions")
-                .insert({ id_inscription: capitanData.id, id_game: selectedGame });
-
-            if (capitanGameError) throw capitanGameError;
-
             capitanData.qr_code = qrStringCapitan;
             capitanData.id_evento = eventoId;
 
-            // 2. Inscribir jugadores adicionales
             const jugadoresConQR = [];
-
-            for (let i = 0; i < jugadores.length; i++) {
-                const jugador = jugadores[i];
-                const jugadorNorm = {
-                    ...jugador,
-                    nombre:   capitalizeText(jugador.nombre),
-                    apellido: capitalizeText(jugador.apellido),
-                    email:    jugador.email ? normalizeEmail(jugador.email) : null,
-                };
-
-                const { data: jugadorData, error: jugadorError } = await supabase
-                    .from("inscriptions")
-                    .insert({
-                        ...(user ? { user_id: user.id } : {}),
-                        nombre:    jugadorNorm.nombre,
-                        apellido:  jugadorNorm.apellido,
-                        edad:      jugadorNorm.edad || null,
-                        email:     jugadorNorm.email || null,
-                        celular:   jugadorNorm.celular,
-                        localidad: formValues.localidad,
-                        id_evento: eventoId,
-                        team_name: formValues.team_name,
-                    })
-                    .select()
-                    .single();
-
-                if (jugadorError) throw jugadorError;
-
+            for (const jugadorData of jugadoresData) {
                 const qrStringJugador = generateQRString({ ...jugadorData, id_evento: eventoId });
 
                 await supabase
@@ -111,15 +104,8 @@ export const ConfirmacionEquipo = ({
                     .update({ qr_code: qrStringJugador, asistencia: false })
                     .eq("id", jugadorData.id);
 
-                const { error: jugadorGameError } = await supabase
-                    .from("games_inscriptions")
-                    .insert({ id_inscription: jugadorData.id, id_game: selectedGame });
-
-                if (jugadorGameError) throw jugadorGameError;
-
                 jugadoresConQR.push({
-                    ...jugadorNorm,
-                    id: jugadorData.id,
+                    ...jugadorData,
                     id_evento: eventoId,
                     qr_code: qrStringJugador,
                 });
@@ -155,8 +141,11 @@ export const ConfirmacionEquipo = ({
             console.error("Error al guardar inscripción de equipo:", err);
             // Ver el mismo comentario en Confirmacion.jsx: mensaje específico si
             // Supabase rechazó por una regla del evento (edad de algún
-            // integrante, límite de juegos), genérico en cualquier otro caso.
-            setErrorMsg(mapSupabaseRuleError(err) || "Hubo un error al guardar la inscripción. Intentá de nuevo.");
+            // integrante, límite de juegos, cupo agotado), genérico en
+            // cualquier otro caso. `context: 'team'` hace que
+            // EVENT_GAME_CUPO_EXCEEDED use el mensaje de equipo ("no entran
+            // todos los integrantes") en vez del genérico de cupo individual.
+            setErrorMsg(mapSupabaseRuleError(err, 'team') || "Hubo un error al guardar la inscripción. Intentá de nuevo.");
             setEstado('error');
         }
     };

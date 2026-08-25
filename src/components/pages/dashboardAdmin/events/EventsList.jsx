@@ -59,6 +59,8 @@ const EditEventModal = ({
     event,
     initialGames,
     initialGameModes,
+    initialGameCupos,
+    ocupadosPorJuego,
     games,
     loadingGames,
     errorGames,
@@ -87,6 +89,12 @@ const EditEventModal = ({
     });
     const [selectedGames, setSelectedGames] = useState(initialGames);
     const [gameModes, setGameModes] = useState(initialGameModes);
+    // Cupo máximo por juego (event_games.cupo_maximo) — independiente de
+    // gamesConInscripciones/registration_mode: a diferencia de esos dos, el
+    // cupo SÍ se puede editar aunque el juego ya tenga inscripciones (ver
+    // "Reducción del cupo" en docs/inscripciones.md) — bajar el cupo no
+    // borra ni invalida a nadie, solo cierra el paso a inscripciones nuevas.
+    const [gameCupos, setGameCupos] = useState(initialGameCupos);
     const [reglasError, setReglasError] = useState('');
 
     const esPresentacion = form.tipo === 'presentacion';
@@ -141,6 +149,28 @@ const EditEventModal = ({
 
     const handleModeChange = (gameId, mode) => {
         setGameModes(prev => ({ ...prev, [gameId]: mode }));
+    };
+
+    const handleCupoChange = (gameId, value) => {
+        setGameCupos(prev => ({ ...prev, [gameId]: value }));
+    };
+
+    // Validación de UI del cupo — la definitiva es el constraint
+    // `cupo_maximo >= 0` de la base. A propósito NO bloquea el guardado
+    // cuando el cupo ingresado es menor a los ya ocupados (ver el aviso
+    // inline en el input): eso está permitido explícitamente, solo se avisa.
+    const validarCupos = () => {
+        for (const gameId of selectedGames) {
+            const raw = gameCupos[gameId];
+            if (raw === '' || raw == null) continue;
+            const n = Number(raw);
+            if (!Number.isInteger(n) || n < 0) {
+                const nombreJuego = games.find(g => g.id === gameId)?.game_name || 'un juego';
+                setReglasError(`El cupo de "${nombreJuego}" debe ser un número entero mayor o igual a 0 (o vacío para sin límite).`);
+                return false;
+            }
+        }
+        return true;
     };
 
     const localidadesOptions = localidadesBuenosAires.map(l => ({ value: l, label: l }));
@@ -393,6 +423,40 @@ const EditEventModal = ({
                                                         {game.team_option ? ' ni cambiar su modalidad.' : '.'}
                                                     </span>
                                                 )}
+                                                {isSelected && (() => {
+                                                    const ocupados = ocupadosPorJuego?.[game.id] ?? 0;
+                                                    const raw = gameCupos[game.id];
+                                                    const cupoNuevo = raw === '' || raw == null ? null : Number(raw);
+                                                    const sobreocupado = cupoNuevo !== null && Number.isInteger(cupoNuevo) && cupoNuevo < ocupados;
+                                                    return (
+                                                        <>
+                                                            <label style={{ marginLeft: '1.5rem', fontSize: '0.83rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                                Cupo máximo:
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="1"
+                                                                    value={raw ?? ''}
+                                                                    onChange={(e) => handleCupoChange(game.id, e.target.value)}
+                                                                    className="event-edit-input"
+                                                                    style={{ width: '90px' }}
+                                                                    placeholder="Sin límite"
+                                                                />
+                                                                {ocupados > 0 && (
+                                                                    <span style={{ color: '#6b7280' }}>({ocupados} ya inscriptos)</span>
+                                                                )}
+                                                            </label>
+                                                            {sobreocupado && (
+                                                                <span className="event-edit-hint" style={{ marginLeft: '1.5rem', color: '#b91c1c' }}>
+                                                                    Atención: el cupo nuevo ({cupoNuevo}) es menor a la cantidad de personas ya
+                                                                    inscriptas ({ocupados}). Se puede guardar igual — nadie se da de baja
+                                                                    automáticamente — pero no se aceptarán inscripciones nuevas a este juego
+                                                                    hasta que el cupo suba o baje la cantidad de inscriptos.
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         );
                                     })}
@@ -412,7 +476,7 @@ const EditEventModal = ({
                     </button>
                     <button
                         className="export-button"
-                        onClick={() => { if (validarReglas()) onSave(form, selectedGames, gameModes); }}
+                        onClick={() => { if (validarReglas() && validarCupos()) onSave(form, selectedGames, gameModes, gameCupos); }}
                         disabled={isSaving}
                     >
                         {isSaving ? 'Guardando…' : 'Guardar cambios'}
@@ -502,7 +566,7 @@ export const EventsList = () => {
         fetchInscripcionesFlags();
     }, [JSON.stringify(eventIds)]);
 
-    const saveChanges = async (form, selectedGames, gameModes) => {
+    const saveChanges = async (form, selectedGames, gameModes, gameCupos) => {
         if (isSaving || !editingEvent) return;
         setIsSaving(true);
 
@@ -627,10 +691,18 @@ export const EventsList = () => {
                     .from('event_games')
                     .insert(selectedGames.map(gameId => {
                         const game = games.find(g => g.id === gameId);
+                        const rawCupo = gameCupos?.[gameId];
                         return {
                             event_id: editingEvent.id,
                             game_id: gameId,
                             registration_mode: game?.team_option ? (gameModes[gameId] ?? 'both') : 'individual',
+                            // event_games se borra y reinserta completo en cada
+                            // guardado (ver el delete de arriba) — cupo_maximo
+                            // tiene que viajar acá siempre o se perdería en
+                            // cualquier edición del evento, aunque no se haya
+                            // tocado el cupo (mismo cuidado que ya existe para
+                            // registration_mode).
+                            cupo_maximo: rawCupo === '' || rawCupo == null ? null : Number(rawCupo),
                         };
                     }));
                 if (insertError) throw insertError;
@@ -642,12 +714,16 @@ export const EventsList = () => {
                 ...prev,
                 [editingEvent.id]: games
                     .filter(g => selectedGames.includes(g.id))
-                    .map(g => ({
-                        id: g.id,
-                        game_name: g.game_name,
-                        team_option: g.team_option,
-                        registration_mode: g.team_option ? (gameModes[g.id] ?? 'both') : 'individual',
-                    })),
+                    .map(g => {
+                        const rawCupo = gameCupos?.[g.id];
+                        return {
+                            id: g.id,
+                            game_name: g.game_name,
+                            team_option: g.team_option,
+                            registration_mode: g.team_option ? (gameModes[g.id] ?? 'both') : 'individual',
+                            cupo_maximo: rawCupo === '' || rawCupo == null ? null : Number(rawCupo),
+                        };
+                    }),
             }));
 
             if (editingEvent.slug) {
@@ -893,6 +969,12 @@ export const EventsList = () => {
                     initialGames={localEventGames[editingEvent.id]?.map(g => g.id) || []}
                     initialGameModes={Object.fromEntries(
                         (localEventGames[editingEvent.id] || []).map(g => [g.id, getEffectiveRegistrationMode(g)])
+                    )}
+                    initialGameCupos={Object.fromEntries(
+                        (localEventGames[editingEvent.id] || []).map(g => [g.id, g.cupo_maximo ?? ''])
+                    )}
+                    ocupadosPorJuego={Object.fromEntries(
+                        (localEventGames[editingEvent.id] || []).map(g => [g.id, g.ocupados ?? 0])
                     )}
                     games={games}
                     loadingGames={loadingGames}
