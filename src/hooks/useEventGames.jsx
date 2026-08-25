@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import supabase from "../utils/supabase";
+import { fetchEventGameCupos } from "../utils/eventGameCupos";
 
 export const useEventGames = (eventIds) => {
     const [eventGames, setEventGames] = useState({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    // true si el RPC get_event_game_cupos falló en la última corrida — los
+    // consumidores que necesitan saber con certeza si un juego tiene
+    // inscripciones (EventsList.jsx → EditEventModal) no pueden confiar en
+    // `ocupados` mientras esto sea true (ver fetchEventGameCupos). Los
+    // consumidores que solo muestran el dato de forma informativa
+    // (SeleccionJuego.jsx) pueden seguir ignorándolo (fail-open a nivel UI,
+    // sin cambios de comportamiento ahí).
+    const [cuposError, setCuposError] = useState(false);
 
     useEffect(() => {
         if (!eventIds || eventIds.length === 0) return;
@@ -52,16 +61,15 @@ export const useEventGames = (eventIds) => {
                 // protección real ante sobre-inscripción sigue viviendo en el
                 // trigger de la base, no depende de que este dato llegue bien.
                 const cuposMap = {};
-                const { data: cuposData, error: cuposError } = await supabase.rpc(
-                    "get_event_game_cupos",
-                    { p_event_ids: eventIds }
-                );
-                if (cuposError) {
-                    console.error("Error obteniendo cupos de juegos:", cuposError);
-                } else {
-                    (cuposData || []).forEach(row => {
+                try {
+                    const cuposData = await fetchEventGameCupos(eventIds);
+                    cuposData.forEach(row => {
                         cuposMap[`${row.event_id}-${row.game_id}`] = row;
                     });
+                    setCuposError(false);
+                } catch (cuposErr) {
+                    console.error("Error obteniendo cupos de juegos:", cuposErr);
+                    setCuposError(true);
                 }
 
                 // Query opcional: días específicos por event_game
@@ -136,5 +144,5 @@ export const useEventGames = (eventIds) => {
 
     }, [JSON.stringify(eventIds)]); // Evitamos cambios innecesarios en el array de dependencias
 
-    return { eventGames, loading, error };
+    return { eventGames, loading, error, cuposError };
 };

@@ -6,6 +6,7 @@ import supabase from '../../../../utils/supabase';
 import { AddTournamentForm } from './AddTournamentForm';
 import { localidadesBuenosAires } from '../../../../data/localidades';
 import { getEffectiveRegistrationMode } from '../../../../utils/registrationMode';
+import { fetchEventGameCupos } from '../../../../utils/eventGameCupos';
 
 const BASE_URL = 'https://lcesports.com.ar';
 
@@ -16,29 +17,16 @@ const isoToDatetimeLocal = (isoStr) => {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-// Relación real entre una inscripción y el juego dentro de un evento puntual:
-// inscriptions.id_evento = events.id, y games_inscriptions (id_inscription, id_game)
-// conecta esa inscripción con el juego. No hay una columna que apunte directo de
-// games_inscriptions a event_games, así que hay que pasar por inscriptions.
-// Devuelve el set de game_id que ya tienen al menos una inscripción para ese evento.
-const getGamesConInscripcionesDelEvento = async (eventId) => {
-    const { data: inscripcionesDelEvento, error: errInscripciones } = await supabase
-        .from('inscriptions')
-        .select('id')
-        .eq('id_evento', eventId);
-    if (errInscripciones) throw errInscripciones;
-
-    const inscripcionIds = (inscripcionesDelEvento || []).map(i => i.id);
-    if (inscripcionIds.length === 0) return new Set();
-
-    const { data: gamesInscriptions, error: errGamesInscripciones } = await supabase
-        .from('games_inscriptions')
-        .select('id_game')
-        .in('id_inscription', inscripcionIds);
-    if (errGamesInscripciones) throw errGamesInscripciones;
-
-    return new Set((gamesInscriptions || []).map(r => r.id_game));
-};
+// "¿Este juego ya tiene inscripciones dentro de este evento?" se responde
+// hoy con ocupados > 0 de get_event_game_cupos (RPC SECURITY DEFINER, no
+// depende de RLS sobre inscriptions/games_inscriptions, y no arma ningún
+// .in() con IDs de inscripción — ver src/utils/eventGameCupos.js). Antes se
+// resolvía con una consulta propia (SELECT de inscriptions + .in() sobre
+// games_inscriptions) que podía romperse con un .in() de cientos/miles de
+// UUIDs en eventos con mucho volumen; se retiró por duplicar exactamente lo
+// mismo que ya calcula el RPC de cupos, sin ese riesgo.
+const gamesConInscripcionesDesdeCupos = (cuposRows) =>
+    new Set((cuposRows || []).filter(r => (r.ocupados ?? 0) > 0).map(r => r.game_id));
 
 // Chequeo autoritativo de "¿este evento ya tiene alguna inscripción?", usado
 // como defensa en profundidad al guardar (independiente de `tieneInscripciones`,
@@ -498,9 +486,6 @@ export const EventsList = () => {
     const [copied, setCopied] = useState(false);
     const [tieneInscripciones, setTieneInscripciones] = useState({}); // { [eventId]: boolean } — solo para mostrar en la UI
     const [deletingId, setDeletingId] = useState(null);
-    const [gamesConInscripcionesEditar, setGamesConInscripcionesEditar] = useState(new Set());
-    const [verificandoInscripciones, setVerificandoInscripciones] = useState(false);
-    const [errorVerificandoInscripciones, setErrorVerificandoInscripciones] = useState(false);
 
     const anyModalOpen = showCreateModal || !!editingEvent;
     useEffect(() => {
@@ -509,8 +494,36 @@ export const EventsList = () => {
     }, [anyModalOpen]);
 
     const eventIds = eventsData?.map(e => e.id) || [];
-    const { eventGames, loading: loadingEventGames, error: errorEventGames } = useEventGames(eventIds);
+    const {
+        eventGames,
+        loading: loadingEventGames,
+        error: errorEventGames,
+        cuposError,
+    } = useEventGames(eventIds);
     const { games, loading: loadingGames, error: errorGames } = useGames();
+
+    // Estado de "¿se puede confiar en `ocupados` para saber si un juego tiene
+    // inscripciones?" — ya no es un fetch aparte al abrir el modal (ver
+    // abrirEdicion más abajo): se deriva directo del mismo hook que ya carga
+    // la lista (useEventGames), reusando su `loading`/`error`/`cuposError` en
+    // vez de duplicar la verificación. Mismo criterio fail-closed que antes:
+    // mientras esté cargando O si falló, no se puede confiar en los datos.
+    const verificandoInscripciones = loadingEventGames;
+    const errorVerificandoInscripciones = !!errorEventGames || cuposError;
+
+    // Juegos del evento en edición que ya tienen al menos una inscripción
+    // (ocupados > 0) — derivado de `localEventGames`, que ya trae `ocupados`
+    // por juego desde useEventGames/get_event_game_cupos. Si la verificación
+    // no es confiable ahora mismo (errorVerificandoInscripciones), el propio
+    // EditEventModal trata TODOS los juegos tildados como bloqueados
+    // (bloqueadoPorInscripciones ya combina esto con gamesConInscripciones,
+    // sin cambios en ese componente) — no hace falta ensuciar este Set con
+    // "todos" para lograr el fail-closed.
+    const gamesConInscripcionesEditar = editingEvent
+        ? gamesConInscripcionesDesdeCupos(
+            (localEventGames[editingEvent.id] || []).map(g => ({ game_id: g.id, ocupados: g.ocupados }))
+        )
+        : new Set();
 
     useEffect(() => {
         if (eventGames && Object.keys(eventGames).length > 0) {
@@ -608,12 +621,32 @@ export const EventsList = () => {
 
             // Freno de seguridad, independiente de lo que ya haya filtrado la UI del
             // modal (gamesConInscripcionesEditar): puede haber pasado tiempo entre
-            // abrir el modal y guardar, así que se vuelve a comprobar acá, en el
-            // momento real del guardado, cuáles de los juegos seleccionados ya
-            // tienen inscripciones — y si alguno de ésos cambió de modalidad, se
-            // frena TODO el guardado (no se aplica ningún cambio parcial).
+            // abrir el modal y guardar (incluso alguien pudo haberse inscripto
+            // recién), así que se vuelve a pedir el dato FRESCO acá, en el momento
+            // real del guardado — no se reutiliza el `ocupados` que ya tenía
+            // cargado `localEventGames` desde que se abrió el modal. Mismo RPC que
+            // usa la lista (get_event_game_cupos), pedido de nuevo solo para este
+            // evento puntual.
             if (form.tipo !== 'presentacion') {
-                const gamesConInscripciones = await getGamesConInscripcionesDelEvento(editingEvent.id);
+                let cuposFrescos;
+                try {
+                    cuposFrescos = await fetchEventGameCupos([editingEvent.id]);
+                } catch (err) {
+                    console.error('Error al revalidar inscripciones antes de guardar juegos del evento:', err);
+                    // Fail-closed: si no se puede confirmar en este momento cuáles
+                    // juegos tienen inscripciones, no se guarda ningún cambio de
+                    // juegos/modalidad (podría estar ocultando una inscripción
+                    // nueva creada después de abrir el modal).
+                    setMessage({
+                        type: 'error',
+                        text: 'No se pudo verificar si los juegos tienen inscripciones asociadas. Por seguridad, no se guardaron los cambios.',
+                    });
+                    setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+                    setIsSaving(false);
+                    return;
+                }
+
+                const gamesConInscripciones = gamesConInscripcionesDesdeCupos(cuposFrescos);
                 const juegosActuales = localEventGames[editingEvent.id] || [];
 
                 const gameIdBloqueado = selectedGames.find(gameId => {
@@ -741,25 +774,13 @@ export const EventsList = () => {
         }
     };
 
-    // Antes de habilitar la edición de modalidad por juego, hay que saber cuáles
-    // de los juegos de ESTE evento ya tienen inscripciones (ver
-    // getGamesConInscripcionesDelEvento). Si la verificación falla, no se sabe si
-    // es seguro editar — por eso se bloquea todo el selector de modalidad
-    // (errorVerificandoInscripciones) en vez de asumir que no hay inscripciones.
-    const abrirEdicion = async (event) => {
+    // Ya no hace ningún fetch propio: qué juegos tienen inscripciones se
+    // deriva de `localEventGames` (ver `gamesConInscripcionesEditar` más
+    // arriba), que useEventGames ya carga para toda la lista apenas monta
+    // el componente — abrir el modal no tiene que esperar ni volver a pedir
+    // nada.
+    const abrirEdicion = (event) => {
         setEditingEvent(event);
-        setGamesConInscripcionesEditar(new Set());
-        setErrorVerificandoInscripciones(false);
-        setVerificandoInscripciones(true);
-        try {
-            const set = await getGamesConInscripcionesDelEvento(event.id);
-            setGamesConInscripcionesEditar(set);
-        } catch (err) {
-            console.error('Error al verificar inscripciones por juego antes de editar:', err);
-            setErrorVerificandoInscripciones(true);
-        } finally {
-            setVerificandoInscripciones(false);
-        }
     };
 
     const cerrarTodasPresentaciones = async () => {
