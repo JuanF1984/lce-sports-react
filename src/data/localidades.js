@@ -70,6 +70,7 @@ export const localidadesBuenosAires = [
   "Laprida",
   "Las Flores",
   "Leandro N. Alem",
+  "Lezama",
   "Lincoln",
   "Lobería",
   "Lobos",
